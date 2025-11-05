@@ -11,13 +11,17 @@ LiteMaaS uses **API keys** for admin operations, not role-based access control.
 
 ### Admin Users
 
-The following users should receive admin API keys:
+When using **OpenShift htpasswd authentication**, the admin user is:
+- **admin** (htpasswd username)
 
+When using **Google OAuth** (future), admin users would be identified by email:
 - sborenst@redhat.com
 - ankay@redhat.com
 - psrivast@redhat.com
 - rshah@redhat.com
 - ajammula@redhat.com
+
+**Note**: The `ocp4_workload_litemaas_admin_emails` variable accepts both usernames (for htpasswd) and email addresses (for Google OAuth).
 
 ## Admin API Keys
 

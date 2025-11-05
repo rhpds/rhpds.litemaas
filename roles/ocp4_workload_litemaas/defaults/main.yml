@@ -35,17 +35,15 @@ ocp4_workload_litemaas_litellm_ui_password: "{{ lookup('password', '/dev/null le
 
 # OAuth configuration
 ocp4_workload_litemaas_oauth_enabled: true
-ocp4_workload_litemaas_oauth_provider: "google"  # google or openshift
-ocp4_workload_litemaas_oauth_client_id: ""  # Pass via -e at runtime (DO NOT commit secrets)
-ocp4_workload_litemaas_oauth_client_secret: ""  # Pass via -e at runtime (DO NOT commit secrets)
+ocp4_workload_litemaas_oauth_provider: "openshift"  # google or openshift
+ocp4_workload_litemaas_oauth_client_id: "litemaas-rhpds"
+ocp4_workload_litemaas_oauth_client_secret: "{{ lookup('password', '/dev/null length=32 chars=ascii_letters,digits') }}"
 
-# Admin email addresses (users with these emails get admin role)
+# Admin users (for htpasswd: usernames, for Google OAuth: email addresses)
+# When using OpenShift htpasswd, use usernames from htpasswd secret
+# When using Google OAuth, use email addresses
 ocp4_workload_litemaas_admin_emails:
-  - sborenst@redhat.com
-  - ankay@redhat.com
-  - psrivast@redhat.com
-  - rshah@redhat.com
-  - ajammula@redhat.com
+  - admin  # htpasswd username
 
 # Cluster domain (auto-detected if not set)
 ocp4_workload_litemaas_cluster_domain: ""
