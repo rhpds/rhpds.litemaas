@@ -120,26 +120,34 @@
     msg: "Using cluster domain: {{ ocp4_workload_litemaas_cluster_domain }}"
 
 # OAuth Configuration
-- name: Get OAuth issuer URL from cluster
+- name: Configure OAuth based on provider
   block:
-    - name: Get OAuth server configuration
-      kubernetes.core.k8s_info:
-        api_version: config.openshift.io/v1
-        kind: OAuth
-        name: cluster
-      register: r_oauth_server
-
-    - name: Set OAuth issuer URL from cluster OAuth config
+    - name: Set Google OAuth issuer
       ansible.builtin.set_fact:
-        _litemaas_oauth_issuer: "https://oauth-openshift.{{ ocp4_workload_litemaas_cluster_domain }}"
-      when: r_oauth_server.resources[0].status.issuer is not defined or r_oauth_server.resources[0].status.issuer == ""
+        _litemaas_oauth_issuer: "https://accounts.google.com"
+      when: ocp4_workload_litemaas_oauth_provider == "google"
 
-    - name: Use OAuth issuer from cluster if available
-      ansible.builtin.set_fact:
-        _litemaas_oauth_issuer: "{{ r_oauth_server.resources[0].status.issuer }}"
-      when:
-        - r_oauth_server.resources[0].status.issuer is defined
-        - r_oauth_server.resources[0].status.issuer != ""
+    - name: Set OpenShift OAuth issuer
+      when: ocp4_workload_litemaas_oauth_provider == "openshift"
+      block:
+        - name: Get OAuth server configuration
+          kubernetes.core.k8s_info:
+            api_version: config.openshift.io/v1
+            kind: OAuth
+            name: cluster
+          register: r_oauth_server
+
+        - name: Set OAuth issuer URL from cluster OAuth config
+          ansible.builtin.set_fact:
+            _litemaas_oauth_issuer: "https://oauth-openshift.{{ ocp4_workload_litemaas_cluster_domain }}"
+          when: r_oauth_server.resources[0].status.issuer is not defined or r_oauth_server.resources[0].status.issuer == ""
+
+        - name: Use OAuth issuer from cluster if available
+          ansible.builtin.set_fact:
+            _litemaas_oauth_issuer: "{{ r_oauth_server.resources[0].status.issuer }}"
+          when:
+            - r_oauth_server.resources[0].status.issuer is defined
+            - r_oauth_server.resources[0].status.issuer != ""
 
 - name: Generate OAuth client secret once and reuse
   when: ocp4_workload_litemaas_oauth_enabled | bool
