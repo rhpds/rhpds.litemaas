@@ -306,23 +306,6 @@
 
 - name: Deploy LiteLLM Gateway
   block:
-    - name: Create LiteLLM secret
-      kubernetes.core.k8s:
-        state: present
-        namespace: "{{ ocp4_workload_litemaas_namespace }}"
-        definition:
-          apiVersion: v1
-          kind: Secret
-          metadata:
-            name: litellm-secret
-            labels:
-              app: litellm
-          type: Opaque
-          stringData:
-            LITELLM_MASTER_KEY: "{{ ocp4_workload_litemaas_litellm_api_key }}"
-            UI_USERNAME: "{{ ocp4_workload_litemaas_litellm_ui_username }}"
-            UI_PASSWORD: "{{ ocp4_workload_litemaas_litellm_ui_password }}"
-
     - name: Create LiteLLM deployment
       kubernetes.core.k8s:
         state: present
