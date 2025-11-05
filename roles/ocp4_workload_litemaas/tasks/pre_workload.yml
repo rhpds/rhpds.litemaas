@@ -149,8 +149,28 @@
             - r_oauth_server.resources[0].status.issuer is defined
             - r_oauth_server.resources[0].status.issuer != ""
 
-- name: Generate OAuth client secret once and reuse
-  when: ocp4_workload_litemaas_oauth_enabled | bool
+- name: Check if OAuth client already exists
+  when:
+    - ocp4_workload_litemaas_oauth_enabled | bool
+    - ocp4_workload_litemaas_oauth_provider == "openshift"
+  kubernetes.core.k8s_info:
+    api_version: oauth.openshift.io/v1
+    kind: OAuthClient
+    name: "{{ ocp4_workload_litemaas_oauth_client_id }}"
+  register: r_existing_oauth_client
+
+- name: Reuse existing OAuth client secret if available
+  when:
+    - ocp4_workload_litemaas_oauth_enabled | bool
+    - ocp4_workload_litemaas_oauth_provider == "openshift"
+    - r_existing_oauth_client.resources | length > 0
+  ansible.builtin.set_fact:
+    _litemaas_oauth_client_secret_generated: "{{ r_existing_oauth_client.resources[0].secret }}"
+
+- name: Generate new OAuth client secret if needed
+  when:
+    - ocp4_workload_litemaas_oauth_enabled | bool
+    - r_existing_oauth_client.resources | default([]) | length == 0
   ansible.builtin.set_fact:
     _litemaas_oauth_client_secret_generated: "{{ ocp4_workload_litemaas_oauth_client_secret }}"
 
