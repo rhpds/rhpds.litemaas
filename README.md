@@ -133,40 +133,78 @@ cat ~/litemaas-access.txt
 
 Once deployed, add AI models to make them available to users.
 
-### Quick Start: Add OpenShift AI Model (Granite)
+### Step 1: Get Model Details from OpenShift AI
 
-1. **Get model details from OpenShift AI dashboard:**
-   - Endpoint URL (e.g., `https://granite-3-2-8b-instruct-predictor-maas-apicast-production.apps.maas.redhatworkshops.io:443`)
-   - API Key from the OpenShift AI application
+From the OpenShift AI dashboard, get:
+- **Endpoint URL** (e.g., `https://granite-3-2-8b-instruct-predictor-maas-apicast-production.apps.maas.redhatworkshops.io:443`)
+- **API Key** from the OpenShift AI application
 
-2. **Test the endpoint:**
-   ```bash
-   curl -X POST \
-     https://YOUR-GRANITE-ENDPOINT:443/v1/completions \
-     -H 'Authorization: Bearer YOUR-API-KEY' \
-     -H 'Content-Type: application/json' \
-     -d '{
-       "model": "granite-3-2-8b-instruct",
-       "prompt": "Hello, what is AI?",
-       "max_tokens": 50
-     }'
-   ```
+### Step 2: Find the Correct Model Name
 
-3. **Login to LiteLLM Admin** (use credentials from above)
+**IMPORTANT**: Always check the `/v1/models` endpoint to get the exact model name:
 
-4. **Add Model → Fill in:**
+```bash
+curl https://YOUR-MODEL-ENDPOINT:443/v1/models \
+  -H 'Authorization: Bearer YOUR-API-KEY'
+```
+
+**Example response:**
+```json
+{
+  "object": "list",
+  "data": [{
+    "id": "granite-3-2-8b-instruct",  // ← This is the model name to use
+    "object": "model",
+    ...
+  }]
+}
+```
+
+### Step 3: Test the Endpoint
+
+```bash
+curl -X POST \
+  https://YOUR-MODEL-ENDPOINT:443/v1/completions \
+  -H 'Authorization: Bearer YOUR-API-KEY' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "model": "MODEL-NAME-FROM-STEP-2",
+    "prompt": "Hello, what is AI?",
+    "max_tokens": 50
+  }'
+```
+
+### Step 4: Add Model in LiteLLM Admin UI
+
+1. **Login to LiteLLM Admin Portal** (use credentials from deployment)
+
+2. **Click "Add Model"**
+
+3. **Fill in the form:**
    ```
    Provider: OpenAI-Compatible Endpoints (Together AI, etc.)
-   LiteLLM Model Name(s): openai/granite-3-2-8b-instruct
+   LiteLLM Model Name(s): openai/MODEL-NAME-FROM-STEP-2
    Model Mappings:
-     Public Name: granite-3-2-8b-instruct
-     LiteLLM Model: openai/granite-3-2-8b-instruct
+     Public Name: MODEL-NAME-FROM-STEP-2
+     LiteLLM Model: openai/MODEL-NAME-FROM-STEP-2
    Mode: Completion - /completions
-   API Base: https://YOUR-GRANITE-ENDPOINT:443/v1
+   API Base: https://YOUR-MODEL-ENDPOINT:443/v1
    API Key: YOUR-API-KEY
    ```
 
-5. **Click "Add Model"**
+4. **Click "Add Model"**
+
+5. **Add to Personal Models:**
+   - Go to **Personal Models** section
+   - Add: `openai/MODEL-NAME-FROM-STEP-2`
+
+### Example: Common OpenShift AI Models
+
+| Model | Endpoint Suffix | Correct Model Name |
+|-------|----------------|-------------------|
+| Granite 3.2 8B | `granite-3-2-8b-instruct-predictor-maas-apicast-production` | `granite-3-2-8b-instruct` |
+| Mistral 7B | `mistral-7b-instruct-v0-3-maas-apicast-production` | `mistral-7b-instruct` |
+| CodeLlama 7B | `codellama-7b-maas-apicast-production` | Check `/v1/models` |
 
 ### Create Virtual Keys for Users
 
@@ -174,7 +212,7 @@ Once deployed, add AI models to make them available to users.
 2. **Fill in:**
    ```
    User ID: user@example.com
-   Models: openai/granite-3-2-8b-instruct
+   Models: openai/granite-3-2-8b-instruct, openai/mistral-7b-instruct
    Max Budget: 100 (optional)
    Duration: 30d (optional)
    ```
@@ -183,7 +221,9 @@ Once deployed, add AI models to make them available to users.
    ```
    API Endpoint: https://litellm-rhpds.apps.cluster-xxx.opentlc.com
    Virtual Key: sk-xxxxxx
-   Model: openai/granite-3-2-8b-instruct
+   Available Models:
+     - openai/granite-3-2-8b-instruct
+     - openai/mistral-7b-instruct
    ```
 
 ### Troubleshooting: Virtual Key Model Access
