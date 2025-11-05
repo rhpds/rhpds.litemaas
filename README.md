@@ -204,7 +204,6 @@ curl -X POST \
 |-------|----------------|-------------------|
 | Granite 3.2 8B | `granite-3-2-8b-instruct-predictor-maas-apicast-production` | `granite-3-2-8b-instruct` |
 | Mistral 7B | `mistral-7b-instruct-v0-3-maas-apicast-production` | `mistral-7b-instruct` |
-| CodeLlama 7B | `codellama-7b-maas-apicast-production` | Check `/v1/models` |
 
 ### Create Virtual Keys for Users
 
