@@ -325,13 +325,20 @@
                 containers:
                   - name: create-db
                     image: "postgres:{{ ocp4_workload_litemaas_postgres_version }}"
+                    env:
+                      - name: PGPASSWORD
+                        valueFrom:
+                          secretKeyRef:
+                            name: postgres-secret
+                            key: POSTGRES_PASSWORD
                     command:
                       - /bin/bash
                       - -c
                       - |
-                        export PGPASSWORD="{{ ocp4_workload_litemaas_postgres_password }}"
-                        psql -h postgres -U litemaas -d litemaas -c "CREATE DATABASE litellm_db;" || true
-                        echo "LiteLLM database created or already exists"
+                        echo "Creating LiteLLM database..."
+                        psql -h postgres -U litemaas -d postgres -c "DROP DATABASE IF EXISTS litellm_db;"
+                        psql -h postgres -U litemaas -d postgres -c "CREATE DATABASE litellm_db OWNER litemaas;"
+                        echo "LiteLLM database created successfully"
 
     - name: Wait for LiteLLM database creation job
       kubernetes.core.k8s_info:
