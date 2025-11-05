@@ -186,6 +186,19 @@ Once deployed, add AI models to make them available to users.
    Model: openai/granite-3-2-8b-instruct
    ```
 
+### Troubleshooting: Virtual Key Model Access
+
+**Issue**: Virtual key returns "key not allowed to access model" error
+
+**Workaround**: Add the model as a default model in Personal Models section:
+
+1. **In LiteLLM Admin UI → Personal Models**
+2. **Add the same model** (e.g., `openai/granite-3-2-8b-instruct`)
+3. **Set as default model**
+4. **Virtual keys should now work**
+
+This is a known workaround - proper fix TBD.
+
 ### Test User Access
 
 ```bash
