@@ -17,7 +17,7 @@
 
     - name: Deploy LiteMaaS workload
       ansible.builtin.include_role:
-        name: ocp4_workload_litemaas
+        name: rhpds.litemaas.ocp4_workload_litemaas
       vars:
         ocp4_workload_litemaas_namespace: "rhpds"
         ocp4_workload_litemaas_oauth_client_id: "litemaas-rhpds"
