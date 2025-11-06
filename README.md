@@ -54,22 +54,26 @@ ansible-playbook playbooks/deploy_litemaas.yml
 # 1. SSH to bastion
 ssh lab-user@bastion.xxxxx.sandboxXXXX.opentlc.com
 
-# 2. Activate k8s virtualenv (required for kubernetes library)
+# 2. Create and activate k8s virtualenv (required for kubernetes library)
+python3 -m venv /opt/virtualenvs/k8s
 source /opt/virtualenvs/k8s/bin/activate
 
-# 3. Clone the repository
+# 3. Install Python requirements
+pip install kubernetes openshift
+
+# 4. Clone the repository
 cd ~
 git clone https://github.com/prakhar1985/rhpds.litemaas.git
 cd rhpds.litemaas
 
-# 4. Install kubernetes.core collection
+# 5. Install kubernetes.core collection
 ansible-galaxy collection install kubernetes.core --force
 
-# 5. Build and install LiteMaaS collection
+# 6. Build and install LiteMaaS collection
 ansible-galaxy collection build --force
 ansible-galaxy collection install rhpds-litemaas-*.tar.gz --force
 
-# 6. Deploy with ODF/Ceph storage (common in CNV)
+# 7. Deploy with ODF/Ceph storage (common in CNV)
 ansible-playbook playbooks/deploy_litemaas.yml \
   -e ocp4_workload_litemaas_postgres_storage_class=ocs-external-storagecluster-ceph-rbd
 ```
