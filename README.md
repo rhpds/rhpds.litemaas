@@ -109,12 +109,12 @@ After deployment completes, you'll see the access information. You can retrieve 
 echo "========================================="
 echo "LiteMaaS Access Information"
 echo "========================================="
-echo "LiteLLM Admin Portal: https://$(oc get route litellm -n rhpds -o jsonpath='{.spec.host}')"
-echo "User API Endpoint: https://$(oc get route litellm -n rhpds -o jsonpath='{.spec.host}')"
+echo "LiteLLM Admin Portal: https://$(oc get route litellm -n litemaas -o jsonpath='{.spec.host}')"
+echo "User API Endpoint: https://$(oc get route litellm -n litemaas -o jsonpath='{.spec.host}')"
 echo ""
 echo "Admin Credentials:"
-echo "  Username: $(oc get secret litellm-secret -n rhpds -o jsonpath='{.data.UI_USERNAME}' | base64 -d)"
-echo "  Password: $(oc get secret litellm-secret -n rhpds -o jsonpath='{.data.UI_PASSWORD}' | base64 -d)"
+echo "  Username: $(oc get secret litellm-secret -n litemaas -o jsonpath='{.data.UI_USERNAME}' | base64 -d)"
+echo "  Password: $(oc get secret litellm-secret -n litemaas -o jsonpath='{.data.UI_PASSWORD}' | base64 -d)"
 echo "========================================="
 ```
 
@@ -122,16 +122,16 @@ echo "========================================="
 
 ```bash
 # Just get the admin URL
-echo "https://$(oc get route litellm -n rhpds -o jsonpath='{.spec.host}')"
+echo "https://$(oc get route litellm -n litemaas -o jsonpath='{.spec.host}')"
 
 # Just get the password
-oc get secret litellm-secret -n rhpds -o jsonpath='{.data.UI_PASSWORD}' | base64 -d
+oc get secret litellm-secret -n litemaas -o jsonpath='{.data.UI_PASSWORD}' | base64 -d
 
 # Save to file
 cat > ~/litemaas-access.txt <<EOF
-LiteLLM Admin: https://$(oc get route litellm -n rhpds -o jsonpath='{.spec.host}')
-Username: $(oc get secret litellm-secret -n rhpds -o jsonpath='{.data.UI_USERNAME}' | base64 -d)
-Password: $(oc get secret litellm-secret -n rhpds -o jsonpath='{.data.UI_PASSWORD}' | base64 -d)
+LiteLLM Admin: https://$(oc get route litellm -n litemaas -o jsonpath='{.spec.host}')
+Username: $(oc get secret litellm-secret -n litemaas -o jsonpath='{.data.UI_USERNAME}' | base64 -d)
+Password: $(oc get secret litellm-secret -n litemaas -o jsonpath='{.data.UI_PASSWORD}' | base64 -d)
 EOF
 cat ~/litemaas-access.txt
 ```
@@ -225,7 +225,7 @@ curl -X POST \
 3. **Copy the generated key:** `sk-xxxxxx`
 4. **Share with user:**
    ```
-   API Endpoint: https://litellm-rhpds.apps.cluster-xxx.opentlc.com
+   API Endpoint: https://litellm-admin.apps.cluster-xxx.opentlc.com
    Virtual Key: sk-xxxxxx
    Available Models:
      - openai/granite-3-2-8b-instruct
@@ -248,7 +248,7 @@ This is a known workaround - proper fix TBD.
 
 ```bash
 # Get LiteLLM URL
-LITELLM_URL=$(oc get route litellm -n rhpds -o jsonpath='{.spec.host}')
+LITELLM_URL=$(oc get route litellm -n litemaas -o jsonpath='{.spec.host}')
 
 # Test with virtual key
 curl https://${LITELLM_URL}/chat/completions \
@@ -266,7 +266,7 @@ curl https://${LITELLM_URL}/chat/completions \
 
 ## What Gets Deployed
 
-All components deploy to the `rhpds` namespace:
+All components deploy to the `litemaas` namespace:
 
 | Component | Type | Description |
 |-----------|------|-------------|
@@ -281,7 +281,7 @@ All components deploy to the `rhpds` namespace:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `ocp4_workload_litemaas_namespace` | `rhpds` | Deployment namespace |
+| `ocp4_workload_litemaas_namespace` | `litemaas` | Deployment namespace |
 | `ocp4_workload_litemaas_version` | `0.1.2` | LiteMaaS version |
 | `ocp4_workload_litemaas_cloud_provider` | auto-detect | Cloud provider |
 | `ocp4_workload_litemaas_postgres_storage_class` | auto-detect | Storage class |

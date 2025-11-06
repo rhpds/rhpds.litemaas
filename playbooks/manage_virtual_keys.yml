@@ -1,0 +1,127 @@
+---
+# Playbook to manage LiteLLM virtual keys
+# Usage:
+#   ansible-playbook playbooks/manage_virtual_keys.yml -e litemaas_action=create -e litemaas_user_id=user@example.com
+#   ansible-playbook playbooks/manage_virtual_keys.yml -e litemaas_action=list
+#   ansible-playbook playbooks/manage_virtual_keys.yml -e litemaas_action=info -e litemaas_key_hash=HASH
+
+- name: Manage LiteLLM Virtual Keys
+  hosts: localhost
+  gather_facts: false
+  vars:
+    litemaas_namespace: "rhpds"
+    litemaas_action: "list"  # create, list, info, delete
+    litemaas_models:
+      - "openai/granite-3-2-8b-instruct"
+    litemaas_max_budget: 100
+    litemaas_duration: "30d"
+    litemaas_user_id: ""
+    litemaas_key_alias: ""
+    litemaas_key_hash: ""
+    litemaas_metadata: {}
+
+  tasks:
+    - name: Get LiteLLM route
+      kubernetes.core.k8s_info:
+        api_version: route.openshift.io/v1
+        kind: Route
+        namespace: "{{ litemaas_namespace }}"
+        name: litellm
+      register: r_litellm_route
+
+    - name: Set LiteLLM URL
+      ansible.builtin.set_fact:
+        litellm_url: "https://{{ r_litellm_route.resources[0].spec.host }}"
+
+    - name: Get LiteLLM master key
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Secret
+        namespace: "{{ litemaas_namespace }}"
+        name: litellm-secret
+      register: r_litellm_secret
+
+    - name: Set master key
+      ansible.builtin.set_fact:
+        litellm_master_key: "{{ r_litellm_secret.resources[0].data.LITELLM_MASTER_KEY | b64decode }}"
+
+    - name: List all virtual keys
+      when: litemaas_action == "list"
+      ansible.builtin.uri:
+        url: "{{ litellm_url }}/key/list"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ litellm_master_key }}"
+          Content-Type: "application/json"
+        validate_certs: false
+      register: r_key_list
+
+    - name: Display key list
+      when: litemaas_action == "list"
+      ansible.builtin.debug:
+        var: r_key_list.json
+
+    - name: Get key info
+      when: litemaas_action == "info" and litemaas_key_hash != ""
+      ansible.builtin.uri:
+        url: "{{ litellm_url }}/key/info?key={{ litemaas_key_hash }}"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ litellm_master_key }}"
+        validate_certs: false
+      register: r_key_info
+
+    - name: Display key info
+      when: litemaas_action == "info"
+      ansible.builtin.debug:
+        var: r_key_info.json
+
+    - name: Create virtual key
+      when: litemaas_action == "create" and litemaas_user_id != ""
+      ansible.builtin.uri:
+        url: "{{ litellm_url }}/key/generate"
+        method: POST
+        headers:
+          Authorization: "Bearer {{ litellm_master_key }}"
+          Content-Type: "application/json"
+        body_format: json
+        body:
+          models: "{{ litemaas_models }}"
+          max_budget: "{{ litemaas_max_budget }}"
+          duration: "{{ litemaas_duration }}"
+          user_id: "{{ litemaas_user_id }}"
+          key_alias: "{{ litemaas_key_alias if litemaas_key_alias else omit }}"
+          metadata: "{{ litemaas_metadata }}"
+        validate_certs: false
+      register: r_key_create
+
+    - name: Display created key
+      when: litemaas_action == "create"
+      ansible.builtin.debug:
+        msg:
+          - "Virtual Key Created Successfully!"
+          - "User ID: {{ r_key_create.json.user_id }}"
+          - "Key: {{ r_key_create.json.key }}"
+          - "Key Name: {{ r_key_create.json.key_name }}"
+          - "Models: {{ r_key_create.json.models | join(', ') }}"
+          - "Max Budget: ${{ r_key_create.json.max_budget }}"
+          - "Expires: {{ r_key_create.json.expires }}"
+
+    - name: Delete virtual key
+      when: litemaas_action == "delete" and litemaas_key_hash != ""
+      ansible.builtin.uri:
+        url: "{{ litellm_url }}/key/delete"
+        method: POST
+        headers:
+          Authorization: "Bearer {{ litellm_master_key }}"
+          Content-Type: "application/json"
+        body_format: json
+        body:
+          key: "{{ litemaas_key_hash }}"
+        validate_certs: false
+      register: r_key_delete
+
+    - name: Display delete result
+      when: litemaas_action == "delete"
+      ansible.builtin.debug:
+        var: r_key_delete.json

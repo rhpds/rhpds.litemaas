@@ -2,8 +2,8 @@
 # LiteMaaS version
 ocp4_workload_litemaas_version: "0.1.2"
 
-# Namespace configuration - RHPDS standard
-ocp4_workload_litemaas_namespace: "rhpds"
+# Namespace configuration
+ocp4_workload_litemaas_namespace: "litemaas"
 
 # Image configuration
 ocp4_workload_litemaas_image_registry: "quay.io/rh-aiservices-bu"
