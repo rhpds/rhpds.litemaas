@@ -5,6 +5,9 @@ ocp4_workload_litemaas_version: "0.1.2"
 # Namespace configuration
 ocp4_workload_litemaas_namespace: "litemaas"
 
+# Route configuration
+ocp4_workload_litemaas_route_name: "rhpds"
+
 # Image configuration
 ocp4_workload_litemaas_image_registry: "quay.io/rh-aiservices-bu"
 ocp4_workload_litemaas_backend_image: "quay.io/rh-aiservices-bu/litemaas-backend"
