@@ -195,9 +195,11 @@ curl -X POST \
      Public Name: MODEL-NAME-FROM-STEP-2
      LiteLLM Model: openai/MODEL-NAME-FROM-STEP-2
    Mode: Completion - /completions
-   API Base: https://YOUR-MODEL-ENDPOINT:443/v1
+   API Base: https://YOUR-MODEL-ENDPOINT/v1
    API Key: YOUR-API-KEY
    ```
+
+   **Note**: Do not include the port (`:443`) in the API Base URL.
 
 4. **Click "Add Model"**
 
