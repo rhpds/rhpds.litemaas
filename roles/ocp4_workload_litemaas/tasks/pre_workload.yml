@@ -94,11 +94,20 @@
                  | map(attribute='metadata.name')
                  | first | default('gp3-csi') }}
 
+- name: Set Redis storage class to PostgreSQL storage class if not specified
+  ansible.builtin.set_fact:
+    ocp4_workload_litemaas_redis_storage_class: "{{ ocp4_workload_litemaas_postgres_storage_class }}"
+  when: ocp4_workload_litemaas_redis_storage_class == ""
+
 - name: Display storage configuration
   ansible.builtin.debug:
     msg:
-      - "Storage Class: {{ ocp4_workload_litemaas_postgres_storage_class }}"
-      - "Storage Size: {{ ocp4_workload_litemaas_postgres_storage_size }}"
+      - "PostgreSQL Storage Class: {{ ocp4_workload_litemaas_postgres_storage_class }}"
+      - "PostgreSQL Storage Size: {{ ocp4_workload_litemaas_postgres_storage_size }}"
+      - "Redis Storage Class: {{ ocp4_workload_litemaas_redis_storage_class }}"
+      - "Redis Deployment: {{ ocp4_workload_litemaas_deploy_redis }}"
+      - "PgBouncer Deployment: {{ ocp4_workload_litemaas_deploy_pgbouncer }}"
+      - "LiteLLM Replicas: {{ ocp4_workload_litemaas_litellm_replicas }}"
 
 # Cluster Domain Detection
 - name: Auto-detect cluster domain if not provided

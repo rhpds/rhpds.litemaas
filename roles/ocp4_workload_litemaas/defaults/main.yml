@@ -24,6 +24,42 @@ ocp4_workload_litemaas_postgres_storage_size: "10Gi"
 ocp4_workload_litemaas_postgres_storage_class: ""
 ocp4_workload_litemaas_postgres_storage_access_mode: "ReadWriteOnce"
 ocp4_workload_litemaas_postgres_password: "{{ lookup('password', '/dev/null length=32 chars=ascii_letters,digits') }}"
+ocp4_workload_litemaas_postgres_max_connections: 100
+
+# Redis Operator configuration (for multi-instance LiteLLM deployments)
+ocp4_workload_litemaas_deploy_redis: false
+ocp4_workload_litemaas_redis_mode: "standalone"  # standalone or cluster (future)
+ocp4_workload_litemaas_redis_password: "{{ lookup('password', '/dev/null length=32 chars=ascii_letters,digits') }}"
+ocp4_workload_litemaas_redis_storage_size: "5Gi"
+ocp4_workload_litemaas_redis_storage_class: ""  # Uses postgres storage class if empty
+ocp4_workload_litemaas_redis_memory_limit: "512Mi"
+ocp4_workload_litemaas_redis_cpu_limit: "500m"
+
+# PgBouncer configuration (connection pooling for PostgreSQL)
+ocp4_workload_litemaas_deploy_pgbouncer: false
+ocp4_workload_litemaas_pgbouncer_pool_mode: "transaction"  # transaction or session
+ocp4_workload_litemaas_pgbouncer_max_client_conn: 1000
+ocp4_workload_litemaas_pgbouncer_default_pool_size: 25
+ocp4_workload_litemaas_pgbouncer_replicas: 1
+
+# LiteLLM scaling configuration
+ocp4_workload_litemaas_litellm_replicas: 1
+
+# Multi-user lab deployment (each user gets isolated LiteMaaS instance)
+ocp4_workload_litemaas_multi_user: false
+num_users: 1  # RHDP standard variable for lab environments
+ocp4_workload_litemaas_user_prefix: "user"
+ocp4_workload_litemaas_user_namespace_pattern: "litemaas-{{ ocp4_workload_litemaas_user_prefix }}{{ item }}"
+
+# Multi-user resource optimization (lighter resources for 60-80 user labs)
+ocp4_workload_litemaas_multi_user_postgres_memory_request: "256Mi"
+ocp4_workload_litemaas_multi_user_postgres_memory_limit: "512Mi"
+ocp4_workload_litemaas_multi_user_postgres_cpu_request: "200m"
+ocp4_workload_litemaas_multi_user_postgres_cpu_limit: "500m"
+ocp4_workload_litemaas_multi_user_litellm_memory_request: "256Mi"
+ocp4_workload_litemaas_multi_user_litellm_memory_limit: "512Mi"
+ocp4_workload_litemaas_multi_user_litellm_cpu_request: "100m"
+ocp4_workload_litemaas_multi_user_litellm_cpu_limit: "500m"
 
 # JWT Secret
 ocp4_workload_litemaas_jwt_secret: "{{ lookup('password', '/dev/null length=32 chars=ascii_letters,digits') }}"

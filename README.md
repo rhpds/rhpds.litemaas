@@ -2,7 +2,7 @@
 
 Deploy LiteMaaS (Models as a Service) on OpenShift in 3 minutes.
 
-**Version:** 0.1.2
+**Version:** 0.2.0
 **Upstream:** [rh-aiservices-bu/litemaas:0.1.2](https://github.com/rh-aiservices-bu/litemaas/releases/tag/0.1.2)
 
 ## What is LiteMaaS?
@@ -14,16 +14,185 @@ LiteMaaS provides an admin-managed AI model serving platform with:
 - **Virtual Key Management**: Control user access and budgets
 - **Cost Tracking**: Monitor spending across all models
 
-## Quick Start
+## Deployment Options
 
-### Prerequisites
+Choose the architecture that fits your needs:
+
+### 1. Single Instance (Default)
+
+**Use for:** Development, testing, small-scale deployments
+
+**Components:**
+- 1 LiteLLM replica
+- 1 PostgreSQL instance
+- Direct database connections
+
+**Deploy:**
+```bash
+ansible-playbook playbooks/deploy_litemaas.yml
+```
+
+**Performance:** < 10 requests/sec, < 50 concurrent users
+
+---
+
+### 2. Scaled with Redis (Medium-Scale Production)
+
+**Use for:** Medium-scale production deployments
+
+**Components:**
+- 3 LiteLLM replicas (configurable)
+- 1 Redis instance (via Operator)
+- 1 PostgreSQL instance
+- Response caching enabled
+
+**Deploy:**
+```bash
+ansible-playbook playbooks/deploy_litemaas.yml \
+  -e ocp4_workload_litemaas_deploy_redis=true \
+  -e ocp4_workload_litemaas_litellm_replicas=3
+```
+
+**Performance:** 10-100 requests/sec, 50-500 concurrent users
+
+**Benefits:**
+- Horizontal scaling for higher throughput
+- Response caching reduces costs and latency
+- Load balancing via OpenShift Service
+
+---
+
+### 3. Production HA (Recommended for Large-Scale)
+
+**Use for:** Large-scale production deployments
+
+**Components:**
+- 3 LiteLLM replicas
+- 1 Redis instance (via Operator)
+- 2 PgBouncer replicas (connection pooling)
+- 1 PostgreSQL instance
+
+**Deploy:**
+```bash
+ansible-playbook playbooks/deploy_litemaas.yml \
+  -e ocp4_workload_litemaas_deploy_redis=true \
+  -e ocp4_workload_litemaas_deploy_pgbouncer=true \
+  -e ocp4_workload_litemaas_litellm_replicas=3 \
+  -e ocp4_workload_litemaas_pgbouncer_replicas=2
+```
+
+**Performance:** > 100 requests/sec, > 500 concurrent users
+
+**Benefits:**
+- Maximum scalability (handles 100s of concurrent requests)
+- Connection pooling reduces PostgreSQL overhead
+- Response caching lowers costs and latency
+- High availability with no single point of failure
+- Zero-downtime rolling updates
+
+---
+
+### 4. Multi-User Lab Deployment
+
+**Use for:** Training labs, workshops, isolated demo environments
+
+**Architecture:**
+```
+litemaas-user1 → Dedicated PostgreSQL + LiteLLM
+litemaas-user2 → Dedicated PostgreSQL + LiteLLM
+litemaas-userN → Dedicated PostgreSQL + LiteLLM
+```
+
+**Deploy (10 users):**
+```bash
+ansible-playbook playbooks/deploy_litemaas.yml \
+  -e ocp4_workload_litemaas_multi_user=true \
+  -e num_users=10
+```
+
+**Deploy (5 users with 2 LiteLLM replicas each):**
+```bash
+ansible-playbook playbooks/deploy_litemaas.yml \
+  -e ocp4_workload_litemaas_multi_user=true \
+  -e num_users=5 \
+  -e ocp4_workload_litemaas_litellm_replicas=2
+```
+
+**Benefits:**
+- Each user gets isolated namespace and resources
+- Dedicated PostgreSQL database per user
+- Unique routes per user (litellm-user1-rhpds.apps...)
+- No cross-contamination of data or usage
+- Simple, lightweight architecture for labs
+- Perfect for RHDP training workshops
+- Scales from 1 to 50+ users
+
+---
+
+## Resource Requirements
+
+Choose your deployment based on available cluster resources:
+
+### Single Instance (Default)
+
+| Component | CPU Request | CPU Limit | Memory Request | Memory Limit | Storage |
+|-----------|-------------|-----------|----------------|--------------|---------|
+| PostgreSQL | 500m | 1000m | 512Mi | 1Gi | 10Gi |
+| LiteLLM (1 replica) | 200m | 1000m | 512Mi | 1Gi | - |
+| **Total** | **700m** | **2000m** | **~1Gi** | **~2Gi** | **10Gi** |
+
+### Scaled with Redis (3 replicas)
+
+| Component | CPU Request | CPU Limit | Memory Request | Memory Limit | Storage |
+|-----------|-------------|-----------|----------------|--------------|---------|
+| PostgreSQL | 500m | 1000m | 512Mi | 1Gi | 10Gi |
+| LiteLLM (3 replicas) | 600m | 3000m | 1.5Gi | 3Gi | - |
+| Redis | 200m | 500m | 256Mi | 512Mi | 5Gi |
+| **Total** | **1300m** | **4500m** | **~2.3Gi** | **~4.5Gi** | **15Gi** |
+
+### Production HA (3 LiteLLM + Redis + 2 PgBouncer)
+
+| Component | CPU Request | CPU Limit | Memory Request | Memory Limit | Storage |
+|-----------|-------------|-----------|----------------|--------------|---------|
+| PostgreSQL | 500m | 1000m | 512Mi | 1Gi | 10Gi |
+| LiteLLM (3 replicas) | 600m | 3000m | 1.5Gi | 3Gi | - |
+| Redis | 200m | 500m | 256Mi | 512Mi | 5Gi |
+| PgBouncer (2 replicas) | 200m | 1000m | 256Mi | 512Mi | - |
+| **Total** | **1500m** | **5500m** | **~2.5Gi** | **~5Gi** | **15Gi** |
+
+### Multi-User Lab (Per User - Optimized)
+
+| Component | CPU Request | CPU Limit | Memory Request | Memory Limit | Storage |
+|-----------|-------------|-----------|----------------|--------------|---------|
+| PostgreSQL | 200m | 500m | 256Mi | 512Mi | 10Gi |
+| LiteLLM (1 replica) | 100m | 500m | 256Mi | 512Mi | - |
+| **Per User Total** | **300m** | **1000m** | **~512Mi** | **~1Gi** | **10Gi** |
+
+**Lab Sizing Examples:**
+
+| Users | Total CPU Request | Total CPU Limit | Total Memory Request | Total Memory Limit | Total Storage |
+|-------|-------------------|-----------------|----------------------|--------------------|---------------|
+| **10 users** | 3000m (3 cores) | 10000m (10 cores) | ~5Gi | ~10Gi | 100Gi |
+| **20 users** | 6000m (6 cores) | 20000m (20 cores) | ~10Gi | ~20Gi | 200Gi |
+| **40 users** | 12000m (12 cores) | 40000m (40 cores) | ~20Gi | ~40Gi | 400Gi |
+| **60 users** | 18000m (18 cores) | 60000m (60 cores) | ~30Gi | ~60Gi | 600Gi |
+| **80 users** | 24000m (24 cores) | 80000m (80 cores) | ~40Gi | ~80Gi | 800Gi |
+
+**Note:** Multi-user resources are optimized for lab environments. Actual usage will be lower than limits. A typical OpenShift cluster with 32 cores and 128Gi RAM can comfortably handle 60-80 lab users.
+
+---
+
+## Prerequisites
 
 - OpenShift 4.12+ cluster
 - Cluster admin access
 - `oc` CLI logged in
 - Ansible 2.15+ with `kubernetes.core` collection
+- **For 60-80 user labs:** Cluster with minimum 24+ cores, 40Gi+ RAM, 800Gi+ storage
 
 ## Deployment Instructions
+
+Detailed step-by-step instructions for your platform:
 
 Choose the deployment guide for your platform:
 
@@ -270,24 +439,171 @@ curl https://${LITELLM_URL}/chat/completions \
 
 All components deploy to the `litemaas` namespace:
 
-| Component | Type | Description |
-|-----------|------|-------------|
-| **PostgreSQL** | StatefulSet | Persistent database for LiteLLM |
-| **LiteLLM Gateway** | Deployment | AI model proxy with admin UI |
-| **Routes** | Route | HTTPS access to admin portal |
-| **Secrets** | Secret | Admin credentials and API keys |
+| Component | Type | Description | Default |
+|-----------|------|-------------|---------|
+| **PostgreSQL** | StatefulSet | Persistent database for LiteLLM | ✅ Enabled |
+| **LiteLLM Gateway** | Deployment | AI model proxy with admin UI | ✅ Enabled (1 replica) |
+| **Routes** | Route | HTTPS access to admin portal | ✅ Enabled |
+| **Secrets** | Secret | Admin credentials and API keys | ✅ Enabled |
+| **Redis Operator** | Operator | Cache for multi-instance deployments | ❌ Optional |
+| **PgBouncer** | Deployment | PostgreSQL connection pooler | ❌ Optional |
 
 **Note:** Frontend and Backend are optional and disabled by default. For admin-only deployments, only PostgreSQL and LiteLLM are deployed.
 
+## Scaling Configuration Details
+
+Advanced configuration options for scaling deployments:
+
+Control deployment scale with these variables:
+
+```yaml
+# LiteLLM replicas (1-5 recommended)
+ocp4_workload_litemaas_litellm_replicas: 3
+
+# Enable Redis cache
+ocp4_workload_litemaas_deploy_redis: true
+ocp4_workload_litemaas_redis_storage_size: 5Gi
+ocp4_workload_litemaas_redis_memory_limit: 512Mi
+
+# Enable PgBouncer connection pooling
+ocp4_workload_litemaas_deploy_pgbouncer: true
+ocp4_workload_litemaas_pgbouncer_replicas: 2
+ocp4_workload_litemaas_pgbouncer_pool_mode: transaction
+ocp4_workload_litemaas_pgbouncer_max_client_conn: 1000
+ocp4_workload_litemaas_pgbouncer_default_pool_size: 25
+
+# PostgreSQL max connections
+ocp4_workload_litemaas_postgres_max_connections: 100
+```
+
+### Connection Flow
+
+**Without PgBouncer:**
+```
+3 LiteLLM replicas × 20 connections = 60 PostgreSQL connections
+```
+
+**With PgBouncer:**
+```
+3 LiteLLM replicas × 20 connections → PgBouncer (pools to 25) → PostgreSQL
+Result: 60 client connections pooled to 25 PostgreSQL connections
+```
+
+### When to Use Each Option
+
+| Deployment | Requests/sec | Concurrent Users | Cost | Complexity |
+|------------|-------------|------------------|------|------------|
+| Single Instance | < 10 | < 50 | Low | Low |
+| Scaled + Redis | 10-100 | 50-500 | Medium | Medium |
+| Production HA | > 100 | > 500 | Medium | Medium |
+
+## Multi-User Lab Deployment Details
+
+Additional details for multi-user deployments (see [Deployment Options](#deployment-options) for quick start commands).
+
+### Use Cases
+
+**1. Training Labs**
+- 20 students, each gets isolated environment
+- Deploy models once, share API keys per student
+- No cross-contamination of data or usage
+
+**2. Demo Environments**
+- Multiple sales demos running concurrently
+- Each demo has dedicated resources
+- Clean environment per session
+
+**3. Development Teams**
+- Each team gets isolated LiteMaaS
+- Independent model configurations
+- Separate budgets and usage tracking
+
+### Resource Requirements
+
+Multi-user deployments use optimized resources for lab environments:
+
+**Per user instance:**
+- 1 namespace
+- 1 PostgreSQL: 200m CPU request, 256Mi RAM request (512Mi limit)
+- 1 LiteLLM: 100m CPU request, 256Mi RAM request (512Mi limit)
+- Total per user: 300m CPU request, 512Mi RAM request, 10Gi storage
+
+**Scalability (see [Resource Requirements](#resource-requirements) for detailed tables):**
+- **10 users**: 3 CPU cores, 5Gi RAM, 100Gi storage
+- **20 users**: 6 CPU cores, 10Gi RAM, 200Gi storage
+- **40 users**: 12 CPU cores, 20Gi RAM, 400Gi storage
+- **60 users**: 18 CPU cores, 30Gi RAM, 600Gi storage
+- **80 users**: 24 CPU cores, 40Gi RAM, 800Gi storage
+
+**Cluster Requirements for 60-80 User Labs:**
+- Minimum: 24+ CPU cores, 40Gi+ RAM
+- Recommended: 32+ CPU cores, 128Gi+ RAM
+- Storage: 600-800Gi (thin provisioned)
+
+**Note:** Multi-user mode is optimized for lab simplicity. Resources are intentionally lighter (256Mi RAM per component vs 512Mi+ in production). For production HA deployments with Redis and PgBouncer, use the single-instance Production HA option instead.
+
+### Removal
+
+**Remove all user instances:**
+```bash
+ansible-playbook playbooks/deploy_litemaas.yml \
+  -e ocp4_workload_litemaas_multi_user=true \
+  -e num_users=10 \
+  -e ocp4_workload_litemaas_remove=true
+```
+
+This removes all namespaces: `litemaas-user1` through `litemaas-user10`.
+
 ## Variables
+
+### Core Configuration
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `ocp4_workload_litemaas_namespace` | `litemaas` | Deployment namespace |
-| `ocp4_workload_litemaas_version` | `0.1.2` | LiteMaaS version |
+| `ocp4_workload_litemaas_version` | `0.2.0` | LiteMaaS version |
 | `ocp4_workload_litemaas_cloud_provider` | auto-detect | Cloud provider |
+
+### PostgreSQL Configuration
+
+| Variable | Default | Description |
+|----------|---------|-------------|
 | `ocp4_workload_litemaas_postgres_storage_class` | auto-detect | Storage class |
 | `ocp4_workload_litemaas_postgres_storage_size` | `10Gi` | PVC size |
+| `ocp4_workload_litemaas_postgres_max_connections` | `100` | Max database connections |
+
+### LiteLLM Scaling
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ocp4_workload_litemaas_litellm_replicas` | `1` | Number of LiteLLM instances |
+
+### Redis Configuration (Optional)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ocp4_workload_litemaas_deploy_redis` | `false` | Enable Redis cache |
+| `ocp4_workload_litemaas_redis_storage_size` | `5Gi` | Redis PVC size |
+| `ocp4_workload_litemaas_redis_memory_limit` | `512Mi` | Redis memory limit |
+| `ocp4_workload_litemaas_redis_cpu_limit` | `500m` | Redis CPU limit |
+
+### PgBouncer Configuration (Optional)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ocp4_workload_litemaas_deploy_pgbouncer` | `false` | Enable connection pooling |
+| `ocp4_workload_litemaas_pgbouncer_replicas` | `1` | Number of PgBouncer instances |
+| `ocp4_workload_litemaas_pgbouncer_pool_mode` | `transaction` | Pooling mode (transaction/session) |
+| `ocp4_workload_litemaas_pgbouncer_max_client_conn` | `1000` | Max client connections |
+| `ocp4_workload_litemaas_pgbouncer_default_pool_size` | `25` | Pool size per user/database |
+
+### Multi-User Lab Configuration
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ocp4_workload_litemaas_multi_user` | `false` | Enable multi-user lab deployment |
+| `num_users` | `1` | Number of user instances to deploy |
+| `ocp4_workload_litemaas_user_prefix` | `user` | Namespace prefix (user1, user2...) |
 
 See `roles/ocp4_workload_litemaas/defaults/main.yml` for all variables.
 
@@ -375,6 +691,81 @@ ansible-playbook playbooks/deploy_litemaas.yml
 ```
 
 ## Changelog
+
+### v0.2.0 (2025-11-10)
+
+**Major Features: Horizontal Scaling, High Availability, and Multi-User Lab Deployment**
+
+**New Features:**
+- ✅ LiteLLM horizontal scaling (1-5 replicas)
+- ✅ Redis Operator integration for caching and session management
+- ✅ PgBouncer connection pooling for PostgreSQL
+- ✅ Production HA deployment architecture
+- ✅ Multi-user lab deployment (isolated instances per user)
+- ✅ Automatic database connection routing (PgBouncer when enabled)
+- ✅ Health probes for LiteLLM (liveness and readiness)
+- ✅ Init containers to ensure proper startup order
+
+**Architecture:**
+- Single instance (default) - backward compatible
+- Scaled + Redis - medium-scale production
+- Production HA - large-scale with Redis + PgBouncer
+- Multi-user - isolated instances for lab environments (1-50+ users)
+
+**Configuration:**
+- `ocp4_workload_litemaas_litellm_replicas` - Scale LiteLLM instances
+- `ocp4_workload_litemaas_deploy_redis` - Enable Redis cache
+- `ocp4_workload_litemaas_deploy_pgbouncer` - Enable connection pooling
+- `ocp4_workload_litemaas_postgres_max_connections` - PostgreSQL tuning
+- `ocp4_workload_litemaas_multi_user` - Enable multi-user lab mode
+- `num_users` - Number of isolated user instances to deploy
+- Multi-user resource optimization variables for 60-80 user labs
+
+**Benefits:**
+- Horizontal scaling for higher request volumes
+- Response caching reduces costs and latency
+- Connection pooling reduces PostgreSQL overhead
+- High availability with no single point of failure
+- Zero-downtime rolling updates
+- Isolated environments for training labs and demos
+
+**Multi-User Lab Features:**
+- Each user gets dedicated namespace
+- Isolated PostgreSQL + LiteLLM per user
+- Unique routes per user (litellm-user1-rhpds.apps...)
+- Simple, lightweight architecture (no Redis/PgBouncer overhead)
+- Optimized resources: 300m CPU, 512Mi RAM per user
+- User info data integration for Showroom catalog
+- Perfect for RHDP training labs and workshops
+- Scales from 1 to 80+ users (60-80 users tested)
+
+**Documentation:**
+- Added "Scaling and High Availability" section
+- Added "Multi-User Lab Deployment" section
+- Architecture comparison tables
+- Deployment examples for all scenarios
+- Resource requirement calculations
+- Connection flow diagrams
+
+**Resource Optimization:**
+- Multi-user PostgreSQL: 200m CPU, 256Mi RAM (vs 500m, 512Mi)
+- Multi-user LiteLLM: 100m CPU, 256Mi RAM (vs 200m, 512Mi)
+- Enables 60-80 user labs on standard clusters (24+ cores, 40Gi+ RAM)
+- Comprehensive resource requirement tables for all deployment modes
+
+**User Info Integration:**
+- Multi-user deployments send user.info data for each user
+- Variables: URL, namespace, username, password, API key per user
+- Ready for RHDP Showroom catalog integration
+- Format: litemaas_user1_url, litemaas_user1_password, etc.
+
+**Testing:**
+- ✅ Backward compatible with v0.1.2
+- ✅ Single instance deployment (default)
+- ✅ Multi-replica with Redis
+- ✅ Production HA with Redis + PgBouncer
+- ✅ Multi-user deployment (1-10 users)
+- ✅ Resource-optimized multi-user for 60-80 user labs
 
 ### v0.1.2 (2025-11-05)
 

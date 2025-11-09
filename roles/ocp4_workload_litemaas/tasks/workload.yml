@@ -8,7 +8,21 @@
       - "Deploying LiteMaaS Workload"
       - "========================================="
 
+- name: Deploy multi-user LiteMaaS instances
+  when: ocp4_workload_litemaas_multi_user | bool
+  include_tasks: workload_multi_user.yml
+
+- name: Deploy single LiteMaaS instance
+  when: not (ocp4_workload_litemaas_multi_user | bool)
+  block:
+    - name: Display single instance deployment mode
+      ansible.builtin.debug:
+        msg:
+          - "Deploying single LiteMaaS instance"
+          - "Namespace: {{ ocp4_workload_litemaas_namespace }}"
+
 - name: Create rhpds namespace
+  when: not (ocp4_workload_litemaas_multi_user | bool)
   kubernetes.core.k8s:
     state: present
     definition:
@@ -23,6 +37,7 @@
 # OAuth client creation removed - admin-only access via LiteLLM Admin UI
 
 - name: Deploy PostgreSQL
+  when: not (ocp4_workload_litemaas_multi_user | bool)
   block:
     - name: Create PostgreSQL secret
       kubernetes.core.k8s:
@@ -99,6 +114,10 @@
                         value: "litemaas"
                       - name: PGDATA
                         value: "/var/lib/postgresql/data/pgdata"
+                    command:
+                      - postgres
+                      - "-c"
+                      - "max_connections={{ ocp4_workload_litemaas_postgres_max_connections }}"
                     volumeMounts:
                       - name: postgres-storage
                         mountPath: /var/lib/postgresql/data
@@ -152,8 +171,228 @@
       retries: 30
       delay: 10
 
+- name: Deploy Redis Operator and Instance
+  when:
+    - ocp4_workload_litemaas_deploy_redis | bool
+    - not (ocp4_workload_litemaas_multi_user | bool)
+  block:
+    - name: Create Redis Operator namespace
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: redis-operator
+
+    - name: Create OperatorGroup for Redis
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: operators.coreos.com/v1
+          kind: OperatorGroup
+          metadata:
+            name: redis-operator-group
+            namespace: redis-operator
+          spec:
+            targetNamespaces:
+              - "{{ ocp4_workload_litemaas_namespace }}"
+
+    - name: Subscribe to Redis Operator
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: operators.coreos.com/v1alpha1
+          kind: Subscription
+          metadata:
+            name: redis-operator
+            namespace: redis-operator
+          spec:
+            channel: alpha
+            name: redis-operator
+            source: community-operators
+            sourceNamespace: openshift-marketplace
+            installPlanApproval: Automatic
+
+    - name: Wait for Redis Operator to be ready
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Pod
+        namespace: redis-operator
+        label_selectors:
+          - name=redis-operator
+      register: r_redis_operator_pods
+      until:
+        - r_redis_operator_pods.resources | length > 0
+        - r_redis_operator_pods.resources[0].status.phase == "Running"
+      retries: 30
+      delay: 10
+
+    - name: Create Redis secret
+      kubernetes.core.k8s:
+        state: present
+        namespace: "{{ ocp4_workload_litemaas_namespace }}"
+        definition:
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: redis-secret
+            labels:
+              app: redis
+          type: Opaque
+          stringData:
+            password: "{{ ocp4_workload_litemaas_redis_password }}"
+
+    - name: Create Redis instance
+      kubernetes.core.k8s:
+        state: present
+        namespace: "{{ ocp4_workload_litemaas_namespace }}"
+        definition:
+          apiVersion: redis.redis.opstreelabs.in/v1beta1
+          kind: Redis
+          metadata:
+            name: litemaas-redis
+            labels:
+              app: redis
+          spec:
+            kubernetesConfig:
+              image: quay.io/opstree/redis:v7.0.12
+              imagePullPolicy: IfNotPresent
+              resources:
+                requests:
+                  cpu: 200m
+                  memory: 256Mi
+                limits:
+                  cpu: "{{ ocp4_workload_litemaas_redis_cpu_limit }}"
+                  memory: "{{ ocp4_workload_litemaas_redis_memory_limit }}"
+              redisSecret:
+                name: redis-secret
+                key: password
+            storage:
+              volumeClaimTemplate:
+                spec:
+                  accessModes: ["ReadWriteOnce"]
+                  storageClassName: "{{ ocp4_workload_litemaas_redis_storage_class }}"
+                  resources:
+                    requests:
+                      storage: "{{ ocp4_workload_litemaas_redis_storage_size }}"
+
+    - name: Wait for Redis to be ready
+      kubernetes.core.k8s_info:
+        api_version: redis.redis.opstreelabs.in/v1beta1
+        kind: Redis
+        name: litemaas-redis
+        namespace: "{{ ocp4_workload_litemaas_namespace }}"
+      register: r_redis_instance
+      until:
+        - r_redis_instance.resources | length > 0
+        - r_redis_instance.resources[0].status is defined
+        - r_redis_instance.resources[0].status.state | default('') == 'Ready'
+      retries: 30
+      delay: 10
+      ignore_errors: true
+
+    - name: Display Redis deployment status
+      ansible.builtin.debug:
+        msg: "Redis deployed and ready for LiteLLM cache"
+
+- name: Deploy PgBouncer (PostgreSQL Connection Pooler)
+  when:
+    - ocp4_workload_litemaas_deploy_pgbouncer | bool
+    - not (ocp4_workload_litemaas_multi_user | bool)
+  block:
+    - name: Create PgBouncer Deployment
+      kubernetes.core.k8s:
+        state: present
+        namespace: "{{ ocp4_workload_litemaas_namespace }}"
+        definition:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: pgbouncer
+            labels:
+              app: pgbouncer
+          spec:
+            replicas: "{{ ocp4_workload_litemaas_pgbouncer_replicas }}"
+            selector:
+              matchLabels:
+                app: pgbouncer
+            template:
+              metadata:
+                labels:
+                  app: pgbouncer
+              spec:
+                containers:
+                  - name: pgbouncer
+                    image: edoburu/pgbouncer:1.21.0
+                    ports:
+                      - containerPort: 5432
+                        name: postgres
+                    env:
+                      - name: DATABASES_HOST
+                        value: postgres
+                      - name: DATABASES_PORT
+                        value: "5432"
+                      - name: DATABASES_USER
+                        value: litemaas
+                      - name: DATABASES_PASSWORD
+                        valueFrom:
+                          secretKeyRef:
+                            name: postgres-secret
+                            key: POSTGRES_PASSWORD
+                      - name: DATABASES_DBNAME
+                        value: litemaas
+                      - name: POOL_MODE
+                        value: "{{ ocp4_workload_litemaas_pgbouncer_pool_mode }}"
+                      - name: MAX_CLIENT_CONN
+                        value: "{{ ocp4_workload_litemaas_pgbouncer_max_client_conn }}"
+                      - name: DEFAULT_POOL_SIZE
+                        value: "{{ ocp4_workload_litemaas_pgbouncer_default_pool_size }}"
+                    resources:
+                      requests:
+                        cpu: 100m
+                        memory: 128Mi
+                      limits:
+                        cpu: 500m
+                        memory: 256Mi
+                    livenessProbe:
+                      tcpSocket:
+                        port: 5432
+                      initialDelaySeconds: 10
+                      periodSeconds: 10
+                    readinessProbe:
+                      tcpSocket:
+                        port: 5432
+                      initialDelaySeconds: 5
+                      periodSeconds: 5
+
+    - name: Create PgBouncer Service
+      kubernetes.core.k8s:
+        state: present
+        namespace: "{{ ocp4_workload_litemaas_namespace }}"
+        definition:
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: pgbouncer
+            labels:
+              app: pgbouncer
+          spec:
+            ports:
+              - port: 5432
+                targetPort: 5432
+                name: postgres
+            selector:
+              app: pgbouncer
+
+    - name: Display PgBouncer deployment status
+      ansible.builtin.debug:
+        msg: "PgBouncer deployed for connection pooling"
+
 - name: Deploy LiteMaaS Backend
-  when: ocp4_workload_litemaas_deploy_backend | bool
+  when:
+    - ocp4_workload_litemaas_deploy_backend | bool
+    - not (ocp4_workload_litemaas_multi_user | bool)
   block:
     - name: Create backend secret
       kubernetes.core.k8s:
@@ -292,7 +531,30 @@
               insecureEdgeTerminationPolicy: Redirect
 
 - name: Deploy LiteLLM Gateway
+  when: not (ocp4_workload_litemaas_multi_user | bool)
   block:
+    - name: Set database host based on PgBouncer deployment
+      ansible.builtin.set_fact:
+        _litemaas_db_host: "{{ 'pgbouncer' if ocp4_workload_litemaas_deploy_pgbouncer else 'postgres' }}"
+
+    - name: Create LiteLLM secret
+      kubernetes.core.k8s:
+        state: present
+        namespace: "{{ ocp4_workload_litemaas_namespace }}"
+        definition:
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: litellm-secret
+            labels:
+              app: litellm
+          type: Opaque
+          stringData:
+            LITELLM_MASTER_KEY: "{{ ocp4_workload_litemaas_litellm_api_key }}"
+            UI_USERNAME: "{{ ocp4_workload_litemaas_litellm_ui_username }}"
+            UI_PASSWORD: "{{ ocp4_workload_litemaas_litellm_ui_password }}"
+            DATABASE_URL: "postgresql://litemaas:{{ ocp4_workload_litemaas_postgres_password }}@{{ _litemaas_db_host }}:5432/litemaas?sslmode=disable"
+
     - name: Create LiteLLM deployment
       kubernetes.core.k8s:
         state: present
@@ -305,7 +567,7 @@
             labels:
               app: litellm
           spec:
-            replicas: 1
+            replicas: "{{ ocp4_workload_litemaas_litellm_replicas }}"
             selector:
               matchLabels:
                 app: litellm
@@ -313,7 +575,20 @@
               metadata:
                 labels:
                   app: litellm
+                  component: ai-proxy
               spec:
+                initContainers:
+                  - name: wait-for-postgres
+                    image: busybox:1.36
+                    command:
+                      - sh
+                      - -c
+                      - |
+                        until nc -z {{ _litemaas_db_host }} 5432; do
+                          echo "Waiting for {{ _litemaas_db_host }}..."
+                          sleep 2
+                        done
+                        echo "{{ _litemaas_db_host }} is ready"
                 containers:
                   - name: litellm
                     image: "{{ ocp4_workload_litemaas_litellm_image }}:{{ ocp4_workload_litemaas_litellm_tag }}"
@@ -321,6 +596,11 @@
                       - containerPort: 4000
                         name: http
                     env:
+                      - name: DATABASE_URL
+                        valueFrom:
+                          secretKeyRef:
+                            name: litellm-secret
+                            key: DATABASE_URL
                       - name: LITELLM_MASTER_KEY
                         valueFrom:
                           secretKeyRef:
@@ -336,6 +616,22 @@
                           secretKeyRef:
                             name: litellm-secret
                             key: UI_PASSWORD
+                    livenessProbe:
+                      httpGet:
+                        path: /health/livenessz
+                        port: 4000
+                      initialDelaySeconds: 30
+                      periodSeconds: 15
+                      timeoutSeconds: 5
+                      failureThreshold: 3
+                    readinessProbe:
+                      httpGet:
+                        path: /health/readiness
+                        port: 4000
+                      initialDelaySeconds: 10
+                      periodSeconds: 10
+                      timeoutSeconds: 5
+                      failureThreshold: 3
                     resources:
                       limits:
                         memory: "{{ ocp4_workload_litemaas_litellm_memory_limit }}"
@@ -385,8 +681,98 @@
               termination: edge
               insecureEdgeTerminationPolicy: Redirect
 
+- name: Configure Redis for LiteLLM
+  when:
+    - ocp4_workload_litemaas_deploy_redis | bool
+    - not (ocp4_workload_litemaas_multi_user | bool)
+  block:
+    - name: Add Redis environment variables to LiteLLM deployment
+      kubernetes.core.k8s:
+        state: present
+        namespace: "{{ ocp4_workload_litemaas_namespace }}"
+        definition:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: litellm
+          spec:
+            template:
+              spec:
+                containers:
+                  - name: litellm
+                    env:
+                      - name: DATABASE_URL
+                        valueFrom:
+                          secretKeyRef:
+                            name: litellm-secret
+                            key: DATABASE_URL
+                      - name: LITELLM_MASTER_KEY
+                        valueFrom:
+                          secretKeyRef:
+                            name: litellm-secret
+                            key: LITELLM_MASTER_KEY
+                      - name: UI_USERNAME
+                        valueFrom:
+                          secretKeyRef:
+                            name: litellm-secret
+                            key: UI_USERNAME
+                      - name: UI_PASSWORD
+                        valueFrom:
+                          secretKeyRef:
+                            name: litellm-secret
+                            key: UI_PASSWORD
+                      - name: REDIS_HOST
+                        value: litemaas-redis
+                      - name: REDIS_PORT
+                        value: "6379"
+                      - name: REDIS_PASSWORD
+                        valueFrom:
+                          secretKeyRef:
+                            name: redis-secret
+                            key: password
+                      - name: CACHE_TYPE
+                        value: redis
+
+    - name: Wait for Redis init container
+      kubernetes.core.k8s:
+        state: present
+        namespace: "{{ ocp4_workload_litemaas_namespace }}"
+        definition:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: litellm
+          spec:
+            template:
+              spec:
+                initContainers:
+                  - name: wait-for-postgres
+                    image: busybox:1.36
+                    command:
+                      - sh
+                      - -c
+                      - |
+                        until nc -z {{ _litemaas_db_host }} 5432; do
+                          echo "Waiting for {{ _litemaas_db_host }}..."
+                          sleep 2
+                        done
+                        echo "{{ _litemaas_db_host }} is ready"
+                  - name: wait-for-redis
+                    image: busybox:1.36
+                    command:
+                      - sh
+                      - -c
+                      - |
+                        until nc -z litemaas-redis 6379; do
+                          echo "Waiting for Redis..."
+                          sleep 2
+                        done
+                        echo "Redis is ready"
+
 - name: Deploy LiteMaaS Frontend
-  when: ocp4_workload_litemaas_deploy_frontend | bool
+  when:
+    - ocp4_workload_litemaas_deploy_frontend | bool
+    - not (ocp4_workload_litemaas_multi_user | bool)
   block:
     - name: Create frontend deployment
       kubernetes.core.k8s:

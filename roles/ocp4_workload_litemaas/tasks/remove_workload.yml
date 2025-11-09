@@ -8,15 +8,88 @@
       - "Removing LiteMaaS Workload"
       - "========================================="
 
+- name: Remove multi-user LiteMaaS instances
+  when: ocp4_workload_litemaas_multi_user | bool
+  block:
+    - name: Display multi-user removal info
+      ansible.builtin.debug:
+        msg:
+          - "Removing {{ num_users }} user namespaces"
+          - "Pattern: litemaas-{{ ocp4_workload_litemaas_user_prefix }}1 to litemaas-{{ ocp4_workload_litemaas_user_prefix }}{{ num_users }}"
+
+    - name: Remove namespace for each user
+      loop: "{{ range(1, num_users + 1) | list }}"
+      loop_control:
+        loop_var: user_number
+      kubernetes.core.k8s:
+        state: absent
+        api_version: v1
+        kind: Namespace
+        name: "litemaas-{{ ocp4_workload_litemaas_user_prefix }}{{ user_number }}"
+        wait: true
+        wait_timeout: 300
+
+    - name: Display multi-user removal complete
+      ansible.builtin.debug:
+        msg:
+          - "========================================="
+          - "Multi-User LiteMaaS Removal Complete"
+          - "========================================="
+          - "Removed {{ num_users }} user namespaces"
+          - "========================================="
+
 - name: Remove OAuth client
-  when: ocp4_workload_litemaas_oauth_enabled | bool
+  when:
+    - not (ocp4_workload_litemaas_multi_user | bool)
+    - ocp4_workload_litemaas_oauth_enabled | bool
   kubernetes.core.k8s:
     state: absent
     api_version: oauth.openshift.io/v1
     kind: OAuthClient
     name: "{{ ocp4_workload_litemaas_oauth_client_id }}"
 
+- name: Remove Redis Operator resources
+  when:
+    - ocp4_workload_litemaas_deploy_redis | bool
+    - not (ocp4_workload_litemaas_multi_user | bool)
+  block:
+    - name: Remove Redis instance
+      kubernetes.core.k8s:
+        state: absent
+        api_version: redis.redis.opstreelabs.in/v1beta1
+        kind: Redis
+        name: litemaas-redis
+        namespace: "{{ ocp4_workload_litemaas_namespace }}"
+      ignore_errors: true
+
+    - name: Remove Redis Operator subscription
+      kubernetes.core.k8s:
+        state: absent
+        api_version: operators.coreos.com/v1alpha1
+        kind: Subscription
+        name: redis-operator
+        namespace: redis-operator
+      ignore_errors: true
+
+    - name: Remove Redis OperatorGroup
+      kubernetes.core.k8s:
+        state: absent
+        api_version: operators.coreos.com/v1
+        kind: OperatorGroup
+        name: redis-operator-group
+        namespace: redis-operator
+      ignore_errors: true
+
+    - name: Remove Redis Operator namespace
+      kubernetes.core.k8s:
+        state: absent
+        api_version: v1
+        kind: Namespace
+        name: redis-operator
+      ignore_errors: true
+
 - name: Remove namespace
+  when: not (ocp4_workload_litemaas_multi_user | bool)
   kubernetes.core.k8s:
     state: absent
     api_version: v1
@@ -26,6 +99,7 @@
     wait_timeout: 300
 
 - name: Confirm removal
+  when: not (ocp4_workload_litemaas_multi_user | bool)
   ansible.builtin.debug:
     msg:
       - "========================================="

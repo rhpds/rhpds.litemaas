@@ -1,0 +1,349 @@
+---
+# Multi-user LiteMaaS deployment
+# Each user gets an isolated LiteMaaS instance in their own namespace
+
+- name: Display multi-user deployment header
+  ansible.builtin.debug:
+    msg:
+      - "========================================="
+      - "Deploying Multi-User LiteMaaS"
+      - "========================================="
+      - "Number of users: {{ num_users }}"
+      - "User prefix: {{ ocp4_workload_litemaas_user_prefix }}"
+      - "========================================="
+
+- name: Deploy LiteMaaS instance for each user
+  loop: "{{ range(1, num_users + 1) | list }}"
+  loop_control:
+    loop_var: user_number
+  vars:
+    user_namespace: "litemaas-{{ ocp4_workload_litemaas_user_prefix }}{{ user_number }}"
+    user_route_prefix: "{{ ocp4_workload_litemaas_user_prefix }}{{ user_number }}"
+  block:
+    - name: Create namespace for user{{ user_number }}
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: "{{ user_namespace }}"
+            labels:
+              app: litemaas
+              workload: litemaas
+              user: "{{ ocp4_workload_litemaas_user_prefix }}{{ user_number }}"
+
+    - name: Deploy PostgreSQL for user{{ user_number }}
+      kubernetes.core.k8s:
+        state: present
+        namespace: "{{ user_namespace }}"
+        definition:
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: postgres-secret
+            labels:
+              app: postgres
+          type: Opaque
+          stringData:
+            POSTGRES_PASSWORD: "{{ lookup('password', '/dev/null length=32 chars=ascii_letters,digits') }}"
+            DATABASE_URL: "postgresql://litemaas:{{ lookup('password', '/dev/null length=32 chars=ascii_letters,digits') }}@postgres:5432/litemaas?sslmode=disable"
+
+    - name: Create PostgreSQL service for user{{ user_number }}
+      kubernetes.core.k8s:
+        state: present
+        namespace: "{{ user_namespace }}"
+        definition:
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: postgres
+            labels:
+              app: postgres
+          spec:
+            ports:
+              - port: 5432
+                targetPort: 5432
+                name: postgres
+            selector:
+              app: postgres
+
+    - name: Create PostgreSQL StatefulSet for user{{ user_number }}
+      kubernetes.core.k8s:
+        state: present
+        namespace: "{{ user_namespace }}"
+        definition:
+          apiVersion: apps/v1
+          kind: StatefulSet
+          metadata:
+            name: postgres
+            labels:
+              app: postgres
+          spec:
+            serviceName: postgres
+            replicas: 1
+            selector:
+              matchLabels:
+                app: postgres
+            template:
+              metadata:
+                labels:
+                  app: postgres
+              spec:
+                containers:
+                  - name: postgres
+                    image: "postgres:{{ ocp4_workload_litemaas_postgres_version }}"
+                    ports:
+                      - containerPort: 5432
+                        name: postgres
+                    env:
+                      - name: POSTGRES_PASSWORD
+                        valueFrom:
+                          secretKeyRef:
+                            name: postgres-secret
+                            key: POSTGRES_PASSWORD
+                      - name: POSTGRES_USER
+                        value: "litemaas"
+                      - name: POSTGRES_DB
+                        value: "litemaas"
+                      - name: PGDATA
+                        value: "/var/lib/postgresql/data/pgdata"
+                    command:
+                      - postgres
+                      - "-c"
+                      - "max_connections={{ ocp4_workload_litemaas_postgres_max_connections }}"
+                    volumeMounts:
+                      - name: postgres-storage
+                        mountPath: /var/lib/postgresql/data
+                    resources:
+                      limits:
+                        memory: "{{ ocp4_workload_litemaas_multi_user_postgres_memory_limit }}"
+                        cpu: "{{ ocp4_workload_litemaas_multi_user_postgres_cpu_limit }}"
+                      requests:
+                        memory: "{{ ocp4_workload_litemaas_multi_user_postgres_memory_request }}"
+                        cpu: "{{ ocp4_workload_litemaas_multi_user_postgres_cpu_request }}"
+                    livenessProbe:
+                      exec:
+                        command:
+                          - /bin/sh
+                          - -c
+                          - pg_isready -U litemaas
+                      initialDelaySeconds: 30
+                      periodSeconds: 10
+                    readinessProbe:
+                      exec:
+                        command:
+                          - /bin/sh
+                          - -c
+                          - pg_isready -U litemaas
+                      initialDelaySeconds: 10
+                      periodSeconds: 5
+            volumeClaimTemplates:
+              - metadata:
+                  name: postgres-storage
+                  labels:
+                    app: postgres
+                spec:
+                  accessModes:
+                    - "{{ ocp4_workload_litemaas_postgres_storage_access_mode }}"
+                  storageClassName: "{{ ocp4_workload_litemaas_postgres_storage_class }}"
+                  resources:
+                    requests:
+                      storage: "{{ ocp4_workload_litemaas_postgres_storage_size }}"
+
+    - name: Wait for PostgreSQL to be ready for user{{ user_number }}
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Pod
+        namespace: "{{ user_namespace }}"
+        label_selectors:
+          - app=postgres
+      register: r_postgres_pods
+      until:
+        - r_postgres_pods.resources | length > 0
+        - r_postgres_pods.resources[0].status.phase == "Running"
+      retries: 30
+      delay: 10
+
+    - name: Deploy LiteLLM for user{{ user_number }}
+      block:
+        - name: Create LiteLLM secret for user{{ user_number }}
+          kubernetes.core.k8s:
+            state: present
+            namespace: "{{ user_namespace }}"
+            definition:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: litellm-secret
+                labels:
+                  app: litellm
+              type: Opaque
+              stringData:
+                LITELLM_MASTER_KEY: "sk-{{ lookup('password', '/dev/null length=32 chars=ascii_letters,digits') }}"
+                UI_USERNAME: "{{ ocp4_workload_litemaas_litellm_ui_username }}"
+                UI_PASSWORD: "{{ lookup('password', '/dev/null length=16 chars=ascii_letters,digits') }}"
+                DATABASE_URL: "postgresql://litemaas:{{ lookup('password', '/dev/null length=32 chars=ascii_letters,digits') }}@postgres:5432/litemaas?sslmode=disable"
+
+        - name: Create LiteLLM deployment for user{{ user_number }}
+          kubernetes.core.k8s:
+            state: present
+            namespace: "{{ user_namespace }}"
+            definition:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: litellm
+                labels:
+                  app: litellm
+              spec:
+                replicas: "{{ ocp4_workload_litemaas_litellm_replicas }}"
+                selector:
+                  matchLabels:
+                    app: litellm
+                template:
+                  metadata:
+                    labels:
+                      app: litellm
+                      component: ai-proxy
+                  spec:
+                    initContainers:
+                      - name: wait-for-postgres
+                        image: busybox:1.36
+                        command:
+                          - sh
+                          - -c
+                          - |
+                            until nc -z postgres 5432; do
+                              echo "Waiting for PostgreSQL..."
+                              sleep 2
+                            done
+                            echo "PostgreSQL is ready"
+                    containers:
+                      - name: litellm
+                        image: "{{ ocp4_workload_litemaas_litellm_image }}:{{ ocp4_workload_litemaas_litellm_tag }}"
+                        ports:
+                          - containerPort: 4000
+                            name: http
+                        env:
+                          - name: DATABASE_URL
+                            valueFrom:
+                              secretKeyRef:
+                                name: litellm-secret
+                                key: DATABASE_URL
+                          - name: LITELLM_MASTER_KEY
+                            valueFrom:
+                              secretKeyRef:
+                                name: litellm-secret
+                                key: LITELLM_MASTER_KEY
+                          - name: UI_USERNAME
+                            valueFrom:
+                              secretKeyRef:
+                                name: litellm-secret
+                                key: UI_USERNAME
+                          - name: UI_PASSWORD
+                            valueFrom:
+                              secretKeyRef:
+                                name: litellm-secret
+                                key: UI_PASSWORD
+                        livenessProbe:
+                          httpGet:
+                            path: /health/livenessz
+                            port: 4000
+                          initialDelaySeconds: 30
+                          periodSeconds: 15
+                          timeoutSeconds: 5
+                          failureThreshold: 3
+                        readinessProbe:
+                          httpGet:
+                            path: /health/readiness
+                            port: 4000
+                          initialDelaySeconds: 10
+                          periodSeconds: 10
+                          timeoutSeconds: 5
+                          failureThreshold: 3
+                        resources:
+                          limits:
+                            memory: "{{ ocp4_workload_litemaas_multi_user_litellm_memory_limit }}"
+                            cpu: "{{ ocp4_workload_litemaas_multi_user_litellm_cpu_limit }}"
+                          requests:
+                            memory: "{{ ocp4_workload_litemaas_multi_user_litellm_memory_request }}"
+                            cpu: "{{ ocp4_workload_litemaas_multi_user_litellm_cpu_request }}"
+
+        - name: Create LiteLLM service for user{{ user_number }}
+          kubernetes.core.k8s:
+            state: present
+            namespace: "{{ user_namespace }}"
+            definition:
+              apiVersion: v1
+              kind: Service
+              metadata:
+                name: litellm
+                labels:
+                  app: litellm
+              spec:
+                ports:
+                  - port: 4000
+                    targetPort: 4000
+                    name: http
+                selector:
+                  app: litellm
+
+        - name: Create LiteLLM route for user{{ user_number }}
+          kubernetes.core.k8s:
+            state: present
+            namespace: "{{ user_namespace }}"
+            definition:
+              apiVersion: route.openshift.io/v1
+              kind: Route
+              metadata:
+                name: litellm
+                labels:
+                  app: litellm
+              spec:
+                host: "litellm-{{ user_route_prefix }}-{{ ocp4_workload_litemaas_route_name }}.{{ ocp4_workload_litemaas_cluster_domain }}"
+                to:
+                  kind: Service
+                  name: litellm
+                port:
+                  targetPort: http
+                tls:
+                  termination: edge
+                  insecureEdgeTerminationPolicy: Redirect
+
+    - name: Get LiteLLM admin password for user{{ user_number }}
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Secret
+        name: litellm-secret
+        namespace: "{{ user_namespace }}"
+      register: r_litellm_secret
+
+    - name: Send user info data for user{{ user_number }}
+      agnosticd_user_info:
+        data:
+          litemaas_user{{ user_number }}_url: "https://litellm-{{ user_route_prefix }}-{{ ocp4_workload_litemaas_route_name }}.{{ ocp4_workload_litemaas_cluster_domain }}"
+          litemaas_user{{ user_number }}_namespace: "{{ user_namespace }}"
+          litemaas_user{{ user_number }}_username: "{{ r_litellm_secret.resources[0].data.UI_USERNAME | b64decode }}"
+          litemaas_user{{ user_number }}_password: "{{ r_litellm_secret.resources[0].data.UI_PASSWORD | b64decode }}"
+          litemaas_user{{ user_number }}_api_key: "{{ r_litellm_secret.resources[0].data.LITELLM_MASTER_KEY | b64decode }}"
+
+    - name: Display deployment info for user{{ user_number }}
+      ansible.builtin.debug:
+        msg:
+          - "User{{ user_number }} LiteMaaS deployed:"
+          - "  Namespace: {{ user_namespace }}"
+          - "  URL: https://litellm-{{ user_route_prefix }}-{{ ocp4_workload_litemaas_route_name }}.{{ ocp4_workload_litemaas_cluster_domain }}"
+          - "  Username: {{ r_litellm_secret.resources[0].data.UI_USERNAME | b64decode }}"
+          - "  Password: {{ r_litellm_secret.resources[0].data.UI_PASSWORD | b64decode }}"
+
+- name: Display multi-user deployment summary
+  ansible.builtin.debug:
+    msg:
+      - "========================================="
+      - "Multi-User LiteMaaS Deployment Complete"
+      - "========================================="
+      - "Total users: {{ num_users }}"
+      - "Namespaces created: litemaas-{{ ocp4_workload_litemaas_user_prefix }}1 to litemaas-{{ ocp4_workload_litemaas_user_prefix }}{{ num_users }}"
+      - "Each user has isolated: PostgreSQL + LiteLLM ({{ ocp4_workload_litemaas_litellm_replicas }} replicas)"
+      - "========================================="
