@@ -34,7 +34,7 @@ spec:
     spec:
       containers:
         - name: redis
-          image: "{{ ocp4_workload_litemaas_ha_redis_image }}"
+          image: "{{ _redis_image | default(ocp4_workload_litemaas_ha_redis_image) }}"
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 6379

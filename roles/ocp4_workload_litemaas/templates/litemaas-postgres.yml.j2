@@ -49,7 +49,7 @@ spec:
     spec:
       containers:
         - name: postgres
-          image: "{{ ocp4_workload_litemaas_ha_postgres_image }}"
+          image: "{{ _postgres_image | default(ocp4_workload_litemaas_ha_postgres_image) }}"
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 5432
