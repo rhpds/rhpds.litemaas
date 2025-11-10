@@ -176,16 +176,7 @@
     - ocp4_workload_litemaas_deploy_redis | bool
     - not (ocp4_workload_litemaas_multi_user | bool)
   block:
-    - name: Create Redis Operator namespace
-      kubernetes.core.k8s:
-        state: present
-        definition:
-          apiVersion: v1
-          kind: Namespace
-          metadata:
-            name: redis-operator
-
-    - name: Create OperatorGroup for Redis
+    - name: Create OperatorGroup for Redis (same namespace)
       kubernetes.core.k8s:
         state: present
         definition:
@@ -193,10 +184,9 @@
           kind: OperatorGroup
           metadata:
             name: redis-operator-group
-            namespace: redis-operator
+            namespace: "{{ ocp4_workload_litemaas_namespace }}"
           spec:
             targetNamespaces:
-              - redis-operator
               - "{{ ocp4_workload_litemaas_namespace }}"
 
     - name: Subscribe to Redis Operator (Community)
@@ -207,7 +197,7 @@
           kind: Subscription
           metadata:
             name: redis-operator
-            namespace: redis-operator
+            namespace: "{{ ocp4_workload_litemaas_namespace }}"
           spec:
             channel: stable
             name: redis-operator
@@ -219,7 +209,7 @@
       kubernetes.core.k8s_info:
         api_version: operators.coreos.com/v1alpha1
         kind: InstallPlan
-        namespace: redis-operator
+        namespace: "{{ ocp4_workload_litemaas_namespace }}"
       register: r_install_plans
       until:
         - r_install_plans.resources | length > 0
@@ -234,7 +224,7 @@
           kind: InstallPlan
           metadata:
             name: "{{ r_install_plans.resources[0].metadata.name }}"
-            namespace: redis-operator
+            namespace: "{{ ocp4_workload_litemaas_namespace }}"
           spec:
             approved: true
 
@@ -242,7 +232,9 @@
       kubernetes.core.k8s_info:
         api_version: apps/v1
         kind: Deployment
-        namespace: redis-operator
+        namespace: "{{ ocp4_workload_litemaas_namespace }}"
+        label_selectors:
+          - app.kubernetes.io/name=redis-operator
       register: r_redis_operator_deployments
       until:
         - r_redis_operator_deployments.resources | length > 0
