@@ -114,10 +114,6 @@
                         value: "litemaas"
                       - name: PGDATA
                         value: "/var/lib/postgresql/data/pgdata"
-                    command:
-                      - postgres
-                      - "-c"
-                      - "max_connections={{ ocp4_workload_litemaas_postgres_max_connections }}"
                     volumeMounts:
                       - name: postgres-storage
                         mountPath: /var/lib/postgresql/data
