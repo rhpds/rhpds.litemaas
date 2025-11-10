@@ -334,30 +334,32 @@
               spec:
                 containers:
                   - name: pgbouncer
-                    image: edoburu/pgbouncer:1.21.0
+                    image: bitnami/pgbouncer:1.21.0
                     ports:
                       - containerPort: 5432
                         name: postgres
                     env:
-                      - name: DATABASES_HOST
+                      - name: POSTGRESQL_HOST
                         value: postgres
-                      - name: DATABASES_PORT
+                      - name: POSTGRESQL_PORT
                         value: "5432"
-                      - name: DATABASES_USER
+                      - name: POSTGRESQL_USERNAME
                         value: litemaas
-                      - name: DATABASES_PASSWORD
+                      - name: POSTGRESQL_PASSWORD
                         valueFrom:
                           secretKeyRef:
                             name: postgres-secret
                             key: POSTGRES_PASSWORD
-                      - name: DATABASES_DBNAME
+                      - name: POSTGRESQL_DATABASE
                         value: litemaas
-                      - name: POOL_MODE
+                      - name: PGBOUNCER_POOL_MODE
                         value: "{{ ocp4_workload_litemaas_pgbouncer_pool_mode }}"
-                      - name: MAX_CLIENT_CONN
+                      - name: PGBOUNCER_MAX_CLIENT_CONN
                         value: "{{ ocp4_workload_litemaas_pgbouncer_max_client_conn | string }}"
-                      - name: DEFAULT_POOL_SIZE
+                      - name: PGBOUNCER_DEFAULT_POOL_SIZE
                         value: "{{ ocp4_workload_litemaas_pgbouncer_default_pool_size | string }}"
+                      - name: PGBOUNCER_PORT
+                        value: "5432"
                     resources:
                       requests:
                         cpu: 100m
