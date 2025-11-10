@@ -175,9 +175,16 @@
   delay: 10
 
 # Phase 3: Deploy LiteLLM for all users
+- name: Get PostgreSQL password from secret for user {{ item }}
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Secret
+    namespace: "litemaas-{{ ocp4_workload_litemaas_user_prefix }}{{ item }}"
+    name: postgres-secret
+  register: r_postgres_secrets
+  loop: "{{ range(1, num_users | int + 1) | list }}"
+
 - name: Create LiteLLM secrets for all users
-  vars:
-    _postgres_password: "{{ lookup('password', '/dev/null length=32 chars=ascii_letters,digits') }}"
   kubernetes.core.k8s:
     state: present
     namespace: "litemaas-{{ ocp4_workload_litemaas_user_prefix }}{{ item }}"
@@ -193,7 +200,7 @@
         LITELLM_MASTER_KEY: "sk-{{ lookup('password', '/dev/null length=32 chars=ascii_letters,digits') }}"
         UI_USERNAME: "{{ ocp4_workload_litemaas_litellm_ui_username }}"
         UI_PASSWORD: "{{ _litemaas_common_admin_password }}"
-        DATABASE_URL: "postgresql://litemaas:{{ _postgres_password }}@postgres:5432/litemaas?sslmode=disable"
+        DATABASE_URL: "postgresql://litemaas:{{ r_postgres_secrets.results[item - 1].resources[0].data.POSTGRES_PASSWORD | b64decode }}@postgres:5432/litemaas?sslmode=disable"
   loop: "{{ range(1, num_users | int + 1) | list }}"
 
 - name: Create LiteLLM deployments for all users
