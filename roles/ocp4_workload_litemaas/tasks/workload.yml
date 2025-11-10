@@ -209,7 +209,7 @@
             name: redis-operator
             namespace: redis-operator
           spec:
-            channel: alpha
+            channel: stable
             name: redis-operator
             source: community-operators
             sourceNamespace: openshift-marketplace
