@@ -355,9 +355,9 @@
                       - name: POOL_MODE
                         value: "{{ ocp4_workload_litemaas_pgbouncer_pool_mode }}"
                       - name: MAX_CLIENT_CONN
-                        value: "{{ ocp4_workload_litemaas_pgbouncer_max_client_conn }}"
+                        value: "{{ ocp4_workload_litemaas_pgbouncer_max_client_conn | string }}"
                       - name: DEFAULT_POOL_SIZE
-                        value: "{{ ocp4_workload_litemaas_pgbouncer_default_pool_size }}"
+                        value: "{{ ocp4_workload_litemaas_pgbouncer_default_pool_size | string }}"
                     resources:
                       requests:
                         cpu: 100m
