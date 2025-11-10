@@ -484,7 +484,7 @@
             labels:
               app: litellm
           spec:
-            replicas: "{{ ocp4_workload_litemaas_litellm_replicas | int }}"
+            replicas: {{ ocp4_workload_litemaas_litellm_replicas | int }}
             selector:
               matchLabels:
                 app: litellm
