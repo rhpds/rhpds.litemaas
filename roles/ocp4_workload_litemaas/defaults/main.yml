@@ -24,7 +24,6 @@ ocp4_workload_litemaas_postgres_storage_size: "10Gi"
 ocp4_workload_litemaas_postgres_storage_class: ""
 ocp4_workload_litemaas_postgres_storage_access_mode: "ReadWriteOnce"
 ocp4_workload_litemaas_postgres_password: "{{ lookup('password', '/dev/null length=32 chars=ascii_letters,digits') }}"
-ocp4_workload_litemaas_postgres_max_connections: 100
 
 # Redis Operator configuration (for multi-instance LiteLLM deployments)
 ocp4_workload_litemaas_deploy_redis: false

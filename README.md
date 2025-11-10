@@ -459,9 +459,6 @@ ocp4_workload_litemaas_litellm_replicas: 3
 ocp4_workload_litemaas_deploy_redis: true
 ocp4_workload_litemaas_redis_storage_size: 5Gi
 ocp4_workload_litemaas_redis_memory_limit: 512Mi
-
-# PostgreSQL max connections
-ocp4_workload_litemaas_postgres_max_connections: 100
 ```
 
 ### When to Use Each Option
@@ -544,7 +541,6 @@ This removes all namespaces: `litemaas-user1` through `litemaas-user10`.
 |----------|---------|-------------|
 | `ocp4_workload_litemaas_postgres_storage_class` | auto-detect | Storage class |
 | `ocp4_workload_litemaas_postgres_storage_size` | `10Gi` | PVC size |
-| `ocp4_workload_litemaas_postgres_max_connections` | `100` | Max database connections |
 
 ### LiteLLM Scaling
 
