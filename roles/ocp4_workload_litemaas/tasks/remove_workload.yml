@@ -18,7 +18,7 @@
           - "Pattern: litemaas-{{ ocp4_workload_litemaas_user_prefix }}1 to litemaas-{{ ocp4_workload_litemaas_user_prefix }}{{ num_users }}"
 
     - name: Remove namespace for each user
-      loop: "{{ range(1, num_users + 1) | list }}"
+      loop: "{{ range(1, num_users | int + 1) | list }}"
       loop_control:
         loop_var: user_number
       kubernetes.core.k8s:
