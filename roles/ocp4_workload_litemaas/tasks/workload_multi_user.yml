@@ -2,6 +2,10 @@
 # Multi-user LiteMaaS deployment - Optimized for parallel execution
 # Each user gets an isolated LiteMaaS instance in their own namespace
 
+- name: Generate common admin password for all users
+  ansible.builtin.set_fact:
+    _litemaas_common_admin_password: "{{ lookup('password', '/dev/null length=16 chars=ascii_letters,digits') }}"
+
 - name: Display multi-user deployment header
   ansible.builtin.debug:
     msg:
@@ -10,6 +14,7 @@
       - "========================================="
       - "Number of users: {{ num_users }}"
       - "User prefix: {{ ocp4_workload_litemaas_user_prefix }}"
+      - "Common admin password: {{ _litemaas_common_admin_password }}"
       - "========================================="
 
 # Phase 1: Create all namespaces
@@ -176,7 +181,10 @@
   until:
     - r_postgres_pods.resources | length > 0
     - r_postgres_pods.resources[0].status.phase == "Running"
-  retries: 30
+    - r_postgres_pods.resources[0].status.containerStatuses is defined
+    - r_postgres_pods.resources[0].status.containerStatuses | length > 0
+    - r_postgres_pods.resources[0].status.containerStatuses[0].ready == true
+  retries: 60
   delay: 10
 
 # Phase 3: Deploy LiteLLM for all users
@@ -195,7 +203,7 @@
       stringData:
         LITELLM_MASTER_KEY: "sk-{{ lookup('password', '/dev/null length=32 chars=ascii_letters,digits') }}"
         UI_USERNAME: "{{ ocp4_workload_litemaas_litellm_ui_username }}"
-        UI_PASSWORD: "{{ lookup('password', '/dev/null length=16 chars=ascii_letters,digits') }}"
+        UI_PASSWORD: "{{ _litemaas_common_admin_password }}"
         DATABASE_URL: "postgresql://litemaas:{{ lookup('password', '/dev/null length=32 chars=ascii_letters,digits') }}@postgres:5432/litemaas?sslmode=disable"
   loop: "{{ range(1, num_users | int + 1) | list }}"
 
