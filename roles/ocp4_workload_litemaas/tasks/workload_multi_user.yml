@@ -112,8 +112,6 @@
                     value: "litemaas"
                   - name: POSTGRES_DB
                     value: "litemaas"
-                  - name: PGDATA
-                    value: "/var/lib/postgresql/data/pgdata"
                 command:
                   - postgres
                   - "-c"
@@ -121,6 +119,7 @@
                 volumeMounts:
                   - name: postgres-storage
                     mountPath: /var/lib/postgresql/data
+                    subPath: pgdata
                 resources:
                   limits:
                     memory: "{{ ocp4_workload_litemaas_multi_user_postgres_memory_limit }}"
