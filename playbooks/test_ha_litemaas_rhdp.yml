@@ -2,11 +2,13 @@
 # Test playbook for deploying LiteMaaS in High Availability mode
 # Uses litemaas-rhdp namespace for testing
 #
-# Usage:
-#   ansible-playbook playbooks/test_ha_litemaas_rhdp.yml
+# Usage (HA mode with 2 replicas):
+#   ansible-playbook playbooks/test_ha_litemaas_rhdp.yml \
+#     -e ocp4_workload_litemaas_ha_enabled=true
 #
 # With custom replicas:
 #   ansible-playbook playbooks/test_ha_litemaas_rhdp.yml \
+#     -e ocp4_workload_litemaas_ha_enabled=true \
 #     -e ocp4_workload_litemaas_ha_litellm_replicas=3
 
 - name: Test LiteMaaS HA Deployment in litemaas-rhdp namespace
@@ -18,10 +20,6 @@
   vars:
     # Core configuration
     ocp4_workload_litemaas_namespace: "litemaas-rhdp"
-    ocp4_workload_litemaas_ha_enabled: true
-
-    # HA configuration (can be overridden via -e)
-    ocp4_workload_litemaas_ha_litellm_replicas: 2
 
     # Auto-detect cluster domain
     ocp4_workload_litemaas_cluster_domain: ""
