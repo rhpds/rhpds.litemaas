@@ -23,7 +23,17 @@
         }
       }}
 
-- name: Send user info data for user{{ user_number }}
+- name: Send user-specific info data for user{{ user_number }}
+  agnosticd_user_info:
+    data:
+      litemaas_url: "https://litellm-{{ ocp4_workload_litemaas_user_prefix }}{{ user_number }}-{{ ocp4_workload_litemaas_route_name }}.{{ ocp4_workload_litemaas_cluster_domain }}"
+      litemaas_namespace: "litemaas-{{ ocp4_workload_litemaas_user_prefix }}{{ user_number }}"
+      litemaas_username: "{{ r_litellm_secret.resources[0].data.UI_USERNAME | b64decode }}"
+      litemaas_password: "{{ r_litellm_secret.resources[0].data.UI_PASSWORD | b64decode }}"
+      litemaas_api_key: "{{ r_litellm_secret.resources[0].data.LITELLM_MASTER_KEY | b64decode }}"
+    user: "{{ ocp4_workload_litemaas_user_prefix }}{{ user_number }}"
+
+- name: Send global user info data for user{{ user_number }}
   agnosticd_user_info:
     data: "{{ _user_info_data }}"
 
