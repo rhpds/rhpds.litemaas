@@ -1,0 +1,66 @@
+---
+# Test playbook for deploying LiteMaaS in High Availability mode
+# Uses litemaas-rhdp namespace for testing
+#
+# Usage:
+#   ansible-playbook playbooks/test_ha_litemaas_rhdp.yml
+#
+# With custom replicas:
+#   ansible-playbook playbooks/test_ha_litemaas_rhdp.yml \
+#     -e ocp4_workload_litemaas_ha_litellm_replicas=3
+
+- name: Test LiteMaaS HA Deployment in litemaas-rhdp namespace
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  become: false
+
+  vars:
+    # Core configuration
+    ocp4_workload_litemaas_namespace: "litemaas-rhdp"
+    ocp4_workload_litemaas_ha_enabled: true
+
+    # HA configuration (can be overridden via -e)
+    ocp4_workload_litemaas_ha_litellm_replicas: 2
+
+    # Auto-detect cluster domain
+    ocp4_workload_litemaas_cluster_domain: ""
+
+    # Route name
+    ocp4_workload_litemaas_route_name: "rhdp"
+
+  tasks:
+    - name: Display deployment configuration
+      ansible.builtin.debug:
+        msg:
+          - "==================================="
+          - "LiteMaaS HA Deployment Test"
+          - "==================================="
+          - "Namespace: {{ ocp4_workload_litemaas_namespace }}"
+          - "HA Mode: {{ ocp4_workload_litemaas_ha_enabled }}"
+          - "LiteLLM Replicas: {{ ocp4_workload_litemaas_ha_litellm_replicas }}"
+          - "Redis Enabled: {{ ocp4_workload_litemaas_ha_enable_redis | default(true) }}"
+          - "PostgreSQL Enabled: {{ ocp4_workload_litemaas_ha_enable_postgres | default(true) }}"
+          - "==================================="
+
+    - name: Include HA defaults
+      ansible.builtin.include_vars:
+        file: "{{ playbook_dir }}/../roles/ocp4_workload_litemaas/defaults/ha.yml"
+
+    - name: Include LiteMaaS role with HA configuration
+      ansible.builtin.include_role:
+        name: ocp4_workload_litemaas
+
+    - name: Display deployment completion
+      ansible.builtin.debug:
+        msg:
+          - "==================================="
+          - "LiteMaaS HA Deployment Complete!"
+          - "==================================="
+          - "Namespace: {{ ocp4_workload_litemaas_namespace }}"
+          - ""
+          - "Next steps:"
+          - "1. oc get pods -n {{ ocp4_workload_litemaas_namespace }}"
+          - "2. oc get route -n {{ ocp4_workload_litemaas_namespace }}"
+          - "3. Check the route URL and login with admin credentials"
+          - "==================================="
