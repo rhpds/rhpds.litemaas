@@ -183,6 +183,35 @@
         namespace: "{{ _litemaas_ha_namespace }}"
       register: r_litemaas_route
 
+    - name: Send user info messages
+      agnosticd_user_info:
+        msg: "{{ item }}"
+      loop:
+        - "LiteLLM Admin Portal: https://{{ r_litemaas_route.resources[0].spec.host }}"
+        - "LiteLLM Admin Login: {{ ocp4_workload_litemaas_litellm_ui_username }} / {{ ocp4_workload_litemaas_litellm_ui_password }}"
+        - "LiteLLM Master API Key: {{ ocp4_workload_litemaas_litellm_api_key }}"
+
+    - name: Send user info data - URLs
+      agnosticd_user_info:
+        data:
+          litellm_admin_url: "https://{{ r_litemaas_route.resources[0].spec.host }}"
+          litellm_api_endpoint: "https://{{ r_litemaas_route.resources[0].spec.host }}"
+
+    - name: Send user info data - Credentials
+      agnosticd_user_info:
+        data:
+          litellm_admin_username: "{{ ocp4_workload_litemaas_litellm_ui_username }}"
+          litellm_admin_password: "{{ ocp4_workload_litemaas_litellm_ui_password }}"
+          litemaas_admin_api_key: "{{ ocp4_workload_litemaas_litellm_api_key }}"
+
+    - name: Send user info data - Deployment details
+      agnosticd_user_info:
+        data:
+          litemaas_namespace: "{{ _litemaas_ha_namespace }}"
+          litemaas_version: "{{ ocp4_workload_litemaas_version }}"
+          litemaas_ha_enabled: true
+          litemaas_replicas: "{{ ocp4_workload_litemaas_ha_litellm_replicas }}"
+
     - name: Display HA deployment information
       ansible.builtin.debug:
         msg:
@@ -192,3 +221,4 @@
           - "Route: https://{{ r_litemaas_route.resources[0].spec.host }}"
           - "Admin Username: {{ ocp4_workload_litemaas_litellm_ui_username }}"
           - "Admin Password: {{ ocp4_workload_litemaas_litellm_ui_password }}"
+          - "Master API Key: {{ ocp4_workload_litemaas_litellm_api_key }}"
