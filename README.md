@@ -161,20 +161,20 @@ Choose your deployment based on available cluster resources:
 | Component | CPU Request | CPU Limit | Memory Request | Memory Limit | Storage |
 |-----------|-------------|-----------|----------------|--------------|---------|
 | PostgreSQL | 200m | 500m | 256Mi | 512Mi | 10Gi |
-| LiteLLM (1 replica) | 100m | 500m | 256Mi | 512Mi | - |
-| **Per User Total** | **300m** | **1000m** | **~512Mi** | **~1Gi** | **10Gi** |
+| LiteLLM (1 replica) | 100m | 500m | 512Mi | 1Gi | - |
+| **Per User Total** | **300m** | **1000m** | **~768Mi** | **~1.5Gi** | **10Gi** |
 
 **Lab Sizing Examples:**
 
 | Users | Total CPU Request | Total CPU Limit | Total Memory Request | Total Memory Limit | Total Storage |
 |-------|-------------------|-----------------|----------------------|--------------------|---------------|
-| **10 users** | 3000m (3 cores) | 10000m (10 cores) | ~5Gi | ~10Gi | 100Gi |
-| **20 users** | 6000m (6 cores) | 20000m (20 cores) | ~10Gi | ~20Gi | 200Gi |
-| **40 users** | 12000m (12 cores) | 40000m (40 cores) | ~20Gi | ~40Gi | 400Gi |
-| **60 users** | 18000m (18 cores) | 60000m (60 cores) | ~30Gi | ~60Gi | 600Gi |
-| **80 users** | 24000m (24 cores) | 80000m (80 cores) | ~40Gi | ~80Gi | 800Gi |
+| **10 users** | 3000m (3 cores) | 10000m (10 cores) | ~7.7Gi | ~15Gi | 100Gi |
+| **20 users** | 6000m (6 cores) | 20000m (20 cores) | ~15.4Gi | ~30Gi | 200Gi |
+| **40 users** | 12000m (12 cores) | 40000m (40 cores) | ~30.8Gi | ~60Gi | 400Gi |
+| **60 users** | 18000m (18 cores) | 60000m (60 cores) | ~46Gi | ~90Gi | 600Gi |
+| **80 users** | 24000m (24 cores) | 80000m (80 cores) | ~62Gi | ~120Gi | 800Gi |
 
-**Note:** Multi-user resources are optimized for lab environments. Actual usage will be lower than limits. A typical OpenShift cluster with 32 cores and 128Gi RAM can comfortably handle 60-80 lab users.
+**Note:** Multi-user resources are optimized for lab environments. Actual usage will be lower than limits. For 60-80 user labs, ensure cluster has sufficient memory (90-120Gi limits).
 
 ---
 
