@@ -6,14 +6,13 @@
   ansible.builtin.debug:
     msg:
       - "========================================="
-      - "Deploying Multi-User LiteMaaS (Parallel)"
+      - "Deploying Multi-User LiteMaaS"
       - "========================================="
       - "Number of users: {{ num_users }}"
       - "User prefix: {{ ocp4_workload_litemaas_user_prefix }}"
-      - "Deploying all {{ num_users }} instances in parallel..."
       - "========================================="
 
-# Phase 1: Create all namespaces in parallel
+# Phase 1: Create all namespaces
 - name: Create namespaces for all users
   kubernetes.core.k8s:
     state: present
@@ -27,20 +26,8 @@
           workload: litemaas
           user: "{{ ocp4_workload_litemaas_user_prefix }}{{ item }}"
   loop: "{{ range(1, num_users | int + 1) | list }}"
-  async: 300
-  poll: 0
-  register: namespace_jobs
 
-- name: Wait for all namespaces to be created
-  ansible.builtin.async_status:
-    jid: "{{ item.ansible_job_id }}"
-  loop: "{{ namespace_jobs.results }}"
-  register: namespace_results
-  until: namespace_results.finished
-  retries: 60
-  delay: 5
-
-# Phase 2: Deploy PostgreSQL for all users in parallel
+# Phase 2: Deploy PostgreSQL for all users
 - name: Create PostgreSQL secrets for all users
   kubernetes.core.k8s:
     state: present
@@ -57,9 +44,6 @@
         POSTGRES_PASSWORD: "{{ lookup('password', '/dev/null length=32 chars=ascii_letters,digits') }}"
         DATABASE_URL: "postgresql://litemaas:{{ lookup('password', '/dev/null length=32 chars=ascii_letters,digits') }}@postgres:5432/litemaas?sslmode=disable"
   loop: "{{ range(1, num_users | int + 1) | list }}"
-  async: 60
-  poll: 0
-  register: postgres_secret_jobs
 
 - name: Create PostgreSQL services for all users
   kubernetes.core.k8s:
@@ -80,18 +64,6 @@
         selector:
           app: postgres
   loop: "{{ range(1, num_users | int + 1) | list }}"
-  async: 60
-  poll: 0
-  register: postgres_service_jobs
-
-- name: Wait for PostgreSQL secrets and services
-  ansible.builtin.async_status:
-    jid: "{{ item.ansible_job_id }}"
-  loop: "{{ postgres_secret_jobs.results + postgres_service_jobs.results }}"
-  register: postgres_prep_results
-  until: postgres_prep_results.finished
-  retries: 30
-  delay: 2
 
 - name: Create PostgreSQL StatefulSets for all users
   kubernetes.core.k8s:
@@ -176,18 +148,6 @@
                 requests:
                   storage: "{{ ocp4_workload_litemaas_postgres_storage_size }}"
   loop: "{{ range(1, num_users | int + 1) | list }}"
-  async: 300
-  poll: 0
-  register: postgres_statefulset_jobs
-
-- name: Wait for all PostgreSQL StatefulSets to be created
-  ansible.builtin.async_status:
-    jid: "{{ item.ansible_job_id }}"
-  loop: "{{ postgres_statefulset_jobs.results }}"
-  register: postgres_sts_results
-  until: postgres_sts_results.finished
-  retries: 60
-  delay: 5
 
 - name: Wait for all PostgreSQL pods to be ready
   kubernetes.core.k8s_info:
@@ -204,7 +164,7 @@
   retries: 30
   delay: 10
 
-# Phase 3: Deploy LiteLLM for all users in parallel
+# Phase 3: Deploy LiteLLM for all users
 - name: Create LiteLLM secrets for all users
   kubernetes.core.k8s:
     state: present
@@ -223,18 +183,6 @@
         UI_PASSWORD: "{{ lookup('password', '/dev/null length=16 chars=ascii_letters,digits') }}"
         DATABASE_URL: "postgresql://litemaas:{{ lookup('password', '/dev/null length=32 chars=ascii_letters,digits') }}@postgres:5432/litemaas?sslmode=disable"
   loop: "{{ range(1, num_users | int + 1) | list }}"
-  async: 60
-  poll: 0
-  register: litellm_secret_jobs
-
-- name: Wait for all LiteLLM secrets
-  ansible.builtin.async_status:
-    jid: "{{ item.ansible_job_id }}"
-  loop: "{{ litellm_secret_jobs.results }}"
-  register: litellm_secret_results
-  until: litellm_secret_results.finished
-  retries: 30
-  delay: 2
 
 - name: Create LiteLLM deployments for all users
   kubernetes.core.k8s:
@@ -321,9 +269,6 @@
                     memory: "{{ ocp4_workload_litemaas_multi_user_litellm_memory_request }}"
                     cpu: "{{ ocp4_workload_litemaas_multi_user_litellm_cpu_request }}"
   loop: "{{ range(1, num_users | int + 1) | list }}"
-  async: 300
-  poll: 0
-  register: litellm_deployment_jobs
 
 - name: Create LiteLLM services for all users
   kubernetes.core.k8s:
@@ -344,9 +289,6 @@
         selector:
           app: litellm
   loop: "{{ range(1, num_users | int + 1) | list }}"
-  async: 60
-  poll: 0
-  register: litellm_service_jobs
 
 - name: Create LiteLLM routes for all users
   kubernetes.core.k8s:
@@ -370,18 +312,6 @@
           termination: edge
           insecureEdgeTerminationPolicy: Redirect
   loop: "{{ range(1, num_users | int + 1) | list }}"
-  async: 60
-  poll: 0
-  register: litellm_route_jobs
-
-- name: Wait for all LiteLLM resources to be created
-  ansible.builtin.async_status:
-    jid: "{{ item.ansible_job_id }}"
-  loop: "{{ litellm_deployment_jobs.results + litellm_service_jobs.results + litellm_route_jobs.results }}"
-  register: litellm_results
-  until: litellm_results.finished
-  retries: 60
-  delay: 5
 
 # Phase 4: Collect and send user info data
 - name: Get LiteLLM secrets for all users and send user info
@@ -399,5 +329,4 @@
       - "Total users: {{ num_users }}"
       - "Namespaces: litemaas-{{ ocp4_workload_litemaas_user_prefix }}1 to litemaas-{{ ocp4_workload_litemaas_user_prefix }}{{ num_users }}"
       - "Each user has: PostgreSQL + LiteLLM ({{ ocp4_workload_litemaas_litellm_replicas }} replicas)"
-      - "All instances deployed in parallel!"
       - "========================================="
