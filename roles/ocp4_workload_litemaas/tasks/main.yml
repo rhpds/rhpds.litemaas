@@ -11,6 +11,7 @@
       ansible.builtin.include_tasks: workload.yml
 
     - name: Run post_workload tasks
+      when: not (ocp4_workload_litemaas_multi_user | bool)
       ansible.builtin.include_tasks: post_workload.yml
 
 - name: Remove workload
