@@ -82,8 +82,8 @@ ansible-playbook playbooks/deploy_litemaas_ha.yml \
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `ocp4_workload_litemaas_ha_enable_redis` | `true` | Deploy Redis for caching |
-| `ocp4_workload_litemaas_ha_redis_image` | `registry.redhat.io/rhel8/redis-6:latest` | Primary Redis image |
-| `ocp4_workload_litemaas_ha_redis_image_fallback` | `quay.io/sclorg/redis-6-c9s:latest` | Fallback Redis image |
+| `ocp4_workload_litemaas_ha_redis_image` | `registry.redhat.io/rhel9/redis-7:latest` | Primary Redis image |
+| `ocp4_workload_litemaas_ha_redis_image_fallback` | `quay.io/sclorg/redis-7-c9s:latest` | Fallback Redis image |
 | `ocp4_workload_litemaas_ha_redis_memory_request` | `256Mi` | Redis memory request |
 | `ocp4_workload_litemaas_ha_redis_memory_limit` | `512Mi` | Redis memory limit |
 | `ocp4_workload_litemaas_ha_redis_cpu_request` | `200m` | Redis CPU request |
@@ -176,8 +176,8 @@ Fallback: quay.io/sclorg/postgresql-16-c9s:latest
 ### Example: Redis Image Selection
 
 ```yaml
-Primary: registry.redhat.io/rhel8/redis-6:latest
-Fallback: quay.io/sclorg/redis-6-c9s:latest
+Primary: registry.redhat.io/rhel9/redis-7:latest
+Fallback: quay.io/sclorg/redis-7-c9s:latest
 ```
 
 ## Health Probes
