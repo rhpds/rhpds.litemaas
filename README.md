@@ -609,10 +609,9 @@ This removes all namespaces: `litemaas-user1` through `litemaas-user10`.
 **AgnosticV Example:**
 ```yaml
 # In your AgnosticV catalog config
-default_vars:
-  ocp4_workload_litemaas_multi_user: true
-  num_users: 60
-  ocp4_workload_litemaas_multi_user_common_password: "RedHat2025!"
+ocp4_workload_litemaas_multi_user: true
+num_users: 60
+ocp4_workload_litemaas_multi_user_common_password: "RedHat2025!"
 ```
 
 **Showroom user.info Integration:**
