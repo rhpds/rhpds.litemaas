@@ -48,45 +48,7 @@
     kind: OAuthClient
     name: "{{ ocp4_workload_litemaas_oauth_client_id }}"
 
-- name: Remove Redis Operator resources
-  when:
-    - ocp4_workload_litemaas_deploy_redis | bool
-    - not (ocp4_workload_litemaas_multi_user | bool)
-  block:
-    - name: Remove Redis instance
-      kubernetes.core.k8s:
-        state: absent
-        api_version: redis.redis.opstreelabs.in/v1beta1
-        kind: Redis
-        name: litemaas-redis
-        namespace: "{{ ocp4_workload_litemaas_namespace }}"
-      ignore_errors: true
-
-    - name: Remove Redis Operator subscription
-      kubernetes.core.k8s:
-        state: absent
-        api_version: operators.coreos.com/v1alpha1
-        kind: Subscription
-        name: redis-operator
-        namespace: redis-operator
-      ignore_errors: true
-
-    - name: Remove Redis OperatorGroup
-      kubernetes.core.k8s:
-        state: absent
-        api_version: operators.coreos.com/v1
-        kind: OperatorGroup
-        name: redis-operator-group
-        namespace: redis-operator
-      ignore_errors: true
-
-    - name: Remove Redis Operator namespace
-      kubernetes.core.k8s:
-        state: absent
-        api_version: v1
-        kind: Namespace
-        name: redis-operator
-      ignore_errors: true
+# Redis StatefulSet will be removed with namespace deletion
 
 - name: Remove namespace
   when: not (ocp4_workload_litemaas_multi_user | bool)

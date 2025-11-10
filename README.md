@@ -42,7 +42,7 @@ ansible-playbook playbooks/deploy_litemaas.yml
 
 **Components:**
 - 3 LiteLLM replicas (configurable)
-- 1 Redis instance (via Operator)
+- 1 Redis instance (StatefulSet)
 - 1 PostgreSQL instance
 - Response caching enabled
 
@@ -68,7 +68,7 @@ ansible-playbook playbooks/deploy_litemaas.yml \
 
 **Components:**
 - 3 LiteLLM replicas
-- 1 Redis instance (via Operator)
+- 1 Redis instance (StatefulSet)
 - 2 PgBouncer replicas (connection pooling)
 - 1 PostgreSQL instance
 
@@ -445,7 +445,7 @@ All components deploy to the `litemaas` namespace:
 | **LiteLLM Gateway** | Deployment | AI model proxy with admin UI | ✅ Enabled (1 replica) |
 | **Routes** | Route | HTTPS access to admin portal | ✅ Enabled |
 | **Secrets** | Secret | Admin credentials and API keys | ✅ Enabled |
-| **Redis Operator** | Operator | Cache for multi-instance deployments | ❌ Optional |
+| **Redis** | StatefulSet | Cache for multi-instance deployments | ❌ Optional |
 | **PgBouncer** | Deployment | PostgreSQL connection pooler | ❌ Optional |
 
 **Note:** Frontend and Backend are optional and disabled by default. For admin-only deployments, only PostgreSQL and LiteLLM are deployed.
@@ -718,7 +718,7 @@ ansible-playbook playbooks/deploy_litemaas.yml
 
 **New Features:**
 - ✅ LiteLLM horizontal scaling (1-5 replicas)
-- ✅ Redis Operator integration for caching and session management
+- ✅ Redis StatefulSet integration for caching and session management
 - ✅ PgBouncer connection pooling for PostgreSQL
 - ✅ Production HA deployment architecture
 - ✅ Multi-user lab deployment (isolated instances per user)

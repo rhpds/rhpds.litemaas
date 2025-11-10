@@ -171,63 +171,11 @@
       retries: 30
       delay: 10
 
-- name: Deploy Redis Operator and Instance
+- name: Deploy Redis (StatefulSet)
   when:
     - ocp4_workload_litemaas_deploy_redis | bool
     - not (ocp4_workload_litemaas_multi_user | bool)
   block:
-    - name: Create Redis Operator namespace
-      kubernetes.core.k8s:
-        state: present
-        definition:
-          apiVersion: v1
-          kind: Namespace
-          metadata:
-            name: redis-operator
-
-    - name: Create OperatorGroup for Redis
-      kubernetes.core.k8s:
-        state: present
-        definition:
-          apiVersion: operators.coreos.com/v1
-          kind: OperatorGroup
-          metadata:
-            name: redis-operator-group
-            namespace: redis-operator
-          spec:
-            targetNamespaces:
-              - "{{ ocp4_workload_litemaas_namespace }}"
-
-    - name: Subscribe to Redis Operator
-      kubernetes.core.k8s:
-        state: present
-        definition:
-          apiVersion: operators.coreos.com/v1alpha1
-          kind: Subscription
-          metadata:
-            name: redis-operator
-            namespace: redis-operator
-          spec:
-            channel: alpha
-            name: redis-operator
-            source: community-operators
-            sourceNamespace: openshift-marketplace
-            installPlanApproval: Automatic
-
-    - name: Wait for Redis Operator to be ready
-      kubernetes.core.k8s_info:
-        api_version: v1
-        kind: Pod
-        namespace: redis-operator
-        label_selectors:
-          - name=redis-operator
-      register: r_redis_operator_pods
-      until:
-        - r_redis_operator_pods.resources | length > 0
-        - r_redis_operator_pods.resources[0].status.phase == "Running"
-      retries: 30
-      delay: 10
-
     - name: Create Redis secret
       kubernetes.core.k8s:
         state: present
@@ -243,35 +191,95 @@
           stringData:
             password: "{{ ocp4_workload_litemaas_redis_password }}"
 
-    - name: Create Redis instance
+    - name: Create Redis Service
       kubernetes.core.k8s:
         state: present
         namespace: "{{ ocp4_workload_litemaas_namespace }}"
         definition:
-          apiVersion: redis.redis.opstreelabs.in/v1beta1
-          kind: Redis
+          apiVersion: v1
+          kind: Service
           metadata:
             name: litemaas-redis
             labels:
               app: redis
           spec:
-            kubernetesConfig:
-              image: quay.io/opstree/redis:v7.0.12
-              imagePullPolicy: IfNotPresent
-              resources:
-                requests:
-                  cpu: 200m
-                  memory: 256Mi
-                limits:
-                  cpu: "{{ ocp4_workload_litemaas_redis_cpu_limit }}"
-                  memory: "{{ ocp4_workload_litemaas_redis_memory_limit }}"
-              redisSecret:
-                name: redis-secret
-                key: password
-            storage:
-              volumeClaimTemplate:
+            ports:
+              - port: 6379
+                targetPort: 6379
+                name: redis
+            selector:
+              app: redis
+
+    - name: Create Redis StatefulSet
+      kubernetes.core.k8s:
+        state: present
+        namespace: "{{ ocp4_workload_litemaas_namespace }}"
+        definition:
+          apiVersion: apps/v1
+          kind: StatefulSet
+          metadata:
+            name: redis
+            labels:
+              app: redis
+          spec:
+            serviceName: litemaas-redis
+            replicas: 1
+            selector:
+              matchLabels:
+                app: redis
+            template:
+              metadata:
+                labels:
+                  app: redis
+              spec:
+                containers:
+                  - name: redis
+                    image: redis:7-alpine
+                    ports:
+                      - containerPort: 6379
+                        name: redis
+                    command:
+                      - redis-server
+                      - --requirepass
+                      - $(REDIS_PASSWORD)
+                    env:
+                      - name: REDIS_PASSWORD
+                        valueFrom:
+                          secretKeyRef:
+                            name: redis-secret
+                            key: password
+                    volumeMounts:
+                      - name: redis-storage
+                        mountPath: /data
+                    resources:
+                      requests:
+                        cpu: 200m
+                        memory: 256Mi
+                      limits:
+                        cpu: "{{ ocp4_workload_litemaas_redis_cpu_limit }}"
+                        memory: "{{ ocp4_workload_litemaas_redis_memory_limit }}"
+                    livenessProbe:
+                      exec:
+                        command:
+                          - redis-cli
+                          - ping
+                      initialDelaySeconds: 30
+                      periodSeconds: 10
+                    readinessProbe:
+                      exec:
+                        command:
+                          - redis-cli
+                          - ping
+                      initialDelaySeconds: 5
+                      periodSeconds: 5
+            volumeClaimTemplates:
+              - metadata:
+                  name: redis-storage
+                  labels:
+                    app: redis
                 spec:
-                  accessModes: ["ReadWriteOnce"]
+                  accessModes:
+                    - ReadWriteOnce
                   storageClassName: "{{ ocp4_workload_litemaas_redis_storage_class }}"
                   resources:
                     requests:
@@ -279,18 +287,20 @@
 
     - name: Wait for Redis to be ready
       kubernetes.core.k8s_info:
-        api_version: redis.redis.opstreelabs.in/v1beta1
-        kind: Redis
-        name: litemaas-redis
+        api_version: v1
+        kind: Pod
         namespace: "{{ ocp4_workload_litemaas_namespace }}"
-      register: r_redis_instance
+        label_selectors:
+          - app=redis
+      register: r_redis_pods
       until:
-        - r_redis_instance.resources | length > 0
-        - r_redis_instance.resources[0].status is defined
-        - r_redis_instance.resources[0].status.state | default('') == 'Ready'
+        - r_redis_pods.resources | length > 0
+        - r_redis_pods.resources[0].status.phase == "Running"
+        - r_redis_pods.resources[0].status.containerStatuses is defined
+        - r_redis_pods.resources[0].status.containerStatuses | length > 0
+        - r_redis_pods.resources[0].status.containerStatuses[0].ready == true
       retries: 30
       delay: 10
-      ignore_errors: true
 
     - name: Display Redis deployment status
       ansible.builtin.debug:
