@@ -109,7 +109,7 @@
           app: litellm
           component: ai-proxy
       spec:
-        replicas: "{{ ocp4_workload_litemaas_litellm_replicas | int }}"
+        replicas: 1
         selector:
           matchLabels:
             app: litellm
@@ -192,7 +192,7 @@
   until:
     - r_deployment.resources | length > 0
     - r_deployment.resources[0].status.readyReplicas is defined
-    - r_deployment.resources[0].status.readyReplicas == (ocp4_workload_litemaas_litellm_replicas | int)
+    - r_deployment.resources[0].status.readyReplicas == 1
   retries: 30
   delay: 10
 
