@@ -13,9 +13,9 @@ ocp4_workload_litemaas_ha_enable_redis: true
 ocp4_workload_litemaas_ha_redis_image: "registry.redhat.io/rhel9/redis-7:latest"
 ocp4_workload_litemaas_ha_redis_image_fallback: "quay.io/sclorg/redis-7-c9s:latest"
 
-# PostgreSQL 16 configuration for HA
+# PostgreSQL 16 configuration for HA (uses same image as workload.yml)
 ocp4_workload_litemaas_ha_enable_postgres: true
-ocp4_workload_litemaas_ha_postgres_image: "quay.io/fedora/postgresql-16:latest"
+ocp4_workload_litemaas_ha_postgres_image: "postgres:16"
 ocp4_workload_litemaas_ha_postgres_image_fallback: "postgres:16"
 ocp4_workload_litemaas_ha_postgres_db: "litemaas"
 ocp4_workload_litemaas_ha_postgres_user: "litemaas"
