@@ -604,6 +604,18 @@ This removes all namespaces: `litemaas-user1` through `litemaas-user10`.
 | `ocp4_workload_litemaas_multi_user` | `false` | Enable multi-user lab deployment |
 | `num_users` | `1` | Number of user instances to deploy |
 | `ocp4_workload_litemaas_user_prefix` | `user` | Namespace prefix (user1, user2...) |
+| `ocp4_workload_litemaas_multi_user_common_password` | `""` | Common admin password for all users (empty = auto-generate) |
+
+**AgnosticV Example:**
+```yaml
+# In your AgnosticV catalog config
+agnosticv_meta:
+  params:
+    - name: num_users
+      value: 60
+    - name: ocp4_workload_litemaas_multi_user_common_password
+      value: "RedHat2025!"  # All 60 users share this password
+```
 
 See `roles/ocp4_workload_litemaas/defaults/main.yml` for all variables.
 

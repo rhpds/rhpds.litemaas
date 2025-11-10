@@ -51,6 +51,9 @@ num_users: 1  # RHDP standard variable for lab environments
 ocp4_workload_litemaas_user_prefix: "user"
 ocp4_workload_litemaas_user_namespace_pattern: "litemaas-{{ ocp4_workload_litemaas_user_prefix }}{{ item }}"
 
+# Multi-user common admin password (set in AgnosticV for labs, or leave empty to auto-generate)
+ocp4_workload_litemaas_multi_user_common_password: ""
+
 # Multi-user resource optimization (lighter resources for 60-80 user labs)
 ocp4_workload_litemaas_multi_user_postgres_memory_request: "256Mi"
 ocp4_workload_litemaas_multi_user_postgres_memory_limit: "512Mi"
