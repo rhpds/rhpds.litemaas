@@ -42,7 +42,7 @@ ansible-playbook playbooks/deploy_litemaas.yml
 
 **Components:**
 - 3 LiteLLM replicas (configurable)
-- 1 Redis instance (StatefulSet)
+- 1 Redis Enterprise Database (Red Hat Certified Operator)
 - 1 PostgreSQL instance
 - Response caching enabled
 
@@ -67,27 +67,24 @@ ansible-playbook playbooks/deploy_litemaas.yml \
 **Use for:** Large-scale production deployments
 
 **Components:**
-- 3 LiteLLM replicas
-- 1 Redis instance (StatefulSet)
-- 2 PgBouncer replicas (connection pooling)
+- 3 LiteLLM replicas (configurable)
+- 1 Redis Enterprise Database (Red Hat Certified Operator)
 - 1 PostgreSQL instance
 
 **Deploy:**
 ```bash
 ansible-playbook playbooks/deploy_litemaas.yml \
   -e ocp4_workload_litemaas_deploy_redis=true \
-  -e ocp4_workload_litemaas_deploy_pgbouncer=true \
-  -e ocp4_workload_litemaas_litellm_replicas=3 \
-  -e ocp4_workload_litemaas_pgbouncer_replicas=2
+  -e ocp4_workload_litemaas_litellm_replicas=3
 ```
 
-**Performance:** > 100 requests/sec, > 500 concurrent users
+**Performance:** 10-100 requests/sec, 50-500 concurrent users
 
 **Benefits:**
-- Maximum scalability (handles 100s of concurrent requests)
-- Connection pooling reduces PostgreSQL overhead
-- Response caching lowers costs and latency
-- High availability with no single point of failure
+- Horizontal scaling for higher throughput
+- Enterprise-grade Redis (Red Hat Certified)
+- Response caching reduces costs and latency
+- High availability with load balancing
 - Zero-downtime rolling updates
 
 ---
@@ -150,15 +147,14 @@ Choose your deployment based on available cluster resources:
 | Redis | 200m | 500m | 256Mi | 512Mi | 5Gi |
 | **Total** | **1300m** | **4500m** | **~2.3Gi** | **~4.5Gi** | **15Gi** |
 
-### Production HA (3 LiteLLM + Redis + 2 PgBouncer)
+### Production HA (3 LiteLLM + Redis Enterprise)
 
 | Component | CPU Request | CPU Limit | Memory Request | Memory Limit | Storage |
 |-----------|-------------|-----------|----------------|--------------|---------|
 | PostgreSQL | 500m | 1000m | 512Mi | 1Gi | 10Gi |
 | LiteLLM (3 replicas) | 600m | 3000m | 1.5Gi | 3Gi | - |
-| Redis | 200m | 500m | 256Mi | 512Mi | 5Gi |
-| PgBouncer (2 replicas) | 200m | 1000m | 256Mi | 512Mi | - |
-| **Total** | **1500m** | **5500m** | **~2.5Gi** | **~5Gi** | **15Gi** |
+| Redis Enterprise | 200m | 500m | 512Mi | 512Mi | 5Gi |
+| **Total** | **1300m** | **4500m** | **~2.5Gi** | **~4.5Gi** | **15Gi** |
 
 ### Multi-User Lab (Per User - Optimized)
 
@@ -445,8 +441,7 @@ All components deploy to the `litemaas` namespace:
 | **LiteLLM Gateway** | Deployment | AI model proxy with admin UI | ✅ Enabled (1 replica) |
 | **Routes** | Route | HTTPS access to admin portal | ✅ Enabled |
 | **Secrets** | Secret | Admin credentials and API keys | ✅ Enabled |
-| **Redis** | StatefulSet | Cache for multi-instance deployments | ❌ Optional |
-| **PgBouncer** | Deployment | PostgreSQL connection pooler | ❌ Optional |
+| **Redis Enterprise** | Custom Resource | Enterprise cache (Red Hat Certified) | ❌ Optional |
 
 **Note:** Frontend and Backend are optional and disabled by default. For admin-only deployments, only PostgreSQL and LiteLLM are deployed.
 
@@ -460,33 +455,13 @@ Control deployment scale with these variables:
 # LiteLLM replicas (1-5 recommended)
 ocp4_workload_litemaas_litellm_replicas: 3
 
-# Enable Redis cache
+# Enable Redis Enterprise cache
 ocp4_workload_litemaas_deploy_redis: true
 ocp4_workload_litemaas_redis_storage_size: 5Gi
 ocp4_workload_litemaas_redis_memory_limit: 512Mi
 
-# Enable PgBouncer connection pooling
-ocp4_workload_litemaas_deploy_pgbouncer: true
-ocp4_workload_litemaas_pgbouncer_replicas: 2
-ocp4_workload_litemaas_pgbouncer_pool_mode: transaction
-ocp4_workload_litemaas_pgbouncer_max_client_conn: 1000
-ocp4_workload_litemaas_pgbouncer_default_pool_size: 25
-
 # PostgreSQL max connections
 ocp4_workload_litemaas_postgres_max_connections: 100
-```
-
-### Connection Flow
-
-**Without PgBouncer:**
-```
-3 LiteLLM replicas × 20 connections = 60 PostgreSQL connections
-```
-
-**With PgBouncer:**
-```
-3 LiteLLM replicas × 20 connections → PgBouncer (pools to 25) → PostgreSQL
-Result: 60 client connections pooled to 25 PostgreSQL connections
 ```
 
 ### When to Use Each Option
@@ -495,7 +470,6 @@ Result: 60 client connections pooled to 25 PostgreSQL connections
 |------------|-------------|------------------|------|------------|
 | Single Instance | < 10 | < 50 | Low | Low |
 | Scaled + Redis | 10-100 | 50-500 | Medium | Medium |
-| Production HA | > 100 | > 500 | Medium | Medium |
 
 ## Multi-User Lab Deployment Details
 
@@ -586,16 +560,6 @@ This removes all namespaces: `litemaas-user1` through `litemaas-user10`.
 | `ocp4_workload_litemaas_redis_storage_size` | `5Gi` | Redis PVC size |
 | `ocp4_workload_litemaas_redis_memory_limit` | `512Mi` | Redis memory limit |
 | `ocp4_workload_litemaas_redis_cpu_limit` | `500m` | Redis CPU limit |
-
-### PgBouncer Configuration (Optional)
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `ocp4_workload_litemaas_deploy_pgbouncer` | `false` | Enable connection pooling |
-| `ocp4_workload_litemaas_pgbouncer_replicas` | `1` | Number of PgBouncer instances |
-| `ocp4_workload_litemaas_pgbouncer_pool_mode` | `transaction` | Pooling mode (transaction/session) |
-| `ocp4_workload_litemaas_pgbouncer_max_client_conn` | `1000` | Max client connections |
-| `ocp4_workload_litemaas_pgbouncer_default_pool_size` | `25` | Pool size per user/database |
 
 ### Multi-User Lab Configuration
 
@@ -718,34 +682,28 @@ ansible-playbook playbooks/deploy_litemaas.yml
 
 **New Features:**
 - ✅ LiteLLM horizontal scaling (1-5 replicas)
-- ✅ Redis StatefulSet integration for caching and session management
-- ✅ PgBouncer connection pooling for PostgreSQL
+- ✅ Redis Enterprise Operator (Red Hat Certified) for caching
 - ✅ Production HA deployment architecture
 - ✅ Multi-user lab deployment (isolated instances per user)
-- ✅ Automatic database connection routing (PgBouncer when enabled)
 - ✅ Health probes for LiteLLM (liveness and readiness)
 - ✅ Init containers to ensure proper startup order
 
 **Architecture:**
 - Single instance (default) - backward compatible
-- Scaled + Redis - medium-scale production
-- Production HA - large-scale with Redis + PgBouncer
-- Multi-user - isolated instances for lab environments (1-50+ users)
+- Scaled + Redis Enterprise - medium to large-scale production
+- Multi-user - isolated instances for lab environments (1-80+ users)
 
 **Configuration:**
-- `ocp4_workload_litemaas_litellm_replicas` - Scale LiteLLM instances
-- `ocp4_workload_litemaas_deploy_redis` - Enable Redis cache
-- `ocp4_workload_litemaas_deploy_pgbouncer` - Enable connection pooling
-- `ocp4_workload_litemaas_postgres_max_connections` - PostgreSQL tuning
+- `ocp4_workload_litemaas_litellm_replicas` - Scale LiteLLM instances (1-5)
+- `ocp4_workload_litemaas_deploy_redis` - Enable Redis Enterprise cache
 - `ocp4_workload_litemaas_multi_user` - Enable multi-user lab mode
 - `num_users` - Number of isolated user instances to deploy
 - Multi-user resource optimization variables for 60-80 user labs
 
 **Benefits:**
 - Horizontal scaling for higher request volumes
-- Response caching reduces costs and latency
-- Connection pooling reduces PostgreSQL overhead
-- High availability with no single point of failure
+- Enterprise-grade Redis caching reduces costs and latency
+- High availability with load balancing
 - Zero-downtime rolling updates
 - Isolated environments for training labs and demos
 

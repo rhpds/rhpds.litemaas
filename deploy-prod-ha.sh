@@ -25,12 +25,10 @@ echo "Installing collection..."
 ansible-galaxy collection install rhpds-litemaas-0.2.0.tar.gz --force
 
 # Deploy Production HA
-echo "Deploying Production HA (Redis + PgBouncer + 3 LiteLLM replicas)..."
+echo "Deploying Production HA (Redis Enterprise + 3 LiteLLM replicas)..."
 ansible-playbook playbooks/deploy_litemaas.yml \
   -e ocp4_workload_litemaas_deploy_redis=true \
-  -e ocp4_workload_litemaas_deploy_pgbouncer=true \
   -e ocp4_workload_litemaas_litellm_replicas=3 \
-  -e ocp4_workload_litemaas_pgbouncer_replicas=2 \
   -e ocp4_workload_litemaas_postgres_storage_class=ocs-external-storagecluster-ceph-rbd
 
 echo "========================================="
