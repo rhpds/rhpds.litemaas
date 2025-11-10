@@ -413,7 +413,50 @@ Multi-user deployments use optimized resources for lab environments:
 - Recommended: 32+ CPU cores, 128Gi+ RAM
 - Storage: 600-800Gi (thin provisioned)
 
-**Note:** Multi-user mode is optimized for lab simplicity. Resources are intentionally lighter (256Mi RAM per component vs 512Mi+ in production). For production HA deployments with Redis and PgBouncer, use the single-instance Production HA option instead.
+**Note:** Multi-user mode is optimized for lab simplicity. Resources are intentionally lighter (256Mi RAM per component vs 512Mi+ in production).
+
+### Showroom Integration
+
+Multi-user deployments automatically provide per-user variables for Showroom catalog integration. Each user sees their own credentials when logged in.
+
+**Example Showroom Content:**
+
+```markdown
+## Your LiteLLM Environment
+
+Access your personal LiteLLM instance:
+
+**Admin Portal:** [{{ litemaas_url }}]({{ litemaas_url }})
+
+**Admin Credentials:**
+- Username: `{{ litemaas_username }}`
+- Password: `{{ litemaas_password }}`
+
+**API Access:**
+- Endpoint: `{{ litemaas_url }}`
+- Master Key: `{{ litemaas_api_key }}`
+- Namespace: `{{ litemaas_namespace }}`
+
+### Quick Test
+
+```bash
+curl {{ litemaas_url }}/health/livenessz \
+  -H "Authorization: Bearer {{ litemaas_api_key }}"
+```
+\```
+
+**Available Variables:**
+
+Each user automatically gets their own values for:
+- `{{ litemaas_url }}` - LiteLLM Admin Portal URL
+- `{{ litemaas_username }}` - Admin username (typically "admin")
+- `{{ litemaas_password }}` - Admin password (unique per user)
+- `{{ litemaas_api_key }}` - LiteLLM Master API key (unique per user)
+- `{{ litemaas_namespace }}` - Kubernetes namespace (e.g., "litemaas-user1")
+
+**Additionally**, numbered variables are available for cross-referencing:
+- `{{ litemaas_user1_url }}`, `{{ litemaas_user2_url }}`, etc.
+- `{{ litemaas_user1_password }}`, `{{ litemaas_user2_password }}`, etc.
 
 ### Removal
 
