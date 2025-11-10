@@ -3,7 +3,7 @@
 
 - name: Get actual PostgreSQL password from running pod
   ansible.builtin.shell: |
-    oc exec -n {{ ocp4_workload_litemaas_namespace }} statefulset/postgres -- printenv POSTGRES_PASSWORD
+    oc exec -n {{ ocp4_workload_litemaas_namespace }} postgres-0 -- printenv POSTGRES_PASSWORD
   register: r_actual_pg_password
   changed_when: false
 
@@ -13,7 +13,7 @@
 
 - name: Create LiteLLM database using oc exec with actual password
   ansible.builtin.shell: |
-    oc exec -n {{ ocp4_workload_litemaas_namespace }} statefulset/postgres -- bash -c "
+    oc exec -n {{ ocp4_workload_litemaas_namespace }} postgres-0 -- bash -c "
     export PGPASSWORD='{{ _litemaas_actual_postgres_password }}'
     psql -U litemaas -d postgres -c 'DROP DATABASE IF EXISTS litellm_db;'
     psql -U litemaas -d postgres -c 'CREATE DATABASE litellm_db OWNER litemaas;'
@@ -93,7 +93,7 @@
           app: litellm
           component: ai-proxy
       spec:
-        replicas: 1
+        replicas: "{{ ocp4_workload_litemaas_litellm_replicas | int }}"
         selector:
           matchLabels:
             app: litellm
@@ -176,7 +176,7 @@
   until:
     - r_deployment.resources | length > 0
     - r_deployment.resources[0].status.readyReplicas is defined
-    - r_deployment.resources[0].status.readyReplicas == 1
+    - r_deployment.resources[0].status.readyReplicas == (ocp4_workload_litemaas_litellm_replicas | int)
   retries: 30
   delay: 10
 
