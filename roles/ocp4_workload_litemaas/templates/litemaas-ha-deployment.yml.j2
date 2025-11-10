@@ -11,7 +11,6 @@ stringData:
   LITELLM_MASTER_KEY: "{{ ocp4_workload_litemaas_litellm_api_key }}"
   UI_USERNAME: "{{ ocp4_workload_litemaas_litellm_ui_username }}"
   UI_PASSWORD: "{{ ocp4_workload_litemaas_litellm_ui_password }}"
-  DATABASE_URL: "postgresql://{{ ocp4_workload_litemaas_ha_postgres_user }}:{{ ocp4_workload_litemaas_ha_postgres_password }}@litemaas-postgres:5432/{{ ocp4_workload_litemaas_ha_postgres_db }}?sslmode=disable"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -64,7 +63,7 @@ spec:
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
-                  name: litellm-secret
+                  name: litemaas-db
                   key: DATABASE_URL
             - name: LITELLM_MASTER_KEY
               valueFrom:
