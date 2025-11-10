@@ -1,0 +1,112 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: litemaas-db
+  labels:
+    app: litemaas-postgres
+    component: database
+type: Opaque
+stringData:
+  username: "{{ ocp4_workload_litemaas_ha_postgres_user }}"
+  password: "{{ ocp4_workload_litemaas_ha_postgres_password }}"
+  database: "{{ ocp4_workload_litemaas_ha_postgres_db }}"
+  DATABASE_URL: "postgresql://{{ ocp4_workload_litemaas_ha_postgres_user }}:{{ ocp4_workload_litemaas_ha_postgres_password }}@litemaas-postgres:5432/{{ ocp4_workload_litemaas_ha_postgres_db }}?sslmode=disable"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: litemaas-postgres
+  labels:
+    app: litemaas-postgres
+    component: database
+spec:
+  ports:
+    - port: 5432
+      targetPort: 5432
+      name: postgres
+  selector:
+    app: litemaas-postgres
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: litemaas-postgres
+  labels:
+    app: litemaas-postgres
+    component: database
+spec:
+  serviceName: litemaas-postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app: litemaas-postgres
+  template:
+    metadata:
+      labels:
+        app: litemaas-postgres
+        component: database
+    spec:
+      containers:
+        - name: postgres
+          image: "{{ ocp4_workload_litemaas_ha_postgres_image }}"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5432
+              name: postgres
+          env:
+            - name: POSTGRESQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: litemaas-db
+                  key: password
+            - name: POSTGRESQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: litemaas-db
+                  key: username
+            - name: POSTGRESQL_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: litemaas-db
+                  key: database
+            - name: PGDATA
+              value: "/var/lib/pgsql/data/pgdata"
+          volumeMounts:
+            - name: postgres-storage
+              mountPath: /var/lib/pgsql/data
+          resources:
+            requests:
+              memory: "{{ ocp4_workload_litemaas_ha_postgres_memory_request }}"
+              cpu: "{{ ocp4_workload_litemaas_ha_postgres_cpu_request }}"
+            limits:
+              memory: "{{ ocp4_workload_litemaas_ha_postgres_memory_limit }}"
+              cpu: "{{ ocp4_workload_litemaas_ha_postgres_cpu_limit }}"
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - pg_isready -U {{ ocp4_workload_litemaas_ha_postgres_user }}
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - pg_isready -U {{ ocp4_workload_litemaas_ha_postgres_user }}
+            initialDelaySeconds: 10
+            periodSeconds: 5
+  volumeClaimTemplates:
+    - metadata:
+        name: postgres-storage
+        labels:
+          app: litemaas-postgres
+      spec:
+        accessModes:
+          - "{{ ocp4_workload_litemaas_postgres_storage_access_mode }}"
+        storageClassName: "{{ ocp4_workload_litemaas_postgres_storage_class }}"
+        resources:
+          requests:
+            storage: "{{ ocp4_workload_litemaas_ha_postgres_pvc_size }}"

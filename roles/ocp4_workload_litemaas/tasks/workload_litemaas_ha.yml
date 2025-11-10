@@ -1,0 +1,194 @@
+---
+# High Availability LiteMaaS Workload
+# Deploys LiteMaaS with multiple replicas, Redis cache, and PostgreSQL 16
+
+- name: Set HA deployment facts
+  ansible.builtin.set_fact:
+    _litemaas_ha_namespace: "{{ ocp4_workload_litemaas_namespace }}"
+
+- name: Display HA deployment configuration
+  ansible.builtin.debug:
+    msg:
+      - "Deploying LiteMaaS in High Availability mode"
+      - "Namespace: {{ _litemaas_ha_namespace }}"
+      - "LiteLLM Replicas: {{ ocp4_workload_litemaas_ha_litellm_replicas }}"
+      - "Redis Enabled: {{ ocp4_workload_litemaas_ha_enable_redis }}"
+      - "PostgreSQL Enabled: {{ ocp4_workload_litemaas_ha_enable_postgres }}"
+
+- name: Create namespace for HA LiteMaaS
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ _litemaas_ha_namespace }}"
+        labels:
+          app: litemaas
+          deployment-mode: ha
+
+- name: Deploy PostgreSQL 16 database
+  when: ocp4_workload_litemaas_ha_enable_postgres | bool
+  block:
+    - name: Check if Red Hat PostgreSQL image is accessible
+      kubernetes.core.k8s:
+        state: present
+        namespace: "{{ _litemaas_ha_namespace }}"
+        definition:
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: postgres-image-check
+            labels:
+              app: image-check
+          spec:
+            restartPolicy: Never
+            containers:
+              - name: check
+                image: "{{ ocp4_workload_litemaas_ha_postgres_image }}"
+                command: ["echo", "Image accessible"]
+      register: r_postgres_image_check
+      ignore_errors: true
+
+    - name: Use fallback PostgreSQL image if Red Hat image not accessible
+      ansible.builtin.set_fact:
+        _postgres_image: "{{ ocp4_workload_litemaas_ha_postgres_image_fallback }}"
+      when: r_postgres_image_check is failed
+
+    - name: Use Red Hat PostgreSQL image
+      ansible.builtin.set_fact:
+        _postgres_image: "{{ ocp4_workload_litemaas_ha_postgres_image }}"
+      when: r_postgres_image_check is succeeded
+
+    - name: Clean up image check pod
+      kubernetes.core.k8s:
+        state: absent
+        api_version: v1
+        kind: Pod
+        name: postgres-image-check
+        namespace: "{{ _litemaas_ha_namespace }}"
+      when: r_postgres_image_check is defined
+      ignore_errors: true
+
+    - name: Deploy PostgreSQL 16
+      kubernetes.core.k8s:
+        state: present
+        namespace: "{{ _litemaas_ha_namespace }}"
+        definition: "{{ lookup('template', 'litemaas-postgres.yml.j2') | from_yaml_all }}"
+
+    - name: Wait for PostgreSQL to be ready
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Pod
+        namespace: "{{ _litemaas_ha_namespace }}"
+        label_selectors:
+          - app=litemaas-postgres
+      register: r_postgres_pods
+      until:
+        - r_postgres_pods.resources | length > 0
+        - r_postgres_pods.resources[0].status.phase == "Running"
+      retries: 30
+      delay: 10
+
+- name: Deploy Redis cache
+  when: ocp4_workload_litemaas_ha_enable_redis | bool
+  block:
+    - name: Check if Red Hat Redis image is accessible
+      kubernetes.core.k8s:
+        state: present
+        namespace: "{{ _litemaas_ha_namespace }}"
+        definition:
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: redis-image-check
+            labels:
+              app: image-check
+          spec:
+            restartPolicy: Never
+            containers:
+              - name: check
+                image: "{{ ocp4_workload_litemaas_ha_redis_image }}"
+                command: ["echo", "Image accessible"]
+      register: r_redis_image_check
+      ignore_errors: true
+
+    - name: Use fallback Redis image if Red Hat image not accessible
+      ansible.builtin.set_fact:
+        _redis_image: "{{ ocp4_workload_litemaas_ha_redis_image_fallback }}"
+      when: r_redis_image_check is failed
+
+    - name: Use Red Hat Redis image
+      ansible.builtin.set_fact:
+        _redis_image: "{{ ocp4_workload_litemaas_ha_redis_image }}"
+      when: r_redis_image_check is succeeded
+
+    - name: Clean up image check pod
+      kubernetes.core.k8s:
+        state: absent
+        api_version: v1
+        kind: Pod
+        name: redis-image-check
+        namespace: "{{ _litemaas_ha_namespace }}"
+      when: r_redis_image_check is defined
+      ignore_errors: true
+
+    - name: Deploy Redis
+      kubernetes.core.k8s:
+        state: present
+        namespace: "{{ _litemaas_ha_namespace }}"
+        definition: "{{ lookup('template', 'litemaas-redis.yml.j2') | from_yaml_all }}"
+
+    - name: Wait for Redis to be ready
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Pod
+        namespace: "{{ _litemaas_ha_namespace }}"
+        label_selectors:
+          - app=litemaas-redis
+      register: r_redis_pods
+      until:
+        - r_redis_pods.resources | length > 0
+        - r_redis_pods.resources[0].status.phase == "Running"
+      retries: 20
+      delay: 5
+
+- name: Deploy LiteMaaS (High Availability)
+  block:
+    - name: Deploy LiteMaaS HA
+      kubernetes.core.k8s:
+        state: present
+        namespace: "{{ _litemaas_ha_namespace }}"
+        definition: "{{ lookup('template', 'litemaas-ha-deployment.yml.j2') | from_yaml_all }}"
+
+    - name: Wait for LiteMaaS pods to be ready
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Pod
+        namespace: "{{ _litemaas_ha_namespace }}"
+        label_selectors:
+          - app=litemaas
+      register: r_litemaas_pods
+      until:
+        - r_litemaas_pods.resources | length == (ocp4_workload_litemaas_ha_litellm_replicas | int)
+        - r_litemaas_pods.resources | selectattr('status.phase', 'equalto', 'Running') | list | length == (ocp4_workload_litemaas_ha_litellm_replicas | int)
+      retries: 40
+      delay: 10
+
+    - name: Get LiteMaaS route
+      kubernetes.core.k8s_info:
+        api_version: route.openshift.io/v1
+        kind: Route
+        name: litemaas
+        namespace: "{{ _litemaas_ha_namespace }}"
+      register: r_litemaas_route
+
+    - name: Display HA deployment information
+      ansible.builtin.debug:
+        msg:
+          - "LiteMaaS HA deployment completed successfully"
+          - "Namespace: {{ _litemaas_ha_namespace }}"
+          - "LiteLLM Replicas: {{ ocp4_workload_litemaas_ha_litellm_replicas }}"
+          - "Route: https://{{ r_litemaas_route.resources[0].spec.host }}"
+          - "Admin Username: {{ ocp4_workload_litemaas_litellm_ui_username }}"
+          - "Admin Password: {{ ocp4_workload_litemaas_litellm_ui_password }}"

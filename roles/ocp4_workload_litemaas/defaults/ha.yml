@@ -1,0 +1,39 @@
+---
+# High Availability LiteMaaS Configuration
+# These variables are used when deploying LiteMaaS in HA mode
+
+# Enable HA mode
+ocp4_workload_litemaas_ha_enabled: false
+
+# LiteLLM replicas for HA deployment
+ocp4_workload_litemaas_ha_litellm_replicas: 2
+
+# Redis configuration
+ocp4_workload_litemaas_ha_enable_redis: true
+ocp4_workload_litemaas_ha_redis_image: "registry.redhat.io/rhel8/redis-6:latest"
+ocp4_workload_litemaas_ha_redis_image_fallback: "quay.io/sclorg/redis-6-c9s:latest"
+
+# PostgreSQL 16 configuration for HA
+ocp4_workload_litemaas_ha_enable_postgres: true
+ocp4_workload_litemaas_ha_postgres_image: "registry.redhat.io/rhel9/postgresql-16:latest"
+ocp4_workload_litemaas_ha_postgres_image_fallback: "quay.io/sclorg/postgresql-16-c9s:latest"
+ocp4_workload_litemaas_ha_postgres_db: "litemaas"
+ocp4_workload_litemaas_ha_postgres_user: "litemaas"
+ocp4_workload_litemaas_ha_postgres_password: "{{ lookup('password', '/dev/null length=32 chars=ascii_letters,digits') }}"
+ocp4_workload_litemaas_ha_postgres_pvc_size: "10Gi"
+
+# Resource limits for HA deployment
+ocp4_workload_litemaas_ha_litellm_memory_request: "512Mi"
+ocp4_workload_litemaas_ha_litellm_memory_limit: "2Gi"
+ocp4_workload_litemaas_ha_litellm_cpu_request: "500m"
+ocp4_workload_litemaas_ha_litellm_cpu_limit: "2000m"
+
+ocp4_workload_litemaas_ha_postgres_memory_request: "512Mi"
+ocp4_workload_litemaas_ha_postgres_memory_limit: "2Gi"
+ocp4_workload_litemaas_ha_postgres_cpu_request: "500m"
+ocp4_workload_litemaas_ha_postgres_cpu_limit: "2000m"
+
+ocp4_workload_litemaas_ha_redis_memory_request: "256Mi"
+ocp4_workload_litemaas_ha_redis_memory_limit: "512Mi"
+ocp4_workload_litemaas_ha_redis_cpu_request: "200m"
+ocp4_workload_litemaas_ha_redis_cpu_limit: "500m"

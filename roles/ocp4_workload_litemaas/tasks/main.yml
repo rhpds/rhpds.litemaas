@@ -7,11 +7,18 @@
     - name: Run pre_workload tasks
       ansible.builtin.include_tasks: pre_workload.yml
 
-    - name: Run workload tasks
+    - name: Run HA workload tasks
+      when: ocp4_workload_litemaas_ha_enabled | bool
+      ansible.builtin.include_tasks: workload_litemaas_ha.yml
+
+    - name: Run standard workload tasks
+      when: not (ocp4_workload_litemaas_ha_enabled | bool)
       ansible.builtin.include_tasks: workload.yml
 
     - name: Run post_workload tasks
-      when: not (ocp4_workload_litemaas_multi_user | bool)
+      when:
+        - not (ocp4_workload_litemaas_multi_user | bool)
+        - not (ocp4_workload_litemaas_ha_enabled | bool)
       ansible.builtin.include_tasks: post_workload.yml
 
 - name: Remove workload

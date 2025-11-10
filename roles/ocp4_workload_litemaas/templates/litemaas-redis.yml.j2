@@ -1,0 +1,61 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: litemaas-redis
+  labels:
+    app: litemaas-redis
+    component: cache
+spec:
+  ports:
+    - port: 6379
+      targetPort: 6379
+      name: redis
+  selector:
+    app: litemaas-redis
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: litemaas-redis
+  labels:
+    app: litemaas-redis
+    component: cache
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: litemaas-redis
+  template:
+    metadata:
+      labels:
+        app: litemaas-redis
+        component: cache
+    spec:
+      containers:
+        - name: redis
+          image: "{{ ocp4_workload_litemaas_ha_redis_image }}"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 6379
+              name: redis
+          resources:
+            requests:
+              memory: "{{ ocp4_workload_litemaas_ha_redis_memory_request }}"
+              cpu: "{{ ocp4_workload_litemaas_ha_redis_cpu_request }}"
+            limits:
+              memory: "{{ ocp4_workload_litemaas_ha_redis_memory_limit }}"
+              cpu: "{{ ocp4_workload_litemaas_ha_redis_cpu_limit }}"
+          livenessProbe:
+            tcpSocket:
+              port: 6379
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - redis-cli ping | grep PONG
+            initialDelaySeconds: 10
+            periodSeconds: 5

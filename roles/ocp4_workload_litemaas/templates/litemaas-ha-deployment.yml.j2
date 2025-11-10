@@ -1,0 +1,162 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: litellm-secret
+  labels:
+    app: litemaas
+    component: ai-proxy
+type: Opaque
+stringData:
+  LITELLM_MASTER_KEY: "{{ ocp4_workload_litemaas_litellm_api_key }}"
+  UI_USERNAME: "{{ ocp4_workload_litemaas_litellm_ui_username }}"
+  UI_PASSWORD: "{{ ocp4_workload_litemaas_litellm_ui_password }}"
+  DATABASE_URL: "postgresql://{{ ocp4_workload_litemaas_ha_postgres_user }}:{{ ocp4_workload_litemaas_ha_postgres_password }}@litemaas-postgres:5432/{{ ocp4_workload_litemaas_ha_postgres_db }}?sslmode=disable"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: litemaas
+  labels:
+    app: litemaas
+    component: ai-proxy
+spec:
+  replicas: {{ ocp4_workload_litemaas_ha_litellm_replicas | int }}
+  selector:
+    matchLabels:
+      app: litemaas
+  template:
+    metadata:
+      labels:
+        app: litemaas
+        component: ai-proxy
+    spec:
+      initContainers:
+        - name: wait-for-postgres
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              until nc -z litemaas-postgres 5432; do
+                echo "Waiting for PostgreSQL..."
+                sleep 2
+              done
+              echo "PostgreSQL is ready"
+        - name: wait-for-redis
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              until nc -z litemaas-redis 6379; do
+                echo "Waiting for Redis..."
+                sleep 2
+              done
+              echo "Redis is ready"
+      containers:
+        - name: litemaas
+          image: "{{ ocp4_workload_litemaas_litellm_image }}:{{ ocp4_workload_litemaas_litellm_tag }}"
+          ports:
+            - containerPort: 4000
+              name: http
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: litellm-secret
+                  key: DATABASE_URL
+            - name: LITELLM_MASTER_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: litellm-secret
+                  key: LITELLM_MASTER_KEY
+            - name: UI_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: litellm-secret
+                  key: UI_USERNAME
+            - name: UI_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: litellm-secret
+                  key: UI_PASSWORD
+            - name: REDIS_HOST
+              value: "litemaas-redis"
+            - name: REDIS_PORT
+              value: "6379"
+            - name: DB_HOST
+              value: "litemaas-postgres"
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: litemaas-db
+                  key: database
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: litemaas-db
+                  key: username
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: litemaas-db
+                  key: password
+          readinessProbe:
+            httpGet:
+              path: /health/readiness
+              port: 4000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health/liveness
+              port: 4000
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              memory: "{{ ocp4_workload_litemaas_ha_litellm_memory_request }}"
+              cpu: "{{ ocp4_workload_litemaas_ha_litellm_cpu_request }}"
+            limits:
+              memory: "{{ ocp4_workload_litemaas_ha_litellm_memory_limit }}"
+              cpu: "{{ ocp4_workload_litemaas_ha_litellm_cpu_limit }}"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: litemaas
+  labels:
+    app: litemaas
+    component: ai-proxy
+spec:
+  ports:
+    - port: 4000
+      targetPort: 4000
+      name: http
+  selector:
+    app: litemaas
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: litemaas
+  labels:
+    app: litemaas
+    component: ai-proxy
+spec:
+  host: "litellm-{{ ocp4_workload_litemaas_route_name }}.{{ ocp4_workload_litemaas_cluster_domain }}"
+  to:
+    kind: Service
+    name: litemaas
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect

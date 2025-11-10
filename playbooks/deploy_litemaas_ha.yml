@@ -1,0 +1,28 @@
+---
+# Example playbook for deploying LiteMaaS in High Availability mode
+#
+# Usage:
+#   ansible-playbook playbooks/deploy_litemaas_ha.yml
+#
+# With custom replicas:
+#   ansible-playbook playbooks/deploy_litemaas_ha.yml \
+#     -e ocp4_workload_litemaas_ha_litellm_replicas=3
+
+- name: Deploy LiteMaaS in High Availability mode
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  become: false
+
+  tasks:
+    - name: Include HA defaults
+      ansible.builtin.include_vars:
+        file: "{{ playbook_dir }}/../roles/ocp4_workload_litemaas/defaults/ha.yml"
+
+    - name: Set HA mode enabled
+      ansible.builtin.set_fact:
+        ocp4_workload_litemaas_ha_enabled: true
+
+    - name: Include LiteMaaS role with HA configuration
+      ansible.builtin.include_role:
+        name: ocp4_workload_litemaas
