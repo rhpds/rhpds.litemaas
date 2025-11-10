@@ -20,76 +20,20 @@ Choose the architecture that fits your needs:
 
 ### 1. Single Instance (Default)
 
-**Use for:** Development, testing, small-scale deployments
+**Use for:** Development, testing, single-user deployments
 
 **Components:**
 - 1 LiteLLM replica
 - 1 PostgreSQL instance
-- Direct database connections
 
 **Deploy:**
 ```bash
 ansible-playbook playbooks/deploy_litemaas.yml
 ```
 
-**Performance:** < 10 requests/sec, < 50 concurrent users
-
 ---
 
-### 2. Scaled with Redis (Medium-Scale Production)
-
-**Use for:** Medium-scale production deployments
-
-**Components:**
-- 3 LiteLLM replicas (configurable)
-- 1 Redis instance (Community Operator)
-- 1 PostgreSQL instance
-- Response caching enabled
-
-**Deploy:**
-```bash
-ansible-playbook playbooks/deploy_litemaas.yml \
-  -e ocp4_workload_litemaas_deploy_redis=true \
-  -e ocp4_workload_litemaas_litellm_replicas=3
-```
-
-**Performance:** 10-100 requests/sec, 50-500 concurrent users
-
-**Benefits:**
-- Horizontal scaling for higher throughput
-- Response caching reduces costs and latency
-- Load balancing via OpenShift Service
-
----
-
-### 3. Production HA (Recommended for Large-Scale)
-
-**Use for:** Large-scale production deployments
-
-**Components:**
-- 3 LiteLLM replicas (configurable)
-- 1 Redis instance (Community Operator)
-- 1 PostgreSQL instance
-
-**Deploy:**
-```bash
-ansible-playbook playbooks/deploy_litemaas.yml \
-  -e ocp4_workload_litemaas_deploy_redis=true \
-  -e ocp4_workload_litemaas_litellm_replicas=3
-```
-
-**Performance:** 10-100 requests/sec, 50-500 concurrent users
-
-**Benefits:**
-- Horizontal scaling for higher throughput
-- Redis Operator (open source, community-supported)
-- Response caching reduces costs and latency
-- High availability with load balancing
-- Zero-downtime rolling updates
-
----
-
-### 4. Multi-User Lab Deployment
+### 2. Multi-User Lab Deployment
 
 **Use for:** Training labs, workshops, isolated demo environments
 
@@ -137,24 +81,6 @@ Choose your deployment based on available cluster resources:
 | PostgreSQL | 500m | 1000m | 512Mi | 1Gi | 10Gi |
 | LiteLLM (1 replica) | 200m | 1000m | 512Mi | 1Gi | - |
 | **Total** | **700m** | **2000m** | **~1Gi** | **~2Gi** | **10Gi** |
-
-### Scaled with Redis (3 replicas)
-
-| Component | CPU Request | CPU Limit | Memory Request | Memory Limit | Storage |
-|-----------|-------------|-----------|----------------|--------------|---------|
-| PostgreSQL | 500m | 1000m | 512Mi | 1Gi | 10Gi |
-| LiteLLM (3 replicas) | 600m | 3000m | 1.5Gi | 3Gi | - |
-| Redis | 200m | 500m | 256Mi | 512Mi | 5Gi |
-| **Total** | **1300m** | **4500m** | **~2.3Gi** | **~4.5Gi** | **15Gi** |
-
-### Production HA (3 LiteLLM + Redis Operator)
-
-| Component | CPU Request | CPU Limit | Memory Request | Memory Limit | Storage |
-|-----------|-------------|-----------|----------------|--------------|---------|
-| PostgreSQL | 500m | 1000m | 512Mi | 1Gi | 10Gi |
-| LiteLLM (3 replicas) | 600m | 3000m | 1.5Gi | 3Gi | - |
-| Redis | 200m | 500m | 256Mi | 512Mi | 5Gi |
-| **Total** | **1300m** | **4500m** | **~2.3Gi** | **~4.5Gi** | **15Gi** |
 
 ### Multi-User Lab (Per User - Optimized)
 
@@ -441,32 +367,8 @@ All components deploy to the `litemaas` namespace:
 | **LiteLLM Gateway** | Deployment | AI model proxy with admin UI | ✅ Enabled (1 replica) |
 | **Routes** | Route | HTTPS access to admin portal | ✅ Enabled |
 | **Secrets** | Secret | Admin credentials and API keys | ✅ Enabled |
-| **Redis** | Custom Resource | Cache via Community Operator | ❌ Optional |
 
 **Note:** Frontend and Backend are optional and disabled by default. For admin-only deployments, only PostgreSQL and LiteLLM are deployed.
-
-## Scaling Configuration Details
-
-Advanced configuration options for scaling deployments:
-
-Control deployment scale with these variables:
-
-```yaml
-# LiteLLM replicas (1-5 recommended)
-ocp4_workload_litemaas_litellm_replicas: 3
-
-# Enable Redis cache (Community Operator)
-ocp4_workload_litemaas_deploy_redis: true
-ocp4_workload_litemaas_redis_storage_size: 5Gi
-ocp4_workload_litemaas_redis_memory_limit: 512Mi
-```
-
-### When to Use Each Option
-
-| Deployment | Requests/sec | Concurrent Users | Cost | Complexity |
-|------------|-------------|------------------|------|------------|
-| Single Instance | < 10 | < 50 | Low | Low |
-| Scaled + Redis | 10-100 | 50-500 | Medium | Medium |
 
 ## Multi-User Lab Deployment Details
 
