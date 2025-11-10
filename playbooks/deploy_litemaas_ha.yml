@@ -25,4 +25,4 @@
 
     - name: Include LiteMaaS role with HA configuration
       ansible.builtin.include_role:
-        name: ocp4_workload_litemaas
+        name: rhpds.litemaas.ocp4_workload_litemaas
