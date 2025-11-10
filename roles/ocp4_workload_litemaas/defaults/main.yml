@@ -103,4 +103,4 @@ _ocp4_workload_litemaas_storage_class_map:
   gcp: "standard-rwo"
   vsphere: "thin-csi"
   openstack: "standard"
-  baremetal: "ocs-storagecluster-ceph-rbd"
+  baremetal: "ocs-external-storagecluster-ceph-rbd"
