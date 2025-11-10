@@ -192,6 +192,10 @@
         DATABASE_URL: "postgresql://litemaas:{{ lookup('password', '/dev/null length=32 chars=ascii_letters,digits') }}@postgres:5432/litemaas?sslmode=disable"
   loop: "{{ range(1, num_users | int + 1) | list }}"
 
+- name: Set LiteLLM deployment replicas for multi-user
+  ansible.builtin.set_fact:
+    _litemaas_litellm_replicas: "{{ ocp4_workload_litemaas_litellm_replicas | int }}"
+
 - name: Create LiteLLM deployments for all users
   kubernetes.core.k8s:
     state: present
@@ -204,7 +208,7 @@
         labels:
           app: litellm
       spec:
-        replicas: {{ ocp4_workload_litemaas_litellm_replicas | int }}
+        replicas: "{{ _litemaas_litellm_replicas }}"
         selector:
           matchLabels:
             app: litellm

@@ -472,6 +472,10 @@
             UI_PASSWORD: "{{ ocp4_workload_litemaas_litellm_ui_password }}"
             DATABASE_URL: "postgresql://litemaas:{{ ocp4_workload_litemaas_postgres_password }}@postgres:5432/litemaas?sslmode=disable"
 
+    - name: Set LiteLLM deployment replicas
+      ansible.builtin.set_fact:
+        _litemaas_litellm_replicas: "{{ ocp4_workload_litemaas_litellm_replicas | int }}"
+
     - name: Create LiteLLM deployment
       kubernetes.core.k8s:
         state: present
@@ -484,7 +488,7 @@
             labels:
               app: litellm
           spec:
-            replicas: {{ ocp4_workload_litemaas_litellm_replicas | int }}
+            replicas: "{{ _litemaas_litellm_replicas }}"
             selector:
               matchLabels:
                 app: litellm
