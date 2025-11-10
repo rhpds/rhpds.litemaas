@@ -96,8 +96,6 @@
             labels:
               app: postgres
           spec:
-            securityContext:
-              fsGroup: 999
             containers:
               - name: postgres
                 image: "postgres:{{ ocp4_workload_litemaas_postgres_version }}"
