@@ -1,0 +1,27 @@
+---
+# Collect and send user info data for a single user
+# Called from workload_multi_user.yml with user_number variable
+
+- name: Get LiteLLM secret for user{{ user_number }}
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Secret
+    name: litellm-secret
+    namespace: "litemaas-{{ ocp4_workload_litemaas_user_prefix }}{{ user_number }}"
+  register: r_litellm_secret
+
+- name: Send user info data for user{{ user_number }}
+  agnosticd_user_info:
+    data:
+      litemaas_user{{ user_number }}_url: "https://litellm-{{ ocp4_workload_litemaas_user_prefix }}{{ user_number }}-{{ ocp4_workload_litemaas_route_name }}.{{ ocp4_workload_litemaas_cluster_domain }}"
+      litemaas_user{{ user_number }}_namespace: "litemaas-{{ ocp4_workload_litemaas_user_prefix }}{{ user_number }}"
+      litemaas_user{{ user_number }}_username: "{{ r_litellm_secret.resources[0].data.UI_USERNAME | b64decode }}"
+      litemaas_user{{ user_number }}_password: "{{ r_litellm_secret.resources[0].data.UI_PASSWORD | b64decode }}"
+      litemaas_user{{ user_number }}_api_key: "{{ r_litellm_secret.resources[0].data.LITELLM_MASTER_KEY | b64decode }}"
+
+- name: Display user{{ user_number }} access info
+  ansible.builtin.debug:
+    msg:
+      - "User{{ user_number }} deployed:"
+      - "  URL: https://litellm-{{ ocp4_workload_litemaas_user_prefix }}{{ user_number }}-{{ ocp4_workload_litemaas_route_name }}.{{ ocp4_workload_litemaas_cluster_domain }}"
+      - "  Username: {{ r_litellm_secret.resources[0].data.UI_USERNAME | b64decode }}"
