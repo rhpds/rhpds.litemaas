@@ -42,7 +42,7 @@ ansible-playbook playbooks/deploy_litemaas.yml
 
 **Components:**
 - 3 LiteLLM replicas (configurable)
-- 1 Redis Enterprise Database (Red Hat Certified Operator)
+- 1 Redis instance (Community Operator)
 - 1 PostgreSQL instance
 - Response caching enabled
 
@@ -68,7 +68,7 @@ ansible-playbook playbooks/deploy_litemaas.yml \
 
 **Components:**
 - 3 LiteLLM replicas (configurable)
-- 1 Redis Enterprise Database (Red Hat Certified Operator)
+- 1 Redis instance (Community Operator)
 - 1 PostgreSQL instance
 
 **Deploy:**
@@ -82,7 +82,7 @@ ansible-playbook playbooks/deploy_litemaas.yml \
 
 **Benefits:**
 - Horizontal scaling for higher throughput
-- Enterprise-grade Redis (Red Hat Certified)
+- Redis Operator (open source, community-supported)
 - Response caching reduces costs and latency
 - High availability with load balancing
 - Zero-downtime rolling updates
@@ -147,14 +147,14 @@ Choose your deployment based on available cluster resources:
 | Redis | 200m | 500m | 256Mi | 512Mi | 5Gi |
 | **Total** | **1300m** | **4500m** | **~2.3Gi** | **~4.5Gi** | **15Gi** |
 
-### Production HA (3 LiteLLM + Redis Enterprise)
+### Production HA (3 LiteLLM + Redis Operator)
 
 | Component | CPU Request | CPU Limit | Memory Request | Memory Limit | Storage |
 |-----------|-------------|-----------|----------------|--------------|---------|
 | PostgreSQL | 500m | 1000m | 512Mi | 1Gi | 10Gi |
 | LiteLLM (3 replicas) | 600m | 3000m | 1.5Gi | 3Gi | - |
-| Redis Enterprise | 200m | 500m | 512Mi | 512Mi | 5Gi |
-| **Total** | **1300m** | **4500m** | **~2.5Gi** | **~4.5Gi** | **15Gi** |
+| Redis | 200m | 500m | 256Mi | 512Mi | 5Gi |
+| **Total** | **1300m** | **4500m** | **~2.3Gi** | **~4.5Gi** | **15Gi** |
 
 ### Multi-User Lab (Per User - Optimized)
 
@@ -441,7 +441,7 @@ All components deploy to the `litemaas` namespace:
 | **LiteLLM Gateway** | Deployment | AI model proxy with admin UI | ✅ Enabled (1 replica) |
 | **Routes** | Route | HTTPS access to admin portal | ✅ Enabled |
 | **Secrets** | Secret | Admin credentials and API keys | ✅ Enabled |
-| **Redis Enterprise** | Custom Resource | Enterprise cache (Red Hat Certified) | ❌ Optional |
+| **Redis** | Custom Resource | Cache via Community Operator | ❌ Optional |
 
 **Note:** Frontend and Backend are optional and disabled by default. For admin-only deployments, only PostgreSQL and LiteLLM are deployed.
 
@@ -455,7 +455,7 @@ Control deployment scale with these variables:
 # LiteLLM replicas (1-5 recommended)
 ocp4_workload_litemaas_litellm_replicas: 3
 
-# Enable Redis Enterprise cache
+# Enable Redis cache (Community Operator)
 ocp4_workload_litemaas_deploy_redis: true
 ocp4_workload_litemaas_redis_storage_size: 5Gi
 ocp4_workload_litemaas_redis_memory_limit: 512Mi
@@ -682,7 +682,7 @@ ansible-playbook playbooks/deploy_litemaas.yml
 
 **New Features:**
 - ✅ LiteLLM horizontal scaling (1-5 replicas)
-- ✅ Redis Enterprise Operator (Red Hat Certified) for caching
+- ✅ Redis Operator (Community, open source) for caching
 - ✅ Production HA deployment architecture
 - ✅ Multi-user lab deployment (isolated instances per user)
 - ✅ Health probes for LiteLLM (liveness and readiness)
@@ -690,22 +690,23 @@ ansible-playbook playbooks/deploy_litemaas.yml
 
 **Architecture:**
 - Single instance (default) - backward compatible
-- Scaled + Redis Enterprise - medium to large-scale production
+- Scaled + Redis - medium to large-scale production
 - Multi-user - isolated instances for lab environments (1-80+ users)
 
 **Configuration:**
 - `ocp4_workload_litemaas_litellm_replicas` - Scale LiteLLM instances (1-5)
-- `ocp4_workload_litemaas_deploy_redis` - Enable Redis Enterprise cache
+- `ocp4_workload_litemaas_deploy_redis` - Enable Redis cache (Community Operator)
 - `ocp4_workload_litemaas_multi_user` - Enable multi-user lab mode
 - `num_users` - Number of isolated user instances to deploy
 - Multi-user resource optimization variables for 60-80 user labs
 
 **Benefits:**
 - Horizontal scaling for higher request volumes
-- Enterprise-grade Redis caching reduces costs and latency
+- Redis caching reduces costs and latency
 - High availability with load balancing
 - Zero-downtime rolling updates
 - Isolated environments for training labs and demos
+- No licensing required (all open source)
 
 **Multi-User Lab Features:**
 - Each user gets dedicated namespace

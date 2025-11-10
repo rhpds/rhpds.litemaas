@@ -171,7 +171,7 @@
       retries: 30
       delay: 10
 
-- name: Deploy Redis Enterprise Operator and Database
+- name: Deploy Redis Operator and Database
   when:
     - ocp4_workload_litemaas_deploy_redis | bool
     - not (ocp4_workload_litemaas_multi_user | bool)
@@ -183,128 +183,121 @@
           apiVersion: v1
           kind: Namespace
           metadata:
-            name: redis-enterprise
+            name: redis-operator
 
-    - name: Create OperatorGroup for Redis Enterprise
+    - name: Create OperatorGroup for Redis
       kubernetes.core.k8s:
         state: present
         definition:
           apiVersion: operators.coreos.com/v1
           kind: OperatorGroup
           metadata:
-            name: redis-enterprise-group
-            namespace: redis-enterprise
+            name: redis-operator-group
+            namespace: redis-operator
           spec:
             targetNamespaces:
-              - redis-enterprise
+              - redis-operator
               - "{{ ocp4_workload_litemaas_namespace }}"
 
-    - name: Subscribe to Redis Enterprise Operator
+    - name: Subscribe to Redis Operator (Community)
       kubernetes.core.k8s:
         state: present
         definition:
           apiVersion: operators.coreos.com/v1alpha1
           kind: Subscription
           metadata:
-            name: redis-enterprise-operator-cert
-            namespace: redis-enterprise
+            name: redis-operator
+            namespace: redis-operator
           spec:
-            channel: production
-            name: redis-enterprise-operator-cert
-            source: certified-operators
+            channel: alpha
+            name: redis-operator
+            source: community-operators
             sourceNamespace: openshift-marketplace
             installPlanApproval: Automatic
 
-    - name: Wait for Redis Enterprise Operator to be ready
+    - name: Wait for Redis Operator to be ready
       kubernetes.core.k8s_info:
         api_version: apps/v1
         kind: Deployment
-        namespace: redis-enterprise
-        label_selectors:
-          - name=redis-enterprise-operator
-      register: r_redis_operator
+        namespace: redis-operator
+      register: r_redis_operator_deployments
       until:
-        - r_redis_operator.resources | length > 0
-        - r_redis_operator.resources[0].status.readyReplicas is defined
-        - r_redis_operator.resources[0].status.readyReplicas > 0
+        - r_redis_operator_deployments.resources | length > 0
+        - r_redis_operator_deployments.resources[0].status.readyReplicas is defined
+        - r_redis_operator_deployments.resources[0].status.readyReplicas > 0
       retries: 30
       delay: 10
 
-    - name: Create Redis Enterprise Cluster
+    - name: Create Redis secret
       kubernetes.core.k8s:
         state: present
         namespace: "{{ ocp4_workload_litemaas_namespace }}"
         definition:
-          apiVersion: app.redislabs.com/v1
-          kind: RedisEnterpriseCluster
+          apiVersion: v1
+          kind: Secret
           metadata:
-            name: litemaas-rec
+            name: redis-secret
             labels:
-              app: redis-enterprise
-          spec:
-            nodes: 1
-            persistentSpec:
-              enabled: true
-              storageClassName: "{{ ocp4_workload_litemaas_redis_storage_class }}"
-              volumeSize: "{{ ocp4_workload_litemaas_redis_storage_size }}"
-            redisEnterpriseNodeResources:
-              limits:
-                cpu: "{{ ocp4_workload_litemaas_redis_cpu_limit }}"
-                memory: "{{ ocp4_workload_litemaas_redis_memory_limit }}"
-              requests:
-                cpu: 200m
-                memory: 512Mi
+              app: redis
+          type: Opaque
+          stringData:
+            password: "{{ ocp4_workload_litemaas_redis_password }}"
 
-    - name: Wait for Redis Enterprise Cluster to be ready
-      kubernetes.core.k8s_info:
-        api_version: app.redislabs.com/v1
-        kind: RedisEnterpriseCluster
-        name: litemaas-rec
-        namespace: "{{ ocp4_workload_litemaas_namespace }}"
-      register: r_redis_cluster
-      until:
-        - r_redis_cluster.resources | length > 0
-        - r_redis_cluster.resources[0].status is defined
-        - r_redis_cluster.resources[0].status.state is defined
-        - r_redis_cluster.resources[0].status.state == "Running"
-      retries: 60
-      delay: 10
-
-    - name: Create Redis Enterprise Database
+    - name: Create Redis instance
       kubernetes.core.k8s:
         state: present
         namespace: "{{ ocp4_workload_litemaas_namespace }}"
         definition:
-          apiVersion: app.redislabs.com/v1alpha1
-          kind: RedisEnterpriseDatabase
+          apiVersion: redis.redis.opstreelabs.in/v1beta2
+          kind: Redis
           metadata:
             name: litemaas-redis
             labels:
-              app: redis-enterprise
+              app: redis
           spec:
-            redisEnterpriseCluster:
-              name: litemaas-rec
-            memorySize: 256MB
-            databaseSecretName: redis-enterprise-secret
+            kubernetesConfig:
+              image: quay.io/opstree/redis:v7.0.12
+              imagePullPolicy: IfNotPresent
+              resources:
+                requests:
+                  cpu: 200m
+                  memory: 256Mi
+                limits:
+                  cpu: "{{ ocp4_workload_litemaas_redis_cpu_limit }}"
+                  memory: "{{ ocp4_workload_litemaas_redis_memory_limit }}"
+              redisSecret:
+                name: redis-secret
+                key: password
+            storage:
+              volumeClaimTemplate:
+                spec:
+                  accessModes: ["ReadWriteOnce"]
+                  storageClassName: "{{ ocp4_workload_litemaas_redis_storage_class }}"
+                  resources:
+                    requests:
+                      storage: "{{ ocp4_workload_litemaas_redis_storage_size }}"
 
-    - name: Wait for Redis Enterprise Database to be ready
+    - name: Wait for Redis to be ready
       kubernetes.core.k8s_info:
-        api_version: app.redislabs.com/v1alpha1
-        kind: RedisEnterpriseDatabase
-        name: litemaas-redis
+        api_version: v1
+        kind: Pod
         namespace: "{{ ocp4_workload_litemaas_namespace }}"
-      register: r_redis_db
+        label_selectors:
+          - app=litemaas-redis
+      register: r_redis_pods
       until:
-        - r_redis_db.resources | length > 0
-        - r_redis_db.resources[0].status is defined
-        - r_redis_db.resources[0].status.status is defined
-        - r_redis_db.resources[0].status.status == "active"
-      retries: 30
+        - r_redis_pods.resources | length > 0
+        - r_redis_pods.resources[0].status.phase == "Running"
+        - r_redis_pods.resources[0].status.containerStatuses is defined
+        - r_redis_pods.resources[0].status.containerStatuses | length > 0
+        - r_redis_pods.resources[0].status.containerStatuses[0].ready == true
+      retries: 60
       delay: 10
+      ignore_errors: true
 
-    - name: Display Redis Enterprise deployment status
+    - name: Display Redis deployment status
       ansible.builtin.debug:
-        msg: "Redis Enterprise deployed and ready for LiteLLM cache"
+        msg: "Redis deployed and ready for LiteLLM cache"
 
 - name: Deploy LiteMaaS Backend
   when:
@@ -641,7 +634,7 @@
                       - name: REDIS_PASSWORD
                         valueFrom:
                           secretKeyRef:
-                            name: redis-enterprise-secret
+                            name: redis-secret
                             key: password
                       - name: CACHE_TYPE
                         value: redis
