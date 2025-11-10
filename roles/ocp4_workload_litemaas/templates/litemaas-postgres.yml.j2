@@ -55,26 +55,26 @@ spec:
             - containerPort: 5432
               name: postgres
           env:
-            - name: POSTGRESQL_PASSWORD
+            - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: litemaas-db
                   key: password
-            - name: POSTGRESQL_USER
+            - name: POSTGRES_USER
               valueFrom:
                 secretKeyRef:
                   name: litemaas-db
                   key: username
-            - name: POSTGRESQL_DATABASE
+            - name: POSTGRES_DB
               valueFrom:
                 secretKeyRef:
                   name: litemaas-db
                   key: database
             - name: PGDATA
-              value: "/var/lib/pgsql/data/pgdata"
+              value: "/var/lib/postgresql/data/pgdata"
           volumeMounts:
             - name: postgres-storage
-              mountPath: /var/lib/pgsql/data
+              mountPath: /var/lib/postgresql/data
           resources:
             requests:
               memory: "{{ ocp4_workload_litemaas_ha_postgres_memory_request }}"

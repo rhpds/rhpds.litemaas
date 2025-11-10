@@ -15,8 +15,8 @@ ocp4_workload_litemaas_ha_redis_image_fallback: "quay.io/sclorg/redis-7-c9s:late
 
 # PostgreSQL 16 configuration for HA
 ocp4_workload_litemaas_ha_enable_postgres: true
-ocp4_workload_litemaas_ha_postgres_image: "quay.io/sclorg/postgresql-16-c9s:latest"
-ocp4_workload_litemaas_ha_postgres_image_fallback: "registry.redhat.io/rhel9/postgresql-16:latest"
+ocp4_workload_litemaas_ha_postgres_image: "quay.io/fedora/postgresql-16:latest"
+ocp4_workload_litemaas_ha_postgres_image_fallback: "postgres:16"
 ocp4_workload_litemaas_ha_postgres_db: "litemaas"
 ocp4_workload_litemaas_ha_postgres_user: "litemaas"
 ocp4_workload_litemaas_ha_postgres_password: "{{ lookup('password', '/dev/null length=32 chars=ascii_letters,digits') }}"
