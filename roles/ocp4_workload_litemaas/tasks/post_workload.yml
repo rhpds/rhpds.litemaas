@@ -1,6 +1,22 @@
 ---
 # Post-deployment validation and info
 
+- name: Wait for PostgreSQL pod to be ready
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Pod
+    namespace: "{{ ocp4_workload_litemaas_namespace }}"
+    name: postgres-0
+  register: r_postgres_pod
+  until:
+    - r_postgres_pod.resources | length > 0
+    - r_postgres_pod.resources[0].status.phase == "Running"
+    - r_postgres_pod.resources[0].status.containerStatuses is defined
+    - r_postgres_pod.resources[0].status.containerStatuses | length > 0
+    - r_postgres_pod.resources[0].status.containerStatuses[0].ready == true
+  retries: 30
+  delay: 10
+
 - name: Get actual PostgreSQL password from running pod
   ansible.builtin.shell: |
     oc exec -n {{ ocp4_workload_litemaas_namespace }} postgres-0 -- printenv POSTGRES_PASSWORD
