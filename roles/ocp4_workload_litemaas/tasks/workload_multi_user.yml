@@ -347,5 +347,5 @@
       - "========================================="
       - "Total users: {{ num_users }}"
       - "Namespaces: litemaas-{{ ocp4_workload_litemaas_user_prefix }}1 to litemaas-{{ ocp4_workload_litemaas_user_prefix }}{{ num_users }}"
-      - "Each user has: PostgreSQL + LiteLLM ({{ ocp4_workload_litemaas_litellm_replicas }} replicas)"
+      - "Each user has: PostgreSQL + LiteLLM (1 replica)"
       - "========================================="
