@@ -5,6 +5,29 @@ Deploy LiteMaaS (Models as a Service) on OpenShift in 3 minutes.
 **Version:** 0.2.0
 **Upstream:** [rh-aiservices-bu/litemaas:0.1.2](https://github.com/rh-aiservices-bu/litemaas/releases/tag/0.1.2)
 
+## Quick Start
+
+**Single Instance:**
+```bash
+ansible-playbook playbooks/deploy_litemaas.yml
+```
+
+**High Availability:**
+```bash
+ansible-playbook playbooks/deploy_litemaas_ha.yml
+```
+
+**Multi-User Lab (10 users):**
+```bash
+ansible-playbook playbooks/deploy_litemaas.yml \
+  -e ocp4_workload_litemaas_multi_user=true \
+  -e num_users=10
+```
+
+See [Deployment Examples](#deployment-examples) for AWS and CNV specific configurations.
+
+---
+
 ## What is LiteMaaS?
 
 LiteMaaS provides an admin-managed AI model serving platform with:
