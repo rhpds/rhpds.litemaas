@@ -11,6 +11,16 @@ ocp4_workload_litemaas_route_name: "rhpds"
 # High Availability mode (set to true to enable HA deployment)
 ocp4_workload_litemaas_ha_enabled: false
 
+# OpenShift OAuth Integration (set to true to enable SSO login)
+ocp4_workload_litemaas_oauth_login_enabled: false
+ocp4_workload_litemaas_oauth_client_name: "litemaas-oauth"
+ocp4_workload_litemaas_oauth_client_secret: "{{ lookup('password', '/dev/null length=32 chars=ascii_letters,digits') }}"
+ocp4_workload_litemaas_oauth_provider: "openshift"
+ocp4_workload_litemaas_oauth_scopes:
+  - "user:info"
+  - "user:check-access"
+ocp4_workload_litemaas_oauth_allowed_groups: []
+
 # Image configuration
 ocp4_workload_litemaas_image_registry: "quay.io/rh-aiservices-bu"
 ocp4_workload_litemaas_backend_image: "quay.io/rh-aiservices-bu/litemaas-backend"
@@ -57,6 +67,11 @@ ocp4_workload_litemaas_admin_api_key: "{{ lookup('password', '/dev/null length=3
 ocp4_workload_litemaas_litellm_api_key: "sk-{{ lookup('password', '/dev/null length=32 chars=ascii_letters,digits') }}"
 ocp4_workload_litemaas_litellm_ui_username: "admin"
 ocp4_workload_litemaas_litellm_ui_password: "{{ lookup('password', '/dev/null length=16 chars=ascii_letters,digits') }}"
+
+# LiteLLM Enterprise License (for SSO and premium features)
+# Leave empty for open source version (SSO limited to 5 users)
+# Set to your enterprise license key for unlimited SSO users
+ocp4_workload_litemaas_litellm_license_key: ""
 
 # OAuth configuration - DISABLED for admin-only access
 # Users access models via LiteLLM virtual keys (created by admins)

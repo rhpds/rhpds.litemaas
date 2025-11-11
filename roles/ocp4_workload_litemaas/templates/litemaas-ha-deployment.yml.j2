@@ -82,6 +82,10 @@ spec:
                   key: UI_PASSWORD
             - name: STORE_MODEL_IN_DB
               value: "True"
+{% if ocp4_workload_litemaas_litellm_license_key | length > 0 %}
+            - name: LITELLM_LICENSE_KEY
+              value: "{{ ocp4_workload_litemaas_litellm_license_key }}"
+{% endif %}
             - name: REDIS_HOST
               value: "litemaas-redis"
             - name: REDIS_PORT
