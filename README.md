@@ -1,32 +1,8 @@
 # LiteMaaS Ansible Collection
 
-Deploy LiteMaaS (Models as a Service) on OpenShift in 3 minutes.
+Deploy AI model serving platform on OpenShift in 3 minutes.
 
 **Version:** 0.2.0
-**Upstream:** [rh-aiservices-bu/litemaas:0.1.2](https://github.com/rh-aiservices-bu/litemaas/releases/tag/0.1.2)
-
-## Quick Start
-
-**Single Instance:**
-```bash
-ansible-playbook playbooks/deploy_litemaas.yml
-```
-
-**High Availability:**
-```bash
-ansible-playbook playbooks/deploy_litemaas_ha.yml
-```
-
-**Multi-User Lab (10 users):**
-```bash
-ansible-playbook playbooks/deploy_litemaas.yml \
-  -e ocp4_workload_litemaas_multi_user=true \
-  -e num_users=10
-```
-
-See [Deployment Examples](#deployment-examples) for AWS and CNV specific configurations.
-
----
 
 ## What is LiteMaaS?
 
@@ -35,55 +11,36 @@ LiteMaaS provides an admin-managed AI model serving platform with:
 - **Admin Interface**: Manage models, create user keys, track usage
 - **OpenShift AI Integration**: Host local models (Granite, Llama, Mistral)
 - **Virtual Key Management**: Control user access and budgets
-- **Cost Tracking**: Monitor spending across all models
 
-## Deployment Options
+## Installation
 
-Choose the architecture that fits your needs:
-
-### 1. Single Instance (Default)
-
-**Use for:** Development, testing, single-user deployments
-
-**Components:**
-- 1 LiteLLM replica
-- 1 PostgreSQL instance
-
-**Deploy:**
+**AWS Cluster:**
 ```bash
-ansible-playbook playbooks/deploy_litemaas.yml
+# Clone repository
+git clone https://github.com/rhpds/rhpds.litemaas.git
+cd rhpds.litemaas
+
+# Build and install collection
+ansible-galaxy collection build --force
+ansible-galaxy collection install rhpds-litemaas-*.tar.gz --force
 ```
 
----
-
-### 2. Multi-User Lab Deployment
-
-**Use for:** Training labs, workshops, isolated demo environments
-
-**Architecture:**
-```
-litemaas-user1 → Dedicated PostgreSQL + LiteLLM
-litemaas-user2 → Dedicated PostgreSQL + LiteLLM
-litemaas-userN → Dedicated PostgreSQL + LiteLLM
-```
-
-**Deploy (10 users):**
+**CNV Cluster:**
 ```bash
-ansible-playbook playbooks/deploy_litemaas.yml \
-  -e ocp4_workload_litemaas_multi_user=true \
-  -e num_users=10
+# Setup Python environment
+python3 -m venv /opt/virtualenvs/k8s
+source /opt/virtualenvs/k8s/bin/activate
+pip install kubernetes openshift
+
+# Install Ansible collection
+ansible-galaxy collection install kubernetes.core --force
+
+# Clone and install LiteMaaS
+git clone https://github.com/rhpds/rhpds.litemaas.git
+cd rhpds.litemaas
+ansible-galaxy collection build --force
+ansible-galaxy collection install rhpds-litemaas-*.tar.gz --force
 ```
-
-**Benefits:**
-- Each user gets isolated namespace and resources
-- Dedicated PostgreSQL database per user
-- Unique routes per user (litellm-user1-rhpds.apps...)
-- No cross-contamination of data or usage
-- Simple, lightweight architecture for labs
-- Perfect for RHDP training workshops
-- Scales from 1 to 50+ users
-
----
 
 ## Resource Requirements
 
@@ -117,94 +74,13 @@ Choose your deployment based on available cluster resources:
 
 **Note:** Multi-user resources are optimized for lab environments. Actual usage will be lower than limits. For 60-80 user labs, ensure cluster has sufficient memory (90-120Gi limits).
 
----
+## Deploy
 
-## Prerequisites
+Now deploy LiteMaaS - choose Single Instance, HA, or Multi-User based on your needs.
 
-- OpenShift 4.12+ cluster
-- Cluster admin access
-- `oc` CLI logged in
-- Ansible 2.15+ with `kubernetes.core` collection
-- **For 60-80 user labs:** Cluster with minimum 24+ cores, 40Gi+ RAM, 800Gi+ storage
+See [Deployment Examples](#deployment-examples) section below for details.
 
-## Deployment Instructions
-
-Detailed step-by-step instructions for your platform:
-
-Choose the deployment guide for your platform:
-
-### Option 1: AWS Clusters
-
-```bash
-# 1. SSH to bastion
-ssh lab-user@bastion.xxxxx.sandboxXXXX.opentlc.com
-
-# 2. Clone the repository
-cd ~
-git clone https://github.com/rhpds/rhpds.litemaas.git
-cd rhpds.litemaas
-
-# 3. Build and install collection
-ansible-galaxy collection build --force
-ansible-galaxy collection install rhpds-litemaas-*.tar.gz --force
-
-# 4. Deploy (auto-detects AWS storage)
-ansible-playbook playbooks/deploy_litemaas.yml
-```
-
-**AWS uses `gp3-csi` storage class automatically.**
-
-### Option 2: CNV/Virtualization Clusters
-
-```bash
-# 1. SSH to bastion
-ssh lab-user@bastion.xxxxx.sandboxXXXX.opentlc.com
-
-# 2. Create and activate k8s virtualenv (required for kubernetes library)
-python3 -m venv /opt/virtualenvs/k8s
-source /opt/virtualenvs/k8s/bin/activate
-
-# 3. Install Python requirements
-pip install kubernetes openshift
-
-# 4. Clone the repository
-cd ~
-git clone https://github.com/prakhar1985/rhpds.litemaas.git
-cd rhpds.litemaas
-
-# 5. Install kubernetes.core collection
-ansible-galaxy collection install kubernetes.core --force
-
-# 6. Build and install LiteMaaS collection
-ansible-galaxy collection build --force
-ansible-galaxy collection install rhpds-litemaas-*.tar.gz --force
-
-# 7. Deploy with ODF/Ceph storage (common in CNV)
-ansible-playbook playbooks/deploy_litemaas.yml \
-  -e ocp4_workload_litemaas_postgres_storage_class=ocs-external-storagecluster-ceph-rbd
-```
-
-**CNV/Virtualization clusters typically use ODF (OpenShift Data Foundation) storage.**
-
-#### Check Available Storage Classes
-
-If deployment fails with PVC errors, check your storage classes:
-
-```bash
-# List storage classes
-oc get storageclass
-
-# Look for (default) marker or common CNV storage classes:
-# - ocs-external-storagecluster-ceph-rbd
-# - hostpath-provisioner
-# - hostpath-csi
-
-# Deploy with your storage class
-ansible-playbook playbooks/deploy_litemaas.yml \
-  -e ocp4_workload_litemaas_postgres_storage_class=YOUR-STORAGE-CLASS
-```
-
-### Access Your Deployment
+## Access Your Deployment
 
 After deployment completes, you'll see the access information. You can retrieve it anytime:
 
