@@ -550,31 +550,29 @@ ansible-playbook playbooks/deploy_litemaas.yml \
 
 ### High Availability (HA) Deployment
 
-**AWS Cluster with HA:**
+**Default HA (2 replicas + Redis):**
 ```bash
-ansible-playbook playbooks/deploy_litemaas.yml \
-  -e ocp4_workload_litemaas_litellm_replicas=3 \
-  -e ocp4_workload_litemaas_deploy_redis=true \
-  -e ocp4_workload_litemaas_postgres_storage_class=gp3-csi
+ansible-playbook playbooks/deploy_litemaas_ha.yml
 ```
 
-This deploys:
-- 3 LiteLLM replicas (load balanced)
-- Redis cache for improved performance
-- Auto-detects AWS storage (gp3-csi)
-
-**CNV Cluster with HA:**
+**AWS Cluster with HA (3 replicas):**
 ```bash
-ansible-playbook playbooks/deploy_litemaas.yml \
-  -e ocp4_workload_litemaas_litellm_replicas=3 \
-  -e ocp4_workload_litemaas_deploy_redis=true \
+ansible-playbook playbooks/deploy_litemaas_ha.yml \
+  -e ocp4_workload_litemaas_ha_litellm_replicas=3
+```
+
+**CNV Cluster with HA (3 replicas):**
+```bash
+ansible-playbook playbooks/deploy_litemaas_ha.yml \
+  -e ocp4_workload_litemaas_ha_litellm_replicas=3 \
   -e ocp4_workload_litemaas_postgres_storage_class=ocs-external-storagecluster-ceph-rbd
 ```
 
-This deploys:
-- 3 LiteLLM replicas (load balanced)
+**What HA deploys:**
+- 2-3 LiteLLM replicas (load balanced)
 - Redis cache for improved performance
-- Uses OpenShift Data Foundation (ODF) storage
+- PostgreSQL with optimized resources
+- Auto-detects storage (gp3-csi for AWS, ODF for CNV)
 
 **Benefits:**
 - High availability with automatic failover
