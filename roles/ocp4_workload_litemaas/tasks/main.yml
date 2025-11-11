@@ -7,6 +7,9 @@
     - name: Run pre_workload tasks
       ansible.builtin.include_tasks: pre_workload.yml
 
+    - name: Setup OAuth integration (if enabled)
+      ansible.builtin.include_tasks: setup_oauth.yml
+
     - name: Run HA workload tasks
       when: ocp4_workload_litemaas_ha_enabled | bool
       ansible.builtin.include_tasks: workload_litemaas_ha.yml

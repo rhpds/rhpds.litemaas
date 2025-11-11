@@ -1,14 +1,18 @@
 # OpenShift OAuth Login for LiteLLM
 
-This feature enables users to login to the LiteLLM UI using their OpenShift credentials instead of a shared admin username/password.
+**STATUS: Framework/Placeholder - Requires LiteLLM OAuth Support**
+
+This feature provides the **framework** for enabling OpenShift OAuth login to LiteLLM UI.
+
+⚠️ **Important**: This creates the OpenShift OAuthClient and configuration, but **LiteLLM integration depends on LiteLLM's OAuth support**. Check your LiteLLM version for OAuth compatibility.
 
 ## Overview
 
 When enabled, this feature:
-- Creates an OpenShift OAuthClient
-- Configures LiteLLM to use OpenShift as OAuth provider
-- Allows users to login with their OpenShift username/password
-- Optionally restricts access to specific groups
+- ✅ Creates an OpenShift OAuthClient
+- ✅ Auto-detects OAuth endpoints
+- ✅ Creates OAuth configuration secret
+- ⚠️ **Requires LiteLLM to be configured to use the OAuth settings**
 
 ## Quick Start
 
