@@ -1,0 +1,95 @@
+---
+# OpenShift OAuth Integration Setup
+# This file configures OpenShift OAuth for LiteLLM UI login
+
+- name: Setup OpenShift OAuth Integration
+  when: ocp4_workload_litemaas_oauth_login_enabled | bool
+  block:
+    - name: Display OAuth setup header
+      ansible.builtin.debug:
+        msg:
+          - "========================================="
+          - "Setting up OpenShift OAuth Integration"
+          - "========================================="
+
+    - name: Get OAuth server configuration
+      kubernetes.core.k8s_info:
+        api_version: config.openshift.io/v1
+        kind: OAuth
+        name: cluster
+      register: r_oauth_server
+
+    - name: Set OAuth endpoints
+      ansible.builtin.set_fact:
+        _oauth_issuer: "https://oauth-openshift.{{ ocp4_workload_litemaas_cluster_domain }}"
+        _oauth_authorization_endpoint: "https://oauth-openshift.{{ ocp4_workload_litemaas_cluster_domain }}/oauth/authorize"
+        _oauth_token_endpoint: "https://oauth-openshift.{{ ocp4_workload_litemaas_cluster_domain }}/oauth/token"
+        _oauth_userinfo_endpoint: "https://oauth-openshift.{{ ocp4_workload_litemaas_cluster_domain }}/oauth/userinfo"
+
+    - name: Set OAuth redirect URI
+      ansible.builtin.set_fact:
+        _oauth_redirect_uri: "https://litellm-{{ ocp4_workload_litemaas_route_name }}.{{ ocp4_workload_litemaas_cluster_domain }}/oauth/callback"
+
+    - name: Create OpenShift OAuthClient
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: oauth.openshift.io/v1
+          kind: OAuthClient
+          metadata:
+            name: "{{ ocp4_workload_litemaas_oauth_client_name }}"
+          secret: "{{ ocp4_workload_litemaas_oauth_client_secret }}"
+          redirectURIs:
+            - "{{ _oauth_redirect_uri }}"
+          grantMethod: auto
+
+    - name: Create OAuth configuration secret
+      kubernetes.core.k8s:
+        state: present
+        namespace: "{{ ocp4_workload_litemaas_namespace }}"
+        definition:
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: litemaas-oauth-config
+            labels:
+              app: litemaas
+          type: Opaque
+          stringData:
+            OAUTH_ENABLED: "true"
+            OAUTH_PROVIDER: "{{ ocp4_workload_litemaas_oauth_provider }}"
+            OAUTH_CLIENT_ID: "{{ ocp4_workload_litemaas_oauth_client_name }}"
+            OAUTH_CLIENT_SECRET: "{{ ocp4_workload_litemaas_oauth_client_secret }}"
+            OAUTH_REDIRECT_URI: "{{ _oauth_redirect_uri }}"
+            OAUTH_AUTHORIZATION_ENDPOINT: "{{ _oauth_authorization_endpoint }}"
+            OAUTH_TOKEN_ENDPOINT: "{{ _oauth_token_endpoint }}"
+            OAUTH_USERINFO_ENDPOINT: "{{ _oauth_userinfo_endpoint }}"
+            OAUTH_ISSUER: "{{ _oauth_issuer }}"
+
+    - name: Display OAuth configuration
+      ansible.builtin.debug:
+        msg:
+          - "OAuth Integration Configured"
+          - "Client Name: {{ ocp4_workload_litemaas_oauth_client_name }}"
+          - "Redirect URI: {{ _oauth_redirect_uri }}"
+          - "Users can now login with their OpenShift credentials"
+
+- name: Remove OAuth configuration
+  when:
+    - not (ocp4_workload_litemaas_oauth_login_enabled | bool)
+    - ocp4_workload_litemaas_remove | bool
+  block:
+    - name: Remove OAuthClient
+      kubernetes.core.k8s:
+        state: absent
+        api_version: oauth.openshift.io/v1
+        kind: OAuthClient
+        name: "{{ ocp4_workload_litemaas_oauth_client_name }}"
+
+    - name: Remove OAuth secret
+      kubernetes.core.k8s:
+        state: absent
+        api_version: v1
+        kind: Secret
+        name: litemaas-oauth-config
+        namespace: "{{ ocp4_workload_litemaas_namespace }}"
