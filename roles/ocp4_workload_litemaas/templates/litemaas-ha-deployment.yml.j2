@@ -10,7 +10,7 @@ type: Opaque
 stringData:
   LITELLM_MASTER_KEY: "{{ ocp4_workload_litemaas_litellm_api_key }}"
   UI_USERNAME: "{{ ocp4_workload_litemaas_litellm_ui_username }}"
-  UI_PASSWORD: "{{ ocp4_workload_litemaas_litellm_ui_password }}"
+  UI_PASSWORD: "{{ _litemaas_ha_admin_password }}"
 ---
 apiVersion: apps/v1
 kind: Deployment

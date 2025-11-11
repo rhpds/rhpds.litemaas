@@ -153,6 +153,10 @@
       retries: 20
       delay: 5
 
+- name: Generate admin password once
+  ansible.builtin.set_fact:
+    _litemaas_ha_admin_password: "{{ lookup('password', '/dev/null length=16 chars=ascii_letters,digits') }}"
+
 - name: Deploy LiteMaaS (High Availability)
   block:
     - name: Deploy LiteMaaS HA
