@@ -524,66 +524,106 @@ user.info:
 
 See `roles/ocp4_workload_litemaas/defaults/main.yml` for all variables.
 
-## Examples
+## Deployment Examples
 
-### Basic Deployment (Admin-Only)
+### 1. Single Instance (Default)
 
+**AWS Cluster:**
 ```bash
 ansible-playbook playbooks/deploy_litemaas.yml
 ```
 
-This deploys:
-- PostgreSQL database
-- LiteLLM gateway with admin UI
-- No frontend or backend (admin-only access)
-
-### Enable Frontend/Backend (Optional)
-
-If you want the web UI for end users:
-
+**CNV Cluster:**
 ```bash
 ansible-playbook playbooks/deploy_litemaas.yml \
-  -e ocp4_workload_litemaas_deploy_frontend=true \
-  -e ocp4_workload_litemaas_deploy_backend=true \
-  -e ocp4_workload_litemaas_oauth_enabled=true
+  -e ocp4_workload_litemaas_postgres_storage_class=ocs-external-storagecluster-ceph-rbd
 ```
 
-### High Availability (HA) Deployment
+**What gets deployed:**
+- 1 PostgreSQL database
+- 1 LiteLLM gateway with admin UI
+- Auto-detects storage (gp3-csi for AWS)
 
-**Default HA (2 replicas + Redis):**
+---
+
+### 2. High Availability (HA)
+
+**AWS Cluster with HA:**
 ```bash
 ansible-playbook playbooks/deploy_litemaas_ha.yml
 ```
 
-**AWS Cluster with HA (3 replicas):**
+**CNV Cluster with HA:**
 ```bash
+ansible-playbook playbooks/deploy_litemaas_ha.yml \
+  -e ocp4_workload_litemaas_postgres_storage_class=ocs-external-storagecluster-ceph-rbd
+```
+
+**What gets deployed:**
+- 2 LiteLLM replicas (load balanced)
+- 1 Redis cache (enabled by default in HA mode)
+- 1 PostgreSQL database
+- Auto-detects storage
+
+**Customize replicas:**
+```bash
+# 3 replicas for higher load
 ansible-playbook playbooks/deploy_litemaas_ha.yml \
   -e ocp4_workload_litemaas_ha_litellm_replicas=3
 ```
 
-**CNV Cluster with HA (3 replicas):**
-```bash
-ansible-playbook playbooks/deploy_litemaas_ha.yml \
-  -e ocp4_workload_litemaas_ha_litellm_replicas=3 \
-  -e ocp4_workload_litemaas_postgres_storage_class=ocs-external-storagecluster-ceph-rbd
-```
-
-**What HA deploys:**
-- 2-3 LiteLLM replicas (load balanced)
-- Redis cache for improved performance
-- PostgreSQL with optimized resources
-- Auto-detects storage (gp3-csi for AWS, ODF for CNV)
-
 **Benefits:**
 - High availability with automatic failover
 - Load balancing across replicas
-- Reduced latency with Redis caching
+- Redis caching reduces latency and costs
 - Zero-downtime rolling updates
+
+---
+
+### 3. Multi-User Lab
+
+**AWS Cluster (10 users):**
+```bash
+ansible-playbook playbooks/deploy_litemaas.yml \
+  -e ocp4_workload_litemaas_multi_user=true \
+  -e num_users=10
+```
+
+**CNV Cluster (10 users):**
+```bash
+ansible-playbook playbooks/deploy_litemaas.yml \
+  -e ocp4_workload_litemaas_multi_user=true \
+  -e num_users=10 \
+  -e ocp4_workload_litemaas_postgres_storage_class=ocs-external-storagecluster-ceph-rbd
+```
+
+**What gets deployed:**
+- 10 isolated namespaces (litemaas-user1 through litemaas-user10)
+- Per user: 1 PostgreSQL + 1 LiteLLM instance
+- Unique routes per user
+- Total: 300m CPU, 768Mi RAM per user
+
+**Scale to 60 users:**
+```bash
+ansible-playbook playbooks/deploy_litemaas.yml \
+  -e ocp4_workload_litemaas_multi_user=true \
+  -e num_users=60 \
+  -e ocp4_workload_litemaas_multi_user_common_password="RedHat2025!"
+```
+
+---
 
 ### Remove Deployment
 
 ```bash
+# Single or HA deployment
 ansible-playbook playbooks/deploy_litemaas.yml \
+  -e ocp4_workload_litemaas_remove=true
+
+# Multi-user deployment
+ansible-playbook playbooks/deploy_litemaas.yml \
+  -e ocp4_workload_litemaas_multi_user=true \
+  -e num_users=10 \
   -e ocp4_workload_litemaas_remove=true
 ```
 
