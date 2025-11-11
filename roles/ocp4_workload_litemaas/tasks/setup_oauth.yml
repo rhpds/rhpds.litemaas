@@ -12,6 +12,19 @@
           - "Setting up OpenShift OAuth Integration"
           - "========================================="
 
+    - name: Set OAuth namespace
+      ansible.builtin.set_fact:
+        _oauth_namespace: "{{ _litemaas_ha_namespace | default(ocp4_workload_litemaas_namespace) }}"
+
+    - name: Ensure OAuth namespace exists
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: "{{ _oauth_namespace }}"
+
     - name: Get OAuth server configuration
       kubernetes.core.k8s_info:
         api_version: config.openshift.io/v1
@@ -46,7 +59,7 @@
     - name: Create OAuth configuration secret
       kubernetes.core.k8s:
         state: present
-        namespace: "{{ ocp4_workload_litemaas_namespace }}"
+        namespace: "{{ _oauth_namespace }}"
         definition:
           apiVersion: v1
           kind: Secret
@@ -92,4 +105,4 @@
         api_version: v1
         kind: Secret
         name: litemaas-oauth-config
-        namespace: "{{ ocp4_workload_litemaas_namespace }}"
+        namespace: "{{ _oauth_namespace | default(ocp4_workload_litemaas_namespace) }}"
