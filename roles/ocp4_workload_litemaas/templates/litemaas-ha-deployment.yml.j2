@@ -53,7 +53,40 @@ spec:
                 sleep 2
               done
               echo "Redis is ready"
+{% if ocp4_workload_litemaas_oauth_proxy_enabled | bool %}
+      serviceAccountName: "{{ ocp4_workload_litemaas_oauth_proxy_serviceaccount }}"
+{% endif %}
       containers:
+{% if ocp4_workload_litemaas_oauth_proxy_enabled | bool %}
+        - name: oauth-proxy
+          image: "{{ ocp4_workload_litemaas_oauth_proxy_image }}"
+          ports:
+            - containerPort: 8443
+              name: https
+          args:
+            - --https-address=:8443
+            - --provider=openshift
+            - --openshift-service-account={{ ocp4_workload_litemaas_oauth_proxy_serviceaccount }}
+            - --upstream=http://localhost:4000
+            - --tls-cert=/etc/tls/private/tls.crt
+            - --tls-key=/etc/tls/private/tls.key
+            - --cookie-secret-file=/etc/proxy/secrets/session_secret
+            - --cookie-refresh=2h
+            - --cookie-expire=24h
+            - --skip-auth-regex=^/metrics
+          volumeMounts:
+            - mountPath: /etc/tls/private
+              name: proxy-tls
+            - mountPath: /etc/proxy/secrets
+              name: proxy-cookie
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "50m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+{% endif %}
         - name: litemaas
           image: "{{ ocp4_workload_litemaas_litellm_image }}:{{ ocp4_workload_litemaas_litellm_tag }}"
           ports:
@@ -85,53 +118,6 @@ spec:
 {% if ocp4_workload_litemaas_litellm_license_key | length > 0 %}
             - name: LITELLM_LICENSE_KEY
               value: "{{ ocp4_workload_litemaas_litellm_license_key }}"
-{% endif %}
-{% if ocp4_workload_litemaas_oauth_login_enabled | bool %}
-            - name: OAUTH_ENABLED
-              valueFrom:
-                secretKeyRef:
-                  name: litemaas-oauth-config
-                  key: OAUTH_ENABLED
-            - name: OAUTH_PROVIDER
-              valueFrom:
-                secretKeyRef:
-                  name: litemaas-oauth-config
-                  key: OAUTH_PROVIDER
-            - name: OAUTH_CLIENT_ID
-              valueFrom:
-                secretKeyRef:
-                  name: litemaas-oauth-config
-                  key: OAUTH_CLIENT_ID
-            - name: OAUTH_CLIENT_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: litemaas-oauth-config
-                  key: OAUTH_CLIENT_SECRET
-            - name: OAUTH_REDIRECT_URI
-              valueFrom:
-                secretKeyRef:
-                  name: litemaas-oauth-config
-                  key: OAUTH_REDIRECT_URI
-            - name: OAUTH_AUTHORIZATION_ENDPOINT
-              valueFrom:
-                secretKeyRef:
-                  name: litemaas-oauth-config
-                  key: OAUTH_AUTHORIZATION_ENDPOINT
-            - name: OAUTH_TOKEN_ENDPOINT
-              valueFrom:
-                secretKeyRef:
-                  name: litemaas-oauth-config
-                  key: OAUTH_TOKEN_ENDPOINT
-            - name: OAUTH_USERINFO_ENDPOINT
-              valueFrom:
-                secretKeyRef:
-                  name: litemaas-oauth-config
-                  key: OAUTH_USERINFO_ENDPOINT
-            - name: OAUTH_ISSUER
-              valueFrom:
-                secretKeyRef:
-                  name: litemaas-oauth-config
-                  key: OAUTH_ISSUER
 {% endif %}
             - name: REDIS_HOST
               value: "litemaas-redis"
@@ -179,6 +165,17 @@ spec:
             limits:
               memory: "{{ ocp4_workload_litemaas_ha_litellm_memory_limit }}"
               cpu: "{{ ocp4_workload_litemaas_ha_litellm_cpu_limit }}"
+{% if ocp4_workload_litemaas_oauth_proxy_enabled | bool %}
+      volumes:
+        - name: proxy-tls
+          secret:
+            secretName: litemaas-tls
+            defaultMode: 420
+        - name: proxy-cookie
+          secret:
+            secretName: litemaas-oauth-proxy-secret
+            defaultMode: 420
+{% endif %}
 ---
 apiVersion: v1
 kind: Service
@@ -187,11 +184,21 @@ metadata:
   labels:
     app: litemaas
     component: ai-proxy
+{% if ocp4_workload_litemaas_oauth_proxy_enabled | bool %}
+  annotations:
+    service.beta.openshift.io/serving-cert-secret-name: litemaas-tls
+{% endif %}
 spec:
   ports:
+{% if ocp4_workload_litemaas_oauth_proxy_enabled | bool %}
+    - port: 8443
+      targetPort: 8443
+      name: https
+{% else %}
     - port: 4000
       targetPort: 4000
       name: http
+{% endif %}
   selector:
     app: litemaas
 ---
@@ -208,7 +215,13 @@ spec:
     kind: Service
     name: litemaas
   port:
+{% if ocp4_workload_litemaas_oauth_proxy_enabled | bool %}
+    targetPort: https
+  tls:
+    termination: reencrypt
+{% else %}
     targetPort: http
   tls:
     termination: edge
+{% endif %}
     insecureEdgeTerminationPolicy: Redirect

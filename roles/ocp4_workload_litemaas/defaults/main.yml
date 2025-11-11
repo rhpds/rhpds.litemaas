@@ -11,15 +11,12 @@ ocp4_workload_litemaas_route_name: "rhpds"
 # High Availability mode (set to true to enable HA deployment)
 ocp4_workload_litemaas_ha_enabled: false
 
-# OpenShift OAuth Integration (set to true to enable SSO login)
-ocp4_workload_litemaas_oauth_login_enabled: false
-ocp4_workload_litemaas_oauth_client_name: "litemaas-oauth"
-ocp4_workload_litemaas_oauth_client_secret: "{{ lookup('password', '/dev/null length=32 chars=ascii_letters,digits') }}"
-ocp4_workload_litemaas_oauth_provider: "openshift"
-ocp4_workload_litemaas_oauth_scopes:
-  - "user:info"
-  - "user:check-access"
-ocp4_workload_litemaas_oauth_allowed_groups: []
+# OpenShift OAuth Proxy Integration (set to true to require OpenShift login)
+# This uses OAuth Proxy sidecar to force OpenShift authentication before accessing LiteLLM
+ocp4_workload_litemaas_oauth_proxy_enabled: false
+ocp4_workload_litemaas_oauth_proxy_image: "quay.io/openshift/origin-oauth-proxy:latest"
+ocp4_workload_litemaas_oauth_proxy_cookie_secret: "{{ lookup('password', '/dev/null length=32 chars=ascii_letters,digits') }}"
+ocp4_workload_litemaas_oauth_proxy_serviceaccount: "litemaas-oauth-proxy"
 
 # Image configuration
 ocp4_workload_litemaas_image_registry: "quay.io/rh-aiservices-bu"

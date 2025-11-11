@@ -1,16 +1,17 @@
 ---
-# OpenShift OAuth Integration Setup
-# This file configures OpenShift OAuth for LiteLLM UI login
+# OpenShift OAuth Proxy Setup
+# This configures OAuth Proxy sidecar to require OpenShift authentication
 
-- name: Setup OpenShift OAuth Integration
-  when: ocp4_workload_litemaas_oauth_login_enabled | bool
+- name: Setup OpenShift OAuth Proxy
+  when: ocp4_workload_litemaas_oauth_proxy_enabled | bool
   block:
-    - name: Display OAuth setup header
+    - name: Display OAuth Proxy setup header
       ansible.builtin.debug:
         msg:
           - "========================================="
-          - "Setting up OpenShift OAuth Integration"
+          - "Setting up OpenShift OAuth Proxy"
           - "========================================="
+          - "All users must login with OpenShift credentials"
 
     - name: Set OAuth namespace
       ansible.builtin.set_fact:
@@ -25,38 +26,37 @@
           metadata:
             name: "{{ _oauth_namespace }}"
 
-    - name: Get OAuth server configuration
-      kubernetes.core.k8s_info:
-        api_version: config.openshift.io/v1
-        kind: OAuth
-        name: cluster
-      register: r_oauth_server
+    - name: Create ServiceAccount for OAuth Proxy
+      kubernetes.core.k8s:
+        state: present
+        namespace: "{{ _oauth_namespace }}"
+        definition:
+          apiVersion: v1
+          kind: ServiceAccount
+          metadata:
+            name: "{{ ocp4_workload_litemaas_oauth_proxy_serviceaccount }}"
+            annotations:
+              serviceaccounts.openshift.io/oauth-redirectreference.primary: >-
+                {"kind":"OAuthRedirectReference","apiVersion":"v1","reference":{"kind":"Route","name":"litemaas"}}
 
-    - name: Set OAuth endpoints
-      ansible.builtin.set_fact:
-        _oauth_issuer: "https://oauth-openshift.{{ ocp4_workload_litemaas_cluster_domain }}"
-        _oauth_authorization_endpoint: "https://oauth-openshift.{{ ocp4_workload_litemaas_cluster_domain }}/oauth/authorize"
-        _oauth_token_endpoint: "https://oauth-openshift.{{ ocp4_workload_litemaas_cluster_domain }}/oauth/token"
-        _oauth_userinfo_endpoint: "https://oauth-openshift.{{ ocp4_workload_litemaas_cluster_domain }}/oauth/userinfo"
-
-    - name: Set OAuth redirect URI
-      ansible.builtin.set_fact:
-        _oauth_redirect_uri: "https://litellm-{{ ocp4_workload_litemaas_route_name }}.{{ ocp4_workload_litemaas_cluster_domain }}/oauth/callback"
-
-    - name: Create OpenShift OAuthClient
+    - name: Create ClusterRoleBinding for OAuth Proxy
       kubernetes.core.k8s:
         state: present
         definition:
-          apiVersion: oauth.openshift.io/v1
-          kind: OAuthClient
+          apiVersion: rbac.authorization.k8s.io/v1
+          kind: ClusterRoleBinding
           metadata:
-            name: "{{ ocp4_workload_litemaas_oauth_client_name }}"
-          secret: "{{ ocp4_workload_litemaas_oauth_client_secret }}"
-          redirectURIs:
-            - "{{ _oauth_redirect_uri }}"
-          grantMethod: auto
+            name: "litemaas-oauth-proxy-{{ _oauth_namespace }}"
+          roleRef:
+            apiGroup: rbac.authorization.k8s.io
+            kind: ClusterRole
+            name: system:auth-delegator
+          subjects:
+            - kind: ServiceAccount
+              name: "{{ ocp4_workload_litemaas_oauth_proxy_serviceaccount }}"
+              namespace: "{{ _oauth_namespace }}"
 
-    - name: Create OAuth configuration secret
+    - name: Create OAuth Proxy cookie secret
       kubernetes.core.k8s:
         state: present
         namespace: "{{ _oauth_namespace }}"
@@ -64,45 +64,49 @@
           apiVersion: v1
           kind: Secret
           metadata:
-            name: litemaas-oauth-config
+            name: litemaas-oauth-proxy-secret
             labels:
               app: litemaas
           type: Opaque
           stringData:
-            OAUTH_ENABLED: "true"
-            OAUTH_PROVIDER: "{{ ocp4_workload_litemaas_oauth_provider }}"
-            OAUTH_CLIENT_ID: "{{ ocp4_workload_litemaas_oauth_client_name }}"
-            OAUTH_CLIENT_SECRET: "{{ ocp4_workload_litemaas_oauth_client_secret }}"
-            OAUTH_REDIRECT_URI: "{{ _oauth_redirect_uri }}"
-            OAUTH_AUTHORIZATION_ENDPOINT: "{{ _oauth_authorization_endpoint }}"
-            OAUTH_TOKEN_ENDPOINT: "{{ _oauth_token_endpoint }}"
-            OAUTH_USERINFO_ENDPOINT: "{{ _oauth_userinfo_endpoint }}"
-            OAUTH_ISSUER: "{{ _oauth_issuer }}"
+            session_secret: "{{ ocp4_workload_litemaas_oauth_proxy_cookie_secret }}"
 
-    - name: Display OAuth configuration
+    - name: Display OAuth Proxy configuration
       ansible.builtin.debug:
         msg:
-          - "OAuth Integration Configured"
-          - "Client Name: {{ ocp4_workload_litemaas_oauth_client_name }}"
-          - "Redirect URI: {{ _oauth_redirect_uri }}"
-          - "Users can now login with their OpenShift credentials"
+          - "OAuth Proxy Configured"
+          - "Service Account: {{ ocp4_workload_litemaas_oauth_proxy_serviceaccount }}"
+          - "Namespace: {{ _oauth_namespace }}"
+          - "Users must authenticate via OpenShift before accessing LiteLLM"
 
-- name: Remove OAuth configuration
+- name: Remove OAuth Proxy configuration
   when:
-    - not (ocp4_workload_litemaas_oauth_login_enabled | bool)
+    - not (ocp4_workload_litemaas_oauth_proxy_enabled | bool)
     - ocp4_workload_litemaas_remove | bool
   block:
-    - name: Remove OAuthClient
+    - name: Set OAuth namespace for removal
+      ansible.builtin.set_fact:
+        _oauth_namespace: "{{ _litemaas_ha_namespace | default(ocp4_workload_litemaas_namespace) }}"
+
+    - name: Remove ClusterRoleBinding
       kubernetes.core.k8s:
         state: absent
-        api_version: oauth.openshift.io/v1
-        kind: OAuthClient
-        name: "{{ ocp4_workload_litemaas_oauth_client_name }}"
+        api_version: rbac.authorization.k8s.io/v1
+        kind: ClusterRoleBinding
+        name: "litemaas-oauth-proxy-{{ _oauth_namespace }}"
 
-    - name: Remove OAuth secret
+    - name: Remove ServiceAccount
+      kubernetes.core.k8s:
+        state: absent
+        api_version: v1
+        kind: ServiceAccount
+        name: "{{ ocp4_workload_litemaas_oauth_proxy_serviceaccount }}"
+        namespace: "{{ _oauth_namespace }}"
+
+    - name: Remove OAuth Proxy secret
       kubernetes.core.k8s:
         state: absent
         api_version: v1
         kind: Secret
-        name: litemaas-oauth-config
-        namespace: "{{ _oauth_namespace | default(ocp4_workload_litemaas_namespace) }}"
+        name: litemaas-oauth-proxy-secret
+        namespace: "{{ _oauth_namespace }}"

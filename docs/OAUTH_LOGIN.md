@@ -1,43 +1,38 @@
-# OpenShift OAuth Login for LiteLLM
+# OpenShift OAuth Proxy for LiteLLM
 
-**STATUS: Framework/Placeholder - Requires LiteLLM OAuth Support**
+**STATUS: Production Ready - Uses OAuth Proxy Sidecar**
 
-This feature provides the **framework** for enabling OpenShift OAuth login to LiteLLM UI.
+This feature provides **OpenShift-only authentication** for LiteLLM using OAuth Proxy sidecar.
 
-⚠️ **Important**: This creates the OpenShift OAuthClient and configuration, but **LiteLLM integration depends on LiteLLM's OAuth support**. Check your LiteLLM version for OAuth compatibility.
+✅ **Approach**: OAuth Proxy sidecar forces OpenShift authentication before accessing LiteLLM.
 
 ## Overview
 
 When enabled, this feature:
-- ✅ Creates an OpenShift OAuthClient
-- ✅ Auto-detects OAuth endpoints
-- ✅ Creates OAuth configuration secret
-- ⚠️ **Requires LiteLLM to be configured to use the OAuth settings**
+- ✅ Creates an OpenShift OAuth Proxy ServiceAccount
+- ✅ Deploys OAuth Proxy sidecar container
+- ✅ Requires OpenShift login before accessing LiteLLM
+- ✅ Works with all OpenShift users (internal authentication only)
 
 ## Quick Start
 
-### Enable OAuth Login
+### Enable OAuth Proxy
 
 Add this to your deployment variables:
 
 ```yaml
-ocp4_workload_litemaas_oauth_login_enabled: true
+ocp4_workload_litemaas_oauth_proxy_enabled: true
 ```
 
-### Deploy with OAuth
-
-```bash
-ansible-playbook playbooks/deploy_litemaas.yml \
-  -e ocp4_workload_litemaas_oauth_login_enabled=true
-```
-
-### HA Deployment with OAuth
+### HA Deployment with OAuth Proxy (Recommended)
 
 ```bash
 ansible-playbook playbooks/deploy_litemaas_ha.yml \
   -e ocp4_workload_litemaas_ha_enabled=true \
-  -e ocp4_workload_litemaas_oauth_login_enabled=true
+  -e ocp4_workload_litemaas_oauth_proxy_enabled=true
 ```
+
+**Note**: OAuth Proxy is currently implemented for HA deployments only.
 
 ## Configuration
 
@@ -45,204 +40,206 @@ ansible-playbook playbooks/deploy_litemaas_ha.yml \
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `ocp4_workload_litemaas_oauth_login_enabled` | `false` | Enable OpenShift OAuth login |
-| `ocp4_workload_litemaas_oauth_client_name` | `litemaas-oauth` | OAuth client name |
-| `ocp4_workload_litemaas_oauth_provider` | `openshift` | OAuth provider type |
+| `ocp4_workload_litemaas_oauth_proxy_enabled` | `false` | Enable OpenShift OAuth Proxy |
+| `ocp4_workload_litemaas_oauth_proxy_image` | `quay.io/openshift/origin-oauth-proxy:latest` | OAuth Proxy image |
+| `ocp4_workload_litemaas_oauth_proxy_serviceaccount` | `litemaas-oauth-proxy` | ServiceAccount name |
 
 ### Advanced Configuration
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `ocp4_workload_litemaas_oauth_allowed_groups` | `[]` | Restrict to specific groups (empty = all) |
-| `ocp4_workload_litemaas_oauth_scopes` | `["user:info", "user:check-access"]` | OAuth scopes |
-| `ocp4_workload_litemaas_oauth_client_secret` | _auto-generated_ | OAuth client secret |
+| `ocp4_workload_litemaas_oauth_proxy_cookie_secret` | _auto-generated_ | Cookie encryption secret |
 
 ## Usage Examples
 
-### Example 1: Basic OAuth Login
+### Example 1: Basic OAuth Proxy (HA Deployment)
 
 ```yaml
 # In AgnosticV common.yaml
-ocp4_workload_litemaas_oauth_login_enabled: true
+ocp4_workload_litemaas_ha_enabled: true
+ocp4_workload_litemaas_oauth_proxy_enabled: true
 ```
 
-### Example 2: Restrict to Specific Groups
+### Example 2: Custom OAuth Proxy Image
 
 ```yaml
-ocp4_workload_litemaas_oauth_login_enabled: true
-ocp4_workload_litemaas_oauth_allowed_groups:
-  - "cluster-admins"
-  - "litemaas-users"
-```
-
-### Example 3: Custom OAuth Client Name
-
-```yaml
-ocp4_workload_litemaas_oauth_login_enabled: true
-ocp4_workload_litemaas_oauth_client_name: "my-litemaas-client"
+ocp4_workload_litemaas_ha_enabled: true
+ocp4_workload_litemaas_oauth_proxy_enabled: true
+ocp4_workload_litemaas_oauth_proxy_image: "quay.io/openshift/origin-oauth-proxy:4.15"
 ```
 
 ## How It Works
 
-### 1. OAuthClient Creation
+### 1. ServiceAccount Creation
 
-The role creates an OpenShift OAuthClient with:
-- **Client ID**: `litemaas-oauth` (or custom name)
-- **Redirect URI**: `https://litellm-{route_name}.{cluster_domain}/oauth/callback`
-- **Grant Method**: `auto` (automatic approval)
+The role creates an OpenShift ServiceAccount with OAuth delegation:
+- **ServiceAccount**: `litemaas-oauth-proxy`
+- **ClusterRoleBinding**: `system:auth-delegator` role
+- **OAuth Annotation**: Automatic redirect reference to LiteLLM route
 
-### 2. OAuth Endpoints
+### 2. OAuth Proxy Sidecar
 
-Auto-detected OAuth endpoints:
-- **Authorization**: `https://oauth-openshift.{cluster_domain}/oauth/authorize`
-- **Token**: `https://oauth-openshift.{cluster_domain}/oauth/token`
-- **UserInfo**: `https://oauth-openshift.{cluster_domain}/oauth/userinfo`
-- **Issuer**: `https://oauth-openshift.{cluster_domain}`
+OAuth Proxy runs as a sidecar container:
+- **Listens on**: Port 8443 (HTTPS)
+- **Proxies to**: LiteLLM on localhost:4000
+- **TLS**: Auto-generated service serving certificate
+- **Cookie Secret**: Auto-generated for session encryption
 
-### 3. LiteLLM Configuration
+### 3. Authentication Flow
 
-Environment variables passed to LiteLLM:
-```yaml
-OAUTH_ENABLED: "true"
-OAUTH_PROVIDER: "openshift"
-OAUTH_CLIENT_ID: "litemaas-oauth"
-OAUTH_CLIENT_SECRET: "***"
-OAUTH_REDIRECT_URI: "https://litellm-rhpds.apps.cluster.com/oauth/callback"
-OAUTH_AUTHORIZATION_ENDPOINT: "https://oauth-openshift.apps.cluster.com/oauth/authorize"
-OAUTH_TOKEN_ENDPOINT: "https://oauth-openshift.apps.cluster.com/oauth/token"
-OAUTH_USERINFO_ENDPOINT: "https://oauth-openshift.apps.cluster.com/oauth/userinfo"
 ```
+User → Route (HTTPS) → OAuth Proxy (8443) → OpenShift OAuth → LiteLLM (4000)
+```
+
+The OAuth Proxy:
+1. Intercepts all requests
+2. Checks for valid OpenShift session cookie
+3. If no session: redirects to OpenShift login
+4. After login: creates encrypted session cookie
+5. Proxies authenticated requests to LiteLLM
 
 ## User Experience
 
-### With OAuth Disabled (Default)
+### With OAuth Proxy Disabled (Default)
 
 1. User opens LiteLLM UI
-2. Sees login form
-3. Enters admin username/password
-4. Accesses LiteLLM
+2. Directly accesses application (no authentication required)
 
-### With OAuth Enabled
+### With OAuth Proxy Enabled
 
 1. User opens LiteLLM UI
-2. Sees "Login with OpenShift" button
-3. Clicks button → redirected to OpenShift login
-4. Logs in with OpenShift credentials
-5. Redirected back to LiteLLM → authenticated
+2. Automatically redirected to OpenShift login page
+3. Logs in with OpenShift credentials
+4. Redirected back to LiteLLM → authenticated
+5. Session cookie valid for 24 hours (configurable)
+
+**All authenticated OpenShift users can access LiteLLM.**
 
 ## Access Control
 
-### Allow All Authenticated Users
+The OAuth Proxy requires **any valid OpenShift user** to authenticate.
 
-```yaml
-ocp4_workload_litemaas_oauth_login_enabled: true
-# No groups specified = all authenticated users can access
-```
-
-### Restrict to Specific Groups
-
-```yaml
-ocp4_workload_litemaas_oauth_login_enabled: true
-ocp4_workload_litemaas_oauth_allowed_groups:
-  - "cluster-admins"
-  - "developers"
-```
-
-Users must be members of at least one specified group.
+- ✅ All cluster users can access after login
+- ✅ No additional group restrictions
+- ✅ Session-based authentication
+- ✅ Automatic cookie refresh every 2 hours
 
 ## Verification
 
-### Check OAuthClient
+### Check ServiceAccount
 
 ```bash
-oc get oauthclient litemaas-oauth -o yaml
+oc get sa litemaas-oauth-proxy -n litemaas -o yaml
 ```
 
-Expected output:
+Expected annotation:
 ```yaml
-apiVersion: oauth.openshift.io/v1
-kind: OAuthClient
-metadata:
-  name: litemaas-oauth
-redirectURIs:
-  - https://litellm-rhpds.apps.cluster.com/oauth/callback
-secret: ***
-grantMethod: auto
+annotations:
+  serviceaccounts.openshift.io/oauth-redirectreference.primary: |
+    {"kind":"OAuthRedirectReference","apiVersion":"v1","reference":{"kind":"Route","name":"litemaas"}}
 ```
 
-### Check OAuth Secret
+### Check ClusterRoleBinding
 
 ```bash
-oc get secret litemaas-oauth-config -n litemaas -o yaml
+oc get clusterrolebinding litemaas-oauth-proxy-litemaas -o yaml
 ```
+
+### Check Secrets
+
+```bash
+# Cookie secret
+oc get secret litemaas-oauth-proxy-secret -n litemaas
+
+# TLS certificate (auto-generated by OpenShift)
+oc get secret litemaas-tls -n litemaas
+```
+
+### Check OAuth Proxy Pod
+
+```bash
+POD=$(oc get pod -n litemaas -l app=litemaas -o jsonpath='{.items[0].metadata.name}')
+oc describe pod $POD -n litemaas
+```
+
+Look for the `oauth-proxy` container.
 
 ### Test OAuth Flow
 
 1. Open LiteLLM URL in browser
-2. Click "Login with OpenShift"
-3. Should redirect to OpenShift OAuth page
-4. Login with OpenShift credentials
-5. Should redirect back to LiteLLM
+2. Should immediately redirect to OpenShift login page
+3. Login with OpenShift credentials
+4. Should redirect back to LiteLLM and show the UI
 
 ## Troubleshooting
 
-### Issue: "Invalid redirect URI"
+### Issue: Redirect loop or "too many redirects"
 
-**Cause**: Redirect URI doesn't match OAuthClient configuration
+**Cause**: TLS certificate not generated or OAuth Proxy can't reach upstream
 
-**Solution**: Check that the route matches the redirect URI:
+**Solution**: Check TLS secret and OAuth Proxy logs:
 ```bash
-oc get route litellm -n litemaas -o jsonpath='{.spec.host}'
-oc get oauthclient litemaas-oauth -o jsonpath='{.redirectURIs[0]}'
+# Check TLS secret exists
+oc get secret litemaas-tls -n litemaas
+
+# Check OAuth Proxy logs
+POD=$(oc get pod -n litemaas -l app=litemaas -o jsonpath='{.items[0].metadata.name}')
+oc logs $POD -n litemaas -c oauth-proxy
 ```
 
-### Issue: "Access denied"
+### Issue: "Service Unavailable" or 503 error
 
-**Cause**: User not in allowed groups
+**Cause**: OAuth Proxy can't connect to LiteLLM container
 
-**Solution**: Check group membership:
-```bash
-oc get groups
-oc describe group <group-name>
-```
-
-### Issue: OAuth login button not appearing
-
-**Cause**: OAuth environment variables not set in LiteLLM pod
-
-**Solution**: Check pod environment:
+**Solution**: Check both containers are running:
 ```bash
 POD=$(oc get pod -n litemaas -l app=litemaas -o jsonpath='{.items[0].metadata.name}')
-oc exec -n litemaas $POD -- env | grep OAUTH
+oc get pod $POD -n litemaas -o jsonpath='{.status.containerStatuses[*].name}'
+oc logs $POD -n litemaas -c litemaas
+```
+
+### Issue: OAuth Proxy container not starting
+
+**Cause**: Missing ServiceAccount or RBAC permissions
+
+**Solution**: Verify ServiceAccount and ClusterRoleBinding:
+```bash
+oc get sa litemaas-oauth-proxy -n litemaas
+oc get clusterrolebinding litemaas-oauth-proxy-litemaas
 ```
 
 ## Compatibility
 
-| Deployment Mode | OAuth Support |
-|----------------|---------------|
-| Single Instance | ✅ Yes |
-| Multi-User | ✅ Yes (per-user) |
+| Deployment Mode | OAuth Proxy Support |
+|----------------|---------------------|
+| Single Instance | ⏳ Coming soon |
+| Multi-User | ⏳ Coming soon |
 | HA Mode | ✅ Yes |
+
+**Currently implemented for HA deployments only.**
 
 ## Security Considerations
 
-1. **Client Secret**: Auto-generated and stored in Kubernetes secret
-2. **HTTPS Required**: OAuth only works over HTTPS (OpenShift routes)
-3. **Group-based Access**: Use `oauth_allowed_groups` to restrict access
-4. **Token Expiration**: Follows OpenShift token expiration policies
+1. **Cookie Secret**: Auto-generated and stored in Kubernetes secret
+2. **TLS Required**: OAuth Proxy uses HTTPS with service serving certificates
+3. **Session Encryption**: All session cookies are encrypted
+4. **Session Lifetime**: 24 hours with 2-hour refresh
+5. **Authentication Only**: All authenticated OpenShift users can access
 
 ## Removal
 
-OAuth configuration is automatically removed when:
+OAuth Proxy configuration is automatically removed when:
 ```bash
-ansible-playbook playbooks/deploy_litemaas.yml \
+ansible-playbook playbooks/deploy_litemaas_ha.yml \
   -e ocp4_workload_litemaas_remove=true
 ```
 
 Manual removal:
 ```bash
-oc delete oauthclient litemaas-oauth
-oc delete secret litemaas-oauth-config -n litemaas
+oc delete clusterrolebinding litemaas-oauth-proxy-litemaas
+oc delete sa litemaas-oauth-proxy -n litemaas
+oc delete secret litemaas-oauth-proxy-secret -n litemaas
+oc delete secret litemaas-tls -n litemaas
 ```
 
 ## Integration with AgnosticV
@@ -254,39 +251,36 @@ oc delete secret litemaas-oauth-config -n litemaas
 workloads:
   - rhpds.litemaas.ocp4_workload_litemaas
 
-# Enable OAuth
-ocp4_workload_litemaas_oauth_login_enabled: true
-
-# Optional: Restrict to groups
-ocp4_workload_litemaas_oauth_allowed_groups:
-  - "{{ guid }}-users"
+# Enable HA with OAuth Proxy
+ocp4_workload_litemaas_ha_enabled: true
+ocp4_workload_litemaas_oauth_proxy_enabled: true
 ```
 
 ### User Info Message
 
-When OAuth is enabled, users receive:
+When OAuth Proxy is enabled, users receive:
 ```
 LiteLLM Admin Portal: https://litellm-rhpds.apps.cluster.com
-Login with your OpenShift credentials
+Login required: Use your OpenShift credentials
 ```
 
 ## Limitations
 
-1. **LiteLLM Support**: Requires LiteLLM version that supports OAuth (check compatibility)
-2. **Single OAuth Provider**: Only OpenShift OAuth is configured
-3. **No SSO**: Each LiteLLM instance has separate OAuth client
-4. **Group Sync**: Groups must exist in OpenShift
+1. **HA Only**: Currently only implemented for HA deployments
+2. **All Users**: No group-based access control (all authenticated users allowed)
+3. **OpenShift Only**: Requires OpenShift cluster (uses OpenShift OAuth)
+4. **No External OAuth**: Only works with OpenShift internal authentication
 
 ## Future Enhancements
 
-- Support for other OAuth providers (Google, GitHub, etc.)
-- Automatic group synchronization
+- Support for single and multi-user deployments
+- Group-based access control
+- Custom session timeout configuration
+- Support for external OAuth providers
 - Role-based access control (RBAC)
-- Session management and timeout configuration
-- Multi-factor authentication (MFA) support
 
 ## References
 
-- [OpenShift OAuth Documentation](https://docs.openshift.com/container-platform/latest/authentication/configuring-internal-oauth.html)
-- [LiteLLM OAuth Configuration](https://docs.litellm.ai/)
-- [Kubernetes OAuthClient API](https://docs.openshift.com/container-platform/latest/rest_api/oauth_apis/oauthclient-oauth-openshift-io-v1.html)
+- [OpenShift OAuth Proxy Documentation](https://docs.openshift.com/container-platform/latest/authentication/configuring-internal-oauth.html)
+- [OAuth Proxy GitHub Repository](https://github.com/openshift/oauth-proxy)
+- [Service Serving Certificates](https://docs.openshift.com/container-platform/latest/security/certificates/service-serving-certificate.html)
