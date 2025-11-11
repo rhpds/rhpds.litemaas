@@ -12,6 +12,7 @@
       - "Deploying LiteMaaS in High Availability mode"
       - "Namespace: {{ _litemaas_ha_namespace }}"
       - "LiteLLM Replicas: {{ ocp4_workload_litemaas_ha_litellm_replicas }}"
+      - "PostgreSQL Storage Size: {{ ocp4_workload_litemaas_ha_postgres_pvc_size }}"
       - "Redis Enabled: {{ ocp4_workload_litemaas_ha_enable_redis }}"
       - "PostgreSQL Enabled: {{ ocp4_workload_litemaas_ha_enable_postgres }}"
 
