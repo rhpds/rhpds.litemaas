@@ -80,6 +80,8 @@ spec:
                 secretKeyRef:
                   name: litellm-secret
                   key: UI_PASSWORD
+            - name: STORE_MODEL_IN_DB
+              value: "True"
             - name: REDIS_HOST
               value: "litemaas-redis"
             - name: REDIS_PORT
