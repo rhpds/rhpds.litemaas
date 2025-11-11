@@ -51,14 +51,6 @@ ansible-playbook playbooks/deploy_litemaas.yml \
   -e num_users=10
 ```
 
-**Deploy (5 users with 2 LiteLLM replicas each):**
-```bash
-ansible-playbook playbooks/deploy_litemaas.yml \
-  -e ocp4_workload_litemaas_multi_user=true \
-  -e num_users=5 \
-  -e ocp4_workload_litemaas_litellm_replicas=2
-```
-
 **Benefits:**
 - Each user gets isolated namespace and resources
 - Dedicated PostgreSQL database per user
@@ -126,7 +118,7 @@ ssh lab-user@bastion.xxxxx.sandboxXXXX.opentlc.com
 
 # 2. Clone the repository
 cd ~
-git clone https://github.com/prakhar1985/rhpds.litemaas.git
+git clone https://github.com/rhpds/rhpds.litemaas.git
 cd rhpds.litemaas
 
 # 3. Build and install collection
@@ -556,12 +548,39 @@ ansible-playbook playbooks/deploy_litemaas.yml \
   -e ocp4_workload_litemaas_oauth_enabled=true
 ```
 
-### Custom Storage
+### High Availability (HA) Deployment
 
+**AWS Cluster with HA:**
 ```bash
 ansible-playbook playbooks/deploy_litemaas.yml \
-  -e ocp4_workload_litemaas_postgres_storage_size=50Gi
+  -e ocp4_workload_litemaas_litellm_replicas=3 \
+  -e ocp4_workload_litemaas_deploy_redis=true \
+  -e ocp4_workload_litemaas_postgres_storage_class=gp3-csi
 ```
+
+This deploys:
+- 3 LiteLLM replicas (load balanced)
+- Redis cache for improved performance
+- Auto-detects AWS storage (gp3-csi)
+
+**CNV Cluster with HA:**
+```bash
+ansible-playbook playbooks/deploy_litemaas.yml \
+  -e ocp4_workload_litemaas_litellm_replicas=3 \
+  -e ocp4_workload_litemaas_deploy_redis=true \
+  -e ocp4_workload_litemaas_postgres_storage_class=ocs-external-storagecluster-ceph-rbd
+```
+
+This deploys:
+- 3 LiteLLM replicas (load balanced)
+- Redis cache for improved performance
+- Uses OpenShift Data Foundation (ODF) storage
+
+**Benefits:**
+- High availability with automatic failover
+- Load balancing across replicas
+- Reduced latency with Redis caching
+- Zero-downtime rolling updates
 
 ### Remove Deployment
 
@@ -610,7 +629,7 @@ ssh lab-user@bastion.xxxxx.sandboxXXXX.opentlc.com
 source /opt/virtualenvs/k8s/bin/activate
 
 # Clone and deploy
-git clone https://github.com/prakhar1985/rhpds.litemaas.git
+git clone https://github.com/rhpds/rhpds.litemaas.git
 cd rhpds.litemaas
 ansible-playbook playbooks/deploy_litemaas.yml
 ```
