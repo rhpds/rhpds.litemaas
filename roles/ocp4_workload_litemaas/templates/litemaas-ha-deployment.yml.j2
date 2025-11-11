@@ -86,6 +86,53 @@ spec:
             - name: LITELLM_LICENSE_KEY
               value: "{{ ocp4_workload_litemaas_litellm_license_key }}"
 {% endif %}
+{% if ocp4_workload_litemaas_oauth_login_enabled | bool %}
+            - name: OAUTH_ENABLED
+              valueFrom:
+                secretKeyRef:
+                  name: litemaas-oauth-config
+                  key: OAUTH_ENABLED
+            - name: OAUTH_PROVIDER
+              valueFrom:
+                secretKeyRef:
+                  name: litemaas-oauth-config
+                  key: OAUTH_PROVIDER
+            - name: OAUTH_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: litemaas-oauth-config
+                  key: OAUTH_CLIENT_ID
+            - name: OAUTH_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: litemaas-oauth-config
+                  key: OAUTH_CLIENT_SECRET
+            - name: OAUTH_REDIRECT_URI
+              valueFrom:
+                secretKeyRef:
+                  name: litemaas-oauth-config
+                  key: OAUTH_REDIRECT_URI
+            - name: OAUTH_AUTHORIZATION_ENDPOINT
+              valueFrom:
+                secretKeyRef:
+                  name: litemaas-oauth-config
+                  key: OAUTH_AUTHORIZATION_ENDPOINT
+            - name: OAUTH_TOKEN_ENDPOINT
+              valueFrom:
+                secretKeyRef:
+                  name: litemaas-oauth-config
+                  key: OAUTH_TOKEN_ENDPOINT
+            - name: OAUTH_USERINFO_ENDPOINT
+              valueFrom:
+                secretKeyRef:
+                  name: litemaas-oauth-config
+                  key: OAUTH_USERINFO_ENDPOINT
+            - name: OAUTH_ISSUER
+              valueFrom:
+                secretKeyRef:
+                  name: litemaas-oauth-config
+                  key: OAUTH_ISSUER
+{% endif %}
             - name: REDIS_HOST
               value: "litemaas-redis"
             - name: REDIS_PORT
