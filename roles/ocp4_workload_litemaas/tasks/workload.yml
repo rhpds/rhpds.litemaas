@@ -390,6 +390,8 @@
                           secretKeyRef:
                             name: litellm-secret
                             key: UI_PASSWORD
+                      - name: STORE_MODEL_IN_DB
+                        value: "True"
                     livenessProbe:
                       httpGet:
                         path: /health/liveness
