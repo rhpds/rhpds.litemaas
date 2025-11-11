@@ -153,9 +153,10 @@
       retries: 20
       delay: 5
 
-- name: Generate admin password once
+- name: Generate admin credentials once
   ansible.builtin.set_fact:
     _litemaas_ha_admin_password: "{{ lookup('password', '/dev/null length=16 chars=ascii_letters,digits') }}"
+    _litemaas_ha_admin_api_key: "{{ lookup('password', '/dev/null length=32 chars=ascii_letters,digits') }}"
 
 - name: Deploy LiteMaaS (High Availability)
   block:
@@ -192,8 +193,8 @@
         msg: "{{ item }}"
       loop:
         - "LiteLLM Admin Portal: https://{{ r_litemaas_route.resources[0].spec.host }}"
-        - "LiteLLM Admin Login: {{ ocp4_workload_litemaas_litellm_ui_username }} / {{ ocp4_workload_litemaas_litellm_ui_password }}"
-        - "LiteLLM Master API Key: {{ ocp4_workload_litemaas_litellm_api_key }}"
+        - "LiteLLM Admin Login: {{ ocp4_workload_litemaas_litellm_ui_username }} / {{ _litemaas_ha_admin_password }}"
+        - "LiteLLM Master API Key: sk-{{ _litemaas_ha_admin_api_key }}"
 
     - name: Send user info data - URLs
       agnosticd_user_info:
@@ -205,8 +206,8 @@
       agnosticd_user_info:
         data:
           litellm_admin_username: "{{ ocp4_workload_litemaas_litellm_ui_username }}"
-          litellm_admin_password: "{{ ocp4_workload_litemaas_litellm_ui_password }}"
-          litemaas_admin_api_key: "{{ ocp4_workload_litemaas_litellm_api_key }}"
+          litellm_admin_password: "{{ _litemaas_ha_admin_password }}"
+          litemaas_admin_api_key: "sk-{{ _litemaas_ha_admin_api_key }}"
 
     - name: Send user info data - Deployment details
       agnosticd_user_info:
@@ -224,5 +225,5 @@
           - "LiteLLM Replicas: {{ ocp4_workload_litemaas_ha_litellm_replicas }}"
           - "Route: https://{{ r_litemaas_route.resources[0].spec.host }}"
           - "Admin Username: {{ ocp4_workload_litemaas_litellm_ui_username }}"
-          - "Admin Password: {{ ocp4_workload_litemaas_litellm_ui_password }}"
-          - "Master API Key: {{ ocp4_workload_litemaas_litellm_api_key }}"
+          - "Admin Password: {{ _litemaas_ha_admin_password }}"
+          - "Master API Key: sk-{{ _litemaas_ha_admin_api_key }}"

@@ -8,7 +8,7 @@ metadata:
     component: ai-proxy
 type: Opaque
 stringData:
-  LITELLM_MASTER_KEY: "{{ ocp4_workload_litemaas_litellm_api_key }}"
+  LITELLM_MASTER_KEY: "sk-{{ _litemaas_ha_admin_api_key }}"
   UI_USERNAME: "{{ ocp4_workload_litemaas_litellm_ui_username }}"
   UI_PASSWORD: "{{ _litemaas_ha_admin_password }}"
 ---
