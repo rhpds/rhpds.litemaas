@@ -1,0 +1,183 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: backend-secret
+  labels:
+    app: litemaas-backend
+type: Opaque
+stringData:
+  JWT_SECRET: "{{ ocp4_workload_litemaas_jwt_secret }}"
+  ADMIN_API_KEY: "{{ ocp4_workload_litemaas_admin_api_key }}"
+  OAUTH_CLIENT_SECRET: "{{ _litemaas_oauth_client_secret_generated | default(ocp4_workload_litemaas_oauth_client_secret) }}"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: litemaas-backend
+  labels:
+    app: litemaas-backend
+    component: api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: litemaas-backend
+  template:
+    metadata:
+      labels:
+        app: litemaas-backend
+        component: api
+    spec:
+      initContainers:
+        - name: wait-for-database
+          image: postgres:16-alpine
+          command:
+            - sh
+            - -c
+            - |
+              until pg_isready -h postgres -p 5432 -U litemaas 2>/dev/null; do
+                echo "Waiting for database..."
+                sleep 2
+              done
+              echo "Database is ready!"
+        - name: run-migrations
+          image: "{{ ocp4_workload_litemaas_backend_image }}:{{ ocp4_workload_litemaas_version }}"
+          command:
+            - sh
+            - -c
+            - |
+              echo "Running database migrations..."
+              cd /app/backend
+              export npm_config_cache=/tmp/.npm
+              npx prisma migrate deploy || npx prisma db push || echo "Migrations not available, skipping..."
+              echo "Migrations complete!"
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: DATABASE_URL
+            - name: NODE_ENV
+              value: "production"
+            - name: HOME
+              value: "/tmp"
+      containers:
+        - name: backend
+          image: "{{ ocp4_workload_litemaas_backend_image }}:{{ ocp4_workload_litemaas_version }}"
+          ports:
+            - containerPort: 8080
+              name: http
+          env:
+            - name: HOST
+              value: "0.0.0.0"
+            - name: PORT
+              value: "8080"
+            - name: NODE_ENV
+              value: "production"
+            - name: LOG_LEVEL
+              value: "info"
+            - name: NODE_TLS_REJECT_UNAUTHORIZED
+              value: "0"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: DATABASE_URL
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: backend-secret
+                  key: JWT_SECRET
+            - name: ADMIN_API_KEYS
+              valueFrom:
+                secretKeyRef:
+                  name: backend-secret
+                  key: ADMIN_API_KEY
+            - name: OAUTH_CLIENT_ID
+              value: "{{ ocp4_workload_litemaas_oauth_client_id }}"
+            - name: OAUTH_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: backend-secret
+                  key: OAUTH_CLIENT_SECRET
+            - name: OAUTH_ISSUER
+              value: "{{ _litemaas_oauth_issuer }}"
+            - name: OAUTH_CALLBACK_URL
+              value: "https://litellm-admin-{{ _user_suffix }}.{{ ocp4_workload_litemaas_cluster_domain }}/api/auth/callback"
+            - name: LITELLM_API_URL
+              value: "http://litellm:4000"
+            - name: LITELLM_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: litellm-secret
+                  key: LITELLM_MASTER_KEY
+            - name: CORS_ORIGIN
+              value: "https://litellm-admin-{{ _user_suffix }}.{{ ocp4_workload_litemaas_cluster_domain }}"
+            - name: RATE_LIMIT_MAX
+              value: "1000"
+            - name: RATE_LIMIT_TIME_WINDOW
+              value: "5m"
+            - name: DEFAULT_USER_MAX_BUDGET
+              value: "100"
+            - name: DEFAULT_USER_TPM_LIMIT
+              value: "100000"
+            - name: DEFAULT_USER_RPM_LIMIT
+              value: "120"
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "{{ ocp4_workload_litemaas_backend_memory_limit }}"
+              cpu: "{{ ocp4_workload_litemaas_backend_cpu_limit }}"
+          readinessProbe:
+            httpGet:
+              path: /api/v1/health/ready
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /api/v1/health/live
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: litemaas-backend
+  labels:
+    app: litemaas-backend
+    component: api
+spec:
+  ports:
+    - port: 8080
+      targetPort: 8080
+      name: http
+  selector:
+    app: litemaas-backend
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: litemaas-backend
+  labels:
+    app: litemaas-backend
+    component: api
+spec:
+  host: "litellm-admin-{{ _user_suffix }}.{{ ocp4_workload_litemaas_cluster_domain }}"
+  path: /api
+  to:
+    kind: Service
+    name: litemaas-backend
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect

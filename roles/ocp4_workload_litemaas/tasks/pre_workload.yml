@@ -179,12 +179,25 @@
   ansible.builtin.set_fact:
     _litemaas_oauth_client_secret_generated: "{{ lookup('password', '/dev/null length=32 chars=ascii_letters,digits') }}"
 
-- name: Generate OAuth redirect URIs for LiteMaaS deployment
-  when: ocp4_workload_litemaas_oauth_enabled | bool
+- name: Generate OAuth redirect URIs for single instance deployment
+  when:
+    - ocp4_workload_litemaas_oauth_enabled | bool
+    - not (ocp4_workload_litemaas_multi_user | bool)
   ansible.builtin.set_fact:
     _litemaas_oauth_redirect_uris:
       - "https://litellm-admin.{{ ocp4_workload_litemaas_cluster_domain }}/api/auth/callback"
       - "https://litellm-frontend.{{ ocp4_workload_litemaas_cluster_domain }}/api/auth/callback"
+
+- name: Generate OAuth redirect URIs for multi-user deployment
+  when:
+    - ocp4_workload_litemaas_oauth_enabled | bool
+    - ocp4_workload_litemaas_multi_user | bool
+  ansible.builtin.set_fact:
+    _litemaas_oauth_redirect_uris: "{{ _litemaas_oauth_redirect_uris | default([]) + [
+      'https://litellm-admin-' + ocp4_workload_litemaas_user_prefix + item | string + '.' + ocp4_workload_litemaas_cluster_domain + '/api/auth/callback',
+      'https://litellm-frontend-' + ocp4_workload_litemaas_user_prefix + item | string + '.' + ocp4_workload_litemaas_cluster_domain + '/api/auth/callback'
+    ] }}"
+  loop: "{{ range(1, num_users | int + 1) | list }}"
 
 - name: Create OpenShift OAuthClient for backend
   when:

@@ -334,7 +334,62 @@
           insecureEdgeTerminationPolicy: Redirect
   loop: "{{ range(1, num_users | int + 1) | list }}"
 
-# Phase 4: Collect and send user info data
+# Phase 4: Deploy Backend (if OAuth enabled)
+- name: Deploy Backend for all users
+  when: ocp4_workload_litemaas_deploy_backend | bool
+  block:
+    - name: Create backend secrets for all users
+      kubernetes.core.k8s:
+        state: present
+        namespace: "litemaas-{{ ocp4_workload_litemaas_user_prefix }}{{ item }}"
+        definition:
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: backend-secret
+            labels:
+              app: litemaas-backend
+          type: Opaque
+          stringData:
+            JWT_SECRET: "{{ lookup('password', '/dev/null length=32 chars=ascii_letters,digits') }}"
+            ADMIN_API_KEY: "{{ lookup('password', '/dev/null length=32 chars=ascii_letters,digits') }}"
+            OAUTH_CLIENT_SECRET: "{{ _litemaas_oauth_client_secret_generated | default(ocp4_workload_litemaas_oauth_client_secret) }}"
+      loop: "{{ range(1, num_users | int + 1) | list }}"
+
+    - name: Set namespace variable for backend template
+      ansible.builtin.set_fact:
+        _litemaas_multi_user_namespace: "litemaas-{{ ocp4_workload_litemaas_user_prefix }}{{ item }}"
+        _litemaas_multi_user_cluster_domain: "{{ ocp4_workload_litemaas_cluster_domain }}"
+        _litemaas_multi_user_number: "{{ item }}"
+      loop: "{{ range(1, num_users | int + 1) | list }}"
+      loop_control:
+        loop_var: item
+
+    - name: Deploy backend for all users
+      kubernetes.core.k8s:
+        state: present
+        namespace: "litemaas-{{ ocp4_workload_litemaas_user_prefix }}{{ item }}"
+        definition: "{{ lookup('template', 'litemaas-backend-multiuser.yml.j2') | from_yaml_all }}"
+      loop: "{{ range(1, num_users | int + 1) | list }}"
+      vars:
+        _user_namespace: "litemaas-{{ ocp4_workload_litemaas_user_prefix }}{{ item }}"
+        _user_suffix: "{{ ocp4_workload_litemaas_user_prefix }}{{ item }}"
+
+# Phase 5: Deploy Frontend (if enabled)
+- name: Deploy Frontend for all users
+  when: ocp4_workload_litemaas_deploy_frontend | bool
+  block:
+    - name: Deploy frontend for all users
+      kubernetes.core.k8s:
+        state: present
+        namespace: "litemaas-{{ ocp4_workload_litemaas_user_prefix }}{{ item }}"
+        definition: "{{ lookup('template', 'litemaas-frontend-multiuser.yml.j2') | from_yaml_all }}"
+      loop: "{{ range(1, num_users | int + 1) | list }}"
+      vars:
+        _user_namespace: "litemaas-{{ ocp4_workload_litemaas_user_prefix }}{{ item }}"
+        _user_suffix: "{{ ocp4_workload_litemaas_user_prefix }}{{ item }}"
+
+# Phase 6: Collect and send user info data
 - name: Get LiteLLM secrets for all users and send user info
   include_tasks: workload_multi_user_userinfo.yml
   loop: "{{ range(1, num_users | int + 1) | list }}"
@@ -349,5 +404,6 @@
       - "========================================="
       - "Total users: {{ num_users }}"
       - "Namespaces: litemaas-{{ ocp4_workload_litemaas_user_prefix }}1 to litemaas-{{ ocp4_workload_litemaas_user_prefix }}{{ num_users }}"
-      - "Each user has: PostgreSQL + LiteLLM (1 replica)"
+      - "Each user has: PostgreSQL + LiteLLM{% if ocp4_workload_litemaas_deploy_backend | bool %} + Backend{% endif %}{% if ocp4_workload_litemaas_deploy_frontend | bool %} + Frontend{% endif %}"
+      - "OAuth enabled: {{ ocp4_workload_litemaas_oauth_enabled | bool }}"
       - "========================================="
