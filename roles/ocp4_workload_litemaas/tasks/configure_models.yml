@@ -73,3 +73,29 @@
         msg: "Model {{ item.item.model_name }}: {{ 'Success' if item.status in [200, 201] else 'Failed - ' + (item.msg | default('Unknown error')) }}"
       loop: "{{ r_model_creation.results }}"
       when: r_model_creation.results is defined
+
+    - name: Create a default team with access to all models
+      ansible.builtin.uri:
+        url: "{{ _litellm_url }}/team/new"
+        method: POST
+        headers:
+          Authorization: "Bearer {{ _litellm_master_key }}"
+          Content-Type: "application/json"
+        body_format: json
+        body:
+          team_alias: "default-users"
+          models: "{{ ocp4_workload_litemaas_litellm_models | map(attribute='model_name') | list }}"
+          max_budget: 1000
+          budget_duration: "30d"
+        validate_certs: false
+        status_code: [200, 201]
+      register: r_team_creation
+      failed_when: false
+      when: ocp4_workload_litemaas_litellm_models | length > 0
+
+    - name: Display team creation result
+      ansible.builtin.debug:
+        msg: "Default team created: {{ 'Success' if r_team_creation.status in [200, 201] else 'Failed - ' + (r_team_creation.msg | default('Unknown error')) }}"
+      when:
+        - r_team_creation is defined
+        - ocp4_workload_litemaas_litellm_models | length > 0
