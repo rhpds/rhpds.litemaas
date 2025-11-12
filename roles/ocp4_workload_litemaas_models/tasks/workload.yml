@@ -244,6 +244,64 @@
         _backend_db_user_sync: "{{ r_backend_db_secret_sync.resources[0].data.username | b64decode }}"
         _backend_db_name_sync: "{{ r_backend_db_secret_sync.resources[0].data.database | b64decode }}"
 
+    - name: Create models table if it doesn't exist
+      ansible.builtin.shell: |
+        oc exec -n {{ ocp4_workload_litemaas_models_namespace }} {{ r_postgres_pods.resources[0].metadata.name }} -- psql -U {{ _backend_db_user_sync }} -d {{ _backend_db_name_sync }} -c "
+        CREATE TABLE IF NOT EXISTS models (
+          id VARCHAR(255) PRIMARY KEY,
+          name VARCHAR(255) NOT NULL,
+          provider VARCHAR(100) NOT NULL,
+          description TEXT,
+          category VARCHAR(100),
+          context_length INTEGER,
+          input_cost_per_token NUMERIC(15,10),
+          output_cost_per_token NUMERIC(15,10),
+          supports_vision BOOLEAN DEFAULT false,
+          supports_function_calling BOOLEAN DEFAULT false,
+          supports_tool_choice BOOLEAN DEFAULT false,
+          supports_parallel_function_calling BOOLEAN DEFAULT false,
+          supports_streaming BOOLEAN DEFAULT true,
+          features TEXT[],
+          availability VARCHAR(50) DEFAULT 'available',
+          version VARCHAR(50),
+          metadata JSONB DEFAULT '{}'::jsonb,
+          api_base VARCHAR(500),
+          tpm INTEGER,
+          rpm INTEGER,
+          max_tokens INTEGER,
+          litellm_model_id VARCHAR(255),
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          backend_model_name VARCHAR(255),
+          restricted_access BOOLEAN DEFAULT false
+        );
+        CREATE INDEX IF NOT EXISTS idx_models_availability ON models(availability);
+        CREATE INDEX IF NOT EXISTS idx_models_category ON models(category);
+        CREATE INDEX IF NOT EXISTS idx_models_litellm_model_id ON models(litellm_model_id);
+        CREATE INDEX IF NOT EXISTS idx_models_provider ON models(provider);
+        CREATE INDEX IF NOT EXISTS idx_models_restricted_access ON models(restricted_access);
+
+        CREATE OR REPLACE FUNCTION update_updated_at_column()
+        RETURNS TRIGGER AS \$\$
+        BEGIN
+          NEW.updated_at = CURRENT_TIMESTAMP;
+          RETURN NEW;
+        END;
+        \$\$ LANGUAGE plpgsql;
+
+        DROP TRIGGER IF EXISTS update_models_updated_at ON models;
+        CREATE TRIGGER update_models_updated_at
+        BEFORE UPDATE ON models
+        FOR EACH ROW
+        EXECUTE FUNCTION update_updated_at_column();
+        "
+      register: r_create_models_table
+      changed_when: true
+
+    - name: Display models table creation result
+      ansible.builtin.debug:
+        msg: "Models table created/verified in backend database"
+
     - name: Sync LiteLLM models to backend database
       ansible.builtin.shell: |
         oc exec -n {{ ocp4_workload_litemaas_models_namespace }} {{ r_postgres_pods.resources[0].metadata.name }} -- psql -U {{ _backend_db_user_sync }} -d {{ _backend_db_name_sync }} -c "
