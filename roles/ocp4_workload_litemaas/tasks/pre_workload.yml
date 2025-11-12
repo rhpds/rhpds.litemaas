@@ -178,6 +178,23 @@
   ansible.builtin.set_fact:
     _litemaas_oauth_redirect_uri: "https://litemaas-rhpds.{{ ocp4_workload_litemaas_cluster_domain }}/api/auth/callback"
 
+- name: Create OpenShift OAuthClient for backend
+  when:
+    - ocp4_workload_litemaas_oauth_enabled | bool
+    - ocp4_workload_litemaas_oauth_provider == "openshift"
+    - r_existing_oauth_client.resources | default([]) | length == 0
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: oauth.openshift.io/v1
+      kind: OAuthClient
+      metadata:
+        name: "{{ ocp4_workload_litemaas_oauth_client_id }}"
+      secret: "{{ _litemaas_oauth_client_secret_generated }}"
+      redirectURIs:
+        - "{{ _litemaas_oauth_redirect_uri }}"
+      grantMethod: prompt
+
 - name: Display pre-flight summary
   ansible.builtin.debug:
     msg:
