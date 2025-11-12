@@ -173,10 +173,12 @@
   ansible.builtin.set_fact:
     _litemaas_oauth_client_secret_generated: "{{ ocp4_workload_litemaas_oauth_client_secret }}"
 
-- name: Generate OAuth redirect URI for RHPDS namespace
+- name: Generate OAuth redirect URIs for RHPDS namespace
   when: ocp4_workload_litemaas_oauth_enabled | bool
   ansible.builtin.set_fact:
-    _litemaas_oauth_redirect_uri: "https://litellm-{{ ocp4_workload_litemaas_route_name }}.{{ ocp4_workload_litemaas_cluster_domain }}/api/auth/callback"
+    _litemaas_oauth_redirect_uris:
+      - "https://litellm-admin-{{ ocp4_workload_litemaas_route_name }}.{{ ocp4_workload_litemaas_cluster_domain }}/api/auth/callback"
+      - "https://litellm-frontend-{{ ocp4_workload_litemaas_route_name }}.{{ ocp4_workload_litemaas_cluster_domain }}/api/auth/callback"
 
 - name: Create OpenShift OAuthClient for backend
   when:
@@ -191,8 +193,7 @@
       metadata:
         name: "{{ ocp4_workload_litemaas_oauth_client_id }}"
       secret: "{{ _litemaas_oauth_client_secret_generated }}"
-      redirectURIs:
-        - "{{ _litemaas_oauth_redirect_uri }}"
+      redirectURIs: "{{ _litemaas_oauth_redirect_uris }}"
       grantMethod: prompt
 
 - name: Display pre-flight summary

@@ -86,7 +86,7 @@ metadata:
     app: litemaas-frontend
     component: web
 spec:
-  host: "litemaas-{{ ocp4_workload_litemaas_route_name }}.{{ ocp4_workload_litemaas_cluster_domain }}"
+  host: "litellm-frontend-{{ ocp4_workload_litemaas_route_name }}.{{ ocp4_workload_litemaas_cluster_domain }}"
   to:
     kind: Service
     name: litemaas-frontend

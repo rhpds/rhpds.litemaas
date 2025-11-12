@@ -297,7 +297,7 @@
             labels:
               app: litemaas-backend
           spec:
-            host: "litemaas-rhpds.{{ ocp4_workload_litemaas_cluster_domain }}"
+            host: "litellm-admin-{{ ocp4_workload_litemaas_route_name }}.{{ ocp4_workload_litemaas_cluster_domain }}"
             path: /api
             to:
               kind: Service
@@ -447,7 +447,7 @@
             labels:
               app: litellm
           spec:
-            host: "litellm-{{ ocp4_workload_litemaas_route_name }}.{{ ocp4_workload_litemaas_cluster_domain }}"
+            host: "litellm-admin-{{ ocp4_workload_litemaas_route_name }}.{{ ocp4_workload_litemaas_cluster_domain }}"
             to:
               kind: Service
               name: litellm
@@ -531,7 +531,7 @@
             labels:
               app: litemaas-frontend
           spec:
-            host: "litemaas-rhpds.{{ ocp4_workload_litemaas_cluster_domain }}"
+            host: "litellm-frontend-{{ ocp4_workload_litemaas_route_name }}.{{ ocp4_workload_litemaas_cluster_domain }}"
             to:
               kind: Service
               name: litemaas-frontend

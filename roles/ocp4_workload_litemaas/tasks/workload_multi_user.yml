@@ -323,7 +323,7 @@
         labels:
           app: litellm
       spec:
-        host: "litellm-{{ ocp4_workload_litemaas_user_prefix }}{{ item }}-{{ ocp4_workload_litemaas_route_name }}.{{ ocp4_workload_litemaas_cluster_domain }}"
+        host: "litellm-admin-{{ ocp4_workload_litemaas_user_prefix }}{{ item }}-{{ ocp4_workload_litemaas_route_name }}.{{ ocp4_workload_litemaas_cluster_domain }}"
         to:
           kind: Service
           name: litellm

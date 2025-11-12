@@ -62,6 +62,8 @@ spec:
               value: "production"
             - name: LOG_LEVEL
               value: "info"
+            - name: NODE_TLS_REJECT_UNAUTHORIZED
+              value: "0"
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
@@ -87,7 +89,7 @@ spec:
             - name: OAUTH_ISSUER
               value: "{{ _litemaas_oauth_issuer }}"
             - name: OAUTH_CALLBACK_URL
-              value: "https://litellm-{{ ocp4_workload_litemaas_route_name }}.{{ ocp4_workload_litemaas_cluster_domain }}/api/auth/callback"
+              value: "https://litellm-admin-{{ ocp4_workload_litemaas_route_name }}.{{ ocp4_workload_litemaas_cluster_domain }}/api/auth/callback"
             - name: LITELLM_API_URL
               value: "http://litemaas:4000"
             - name: LITELLM_API_KEY
@@ -96,7 +98,7 @@ spec:
                   name: litellm-secret
                   key: LITELLM_MASTER_KEY
             - name: CORS_ORIGIN
-              value: "https://litellm-{{ ocp4_workload_litemaas_route_name }}.{{ ocp4_workload_litemaas_cluster_domain }}"
+              value: "https://litellm-admin-{{ ocp4_workload_litemaas_route_name }}.{{ ocp4_workload_litemaas_cluster_domain }}"
             - name: RATE_LIMIT_MAX
               value: "1000"
             - name: RATE_LIMIT_TIME_WINDOW
@@ -154,7 +156,7 @@ metadata:
     app: litemaas-backend
     component: api
 spec:
-  host: "litellm-{{ ocp4_workload_litemaas_route_name }}.{{ ocp4_workload_litemaas_cluster_domain }}"
+  host: "litellm-admin-{{ ocp4_workload_litemaas_route_name }}.{{ ocp4_workload_litemaas_cluster_domain }}"
   path: /api
   to:
     kind: Service
