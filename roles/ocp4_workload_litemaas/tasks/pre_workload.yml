@@ -176,7 +176,7 @@
 - name: Generate OAuth redirect URI for RHPDS namespace
   when: ocp4_workload_litemaas_oauth_enabled | bool
   ansible.builtin.set_fact:
-    _litemaas_oauth_redirect_uri: "https://litemaas-rhpds.{{ ocp4_workload_litemaas_cluster_domain }}/api/auth/callback"
+    _litemaas_oauth_redirect_uri: "https://litellm-{{ ocp4_workload_litemaas_route_name }}.{{ ocp4_workload_litemaas_cluster_domain }}/api/auth/callback"
 
 - name: Create OpenShift OAuthClient for backend
   when:
