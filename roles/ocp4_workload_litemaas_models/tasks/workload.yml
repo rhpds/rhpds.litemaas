@@ -1,0 +1,249 @@
+---
+# =============================================================================
+# LiteMaaS Models Management - Provision Tasks
+# =============================================================================
+# Adds models to LiteLLM and syncs to backend database
+# Supports both automated deployment and manual admin usage
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Step 1: Validate Required Variables
+# -----------------------------------------------------------------------------
+- name: Validate required variables
+  ansible.builtin.assert:
+    that:
+      - litellm_url is defined
+      - litellm_url | length > 0
+      - litellm_master_key is defined
+      - litellm_master_key | length > 0
+      - ocp4_workload_litemaas_models_list | length > 0
+    fail_msg: "Required variables missing: litellm_url, litellm_master_key, ocp4_workload_litemaas_models_list"
+    quiet: true
+
+# -----------------------------------------------------------------------------
+# Step 2: Display Model Management Details
+# -----------------------------------------------------------------------------
+- name: Display model management details
+  ansible.builtin.debug:
+    msg:
+      - "========================================="
+      - "Managing LiteMaaS Models"
+      - "========================================="
+      - "Namespace: {{ ocp4_workload_litemaas_models_namespace }}"
+      - "Models to manage: {{ ocp4_workload_litemaas_models_list | length }}"
+      - "Backend sync enabled: {{ ocp4_workload_litemaas_models_backend_enabled }}"
+      - "========================================="
+
+# -----------------------------------------------------------------------------
+# Step 3: Add Models to LiteLLM
+# -----------------------------------------------------------------------------
+- name: Add models to LiteLLM
+  block:
+    - name: Wait for LiteLLM to be ready
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Pod
+        namespace: "{{ ocp4_workload_litemaas_models_namespace }}"
+        label_selectors:
+          - app=litemaas
+      register: r_litellm_pods
+      until:
+        - r_litellm_pods.resources | length > 0
+        - r_litellm_pods.resources[0].status.phase == "Running"
+        - r_litellm_pods.resources[0].status.containerStatuses is defined
+        - r_litellm_pods.resources[0].status.containerStatuses | selectattr('name', 'equalto', 'litemaas') | list | length > 0
+        - (r_litellm_pods.resources[0].status.containerStatuses | selectattr('name', 'equalto', 'litemaas') | first).ready == true
+      retries: 30
+      delay: 10
+
+    - name: Add models to LiteLLM via API
+      ansible.builtin.uri:
+        url: "{{ litellm_url }}/model/new"
+        method: POST
+        headers:
+          Authorization: "Bearer {{ litellm_master_key }}"
+          Content-Type: "application/json"
+        body_format: json
+        body:
+          model_name: "{{ item.model_name }}"
+          litellm_params:
+            model: "{{ item.litellm_model }}"
+            api_base: "{{ item.api_base | default(omit) }}"
+            api_key: "{{ item.api_key | default(omit) }}"
+            api_version: "{{ item.api_version | default(omit) }}"
+            rpm: "{{ item.rpm | default(omit) }}"
+            tpm: "{{ item.tpm | default(omit) }}"
+        validate_certs: "{{ ocp4_workload_litemaas_models_verify_ssl }}"
+        status_code: [200, 201, 400]
+      loop: "{{ ocp4_workload_litemaas_models_list }}"
+      register: r_litellm_model_creation
+      failed_when:
+        - r_litellm_model_creation.status not in [200, 201, 400]
+
+    - name: Display LiteLLM model creation results
+      ansible.builtin.debug:
+        msg: "Model {{ item.item.model_name }}: {{ 'Created' if item.status in [200, 201] else 'Already exists' if item.status == 400 else 'Failed' }}"
+      loop: "{{ r_litellm_model_creation.results }}"
+      when: r_litellm_model_creation.results is defined
+
+# -----------------------------------------------------------------------------
+# Step 4: Sync Models to Backend Database
+# -----------------------------------------------------------------------------
+- name: Sync models to backend database
+  when: ocp4_workload_litemaas_models_backend_enabled | bool
+  block:
+    - name: Wait for backend to be ready
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Pod
+        namespace: "{{ ocp4_workload_litemaas_models_namespace }}"
+        label_selectors:
+          - app=litemaas-backend
+      register: r_backend_pods
+      until:
+        - r_backend_pods.resources | length > 0
+        - r_backend_pods.resources[0].status.phase == "Running"
+        - r_backend_pods.resources[0].status.containerStatuses is defined
+        - r_backend_pods.resources[0].status.containerStatuses | selectattr('name', 'equalto', 'backend') | list | length > 0
+        - (r_backend_pods.resources[0].status.containerStatuses | selectattr('name', 'equalto', 'backend') | first).ready == true
+      retries: 30
+      delay: 10
+
+    - name: Wait for PostgreSQL to be ready
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Pod
+        namespace: "{{ ocp4_workload_litemaas_models_namespace }}"
+        label_selectors:
+          - app=litemaas-postgres
+      register: r_postgres_pods
+      until:
+        - r_postgres_pods.resources | length > 0
+        - r_postgres_pods.resources[0].status.phase == "Running"
+      retries: 30
+      delay: 10
+
+    - name: Add models to backend database
+      ansible.builtin.shell: |
+        oc exec -n {{ ocp4_workload_litemaas_models_namespace }} {{ r_postgres_pods.resources[0].metadata.name }} -- psql -U litemaas -d litemaas -c "
+        INSERT INTO models (
+          id,
+          name,
+          provider,
+          description,
+          category,
+          context_length,
+          supports_streaming,
+          availability,
+          litellm_model_id,
+          rpm,
+          tpm,
+          created_at,
+          updated_at
+        )
+        VALUES (
+          '{{ item.model_name }}',
+          '{{ item.display_name | default(item.model_name) }}',
+          '{{ item.provider | default('openshift-ai') }}',
+          '{{ item.description | default('AI model') }}',
+          '{{ item.category | default('general') }}',
+          {{ item.context_length | default('null') }},
+          {{ item.supports_streaming | default('true') }},
+          '{{ item.availability | default('available') }}',
+          '{{ item.model_name }}',
+          {{ item.rpm | default('null') }},
+          {{ item.tpm | default('null') }},
+          NOW(),
+          NOW()
+        )
+        ON CONFLICT (id) DO UPDATE SET
+          name = EXCLUDED.name,
+          provider = EXCLUDED.provider,
+          description = EXCLUDED.description,
+          category = EXCLUDED.category,
+          context_length = EXCLUDED.context_length,
+          rpm = EXCLUDED.rpm,
+          tpm = EXCLUDED.tpm,
+          updated_at = NOW();
+        "
+      loop: "{{ ocp4_workload_litemaas_models_list }}"
+      register: r_backend_model_sync
+      changed_when: true
+
+    - name: Display backend database sync results
+      ansible.builtin.debug:
+        msg: "Model {{ item.item.model_name }}: Synced to backend database"
+      loop: "{{ r_backend_model_sync.results }}"
+      when: r_backend_model_sync.results is defined
+
+# -----------------------------------------------------------------------------
+# Step 5: Sync All Models from LiteLLM (Optional)
+# -----------------------------------------------------------------------------
+- name: Sync all models from LiteLLM to backend database
+  when:
+    - ocp4_workload_litemaas_models_sync_from_litellm | bool
+    - ocp4_workload_litemaas_models_backend_enabled | bool
+  block:
+    - name: Get all models from LiteLLM
+      ansible.builtin.uri:
+        url: "{{ litellm_url }}/model/info"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ litellm_master_key }}"
+        validate_certs: "{{ ocp4_workload_litemaas_models_verify_ssl }}"
+        status_code: [200]
+      register: r_litellm_models
+
+    - name: Sync LiteLLM models to backend database
+      ansible.builtin.shell: |
+        oc exec -n {{ ocp4_workload_litemaas_models_namespace }} {{ r_postgres_pods.resources[0].metadata.name }} -- psql -U litemaas -d litemaas -c "
+        INSERT INTO models (
+          id,
+          name,
+          provider,
+          description,
+          litellm_model_id,
+          rpm,
+          tpm,
+          created_at,
+          updated_at
+        )
+        VALUES (
+          '{{ item.model_name }}',
+          '{{ item.model_name }}',
+          'litellm',
+          'Synced from LiteLLM',
+          '{{ item.model_name }}',
+          {{ item.model_info.rpm | default('null') }},
+          {{ item.model_info.tpm | default('null') }},
+          NOW(),
+          NOW()
+        )
+        ON CONFLICT (id) DO UPDATE SET
+          rpm = EXCLUDED.rpm,
+          tpm = EXCLUDED.tpm,
+          updated_at = NOW();
+        "
+      loop: "{{ r_litellm_models.json.data }}"
+      register: r_full_sync
+      changed_when: true
+      when: r_litellm_models.json.data is defined
+
+    - name: Display full sync results
+      ansible.builtin.debug:
+        msg: "Synced {{ r_litellm_models.json.data | length }} models from LiteLLM to backend database"
+      when: r_litellm_models.json.data is defined
+
+# -----------------------------------------------------------------------------
+# Step 6: Display Summary
+# -----------------------------------------------------------------------------
+- name: Display management summary
+  ansible.builtin.debug:
+    msg:
+      - "========================================="
+      - "Model Management Complete"
+      - "========================================="
+      - "Models added to LiteLLM: {{ ocp4_workload_litemaas_models_list | length }}"
+      - "Models synced to backend: {{ 'Yes' if ocp4_workload_litemaas_models_backend_enabled else 'No' }}"
+      - "Full sync from LiteLLM: {{ 'Yes' if ocp4_workload_litemaas_models_sync_from_litellm else 'No' }}"
+      - "========================================="

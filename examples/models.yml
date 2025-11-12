@@ -1,0 +1,69 @@
+---
+# =============================================================================
+# Example Models Configuration
+# =============================================================================
+# Copy this file and customize for your environment
+# Usage: ansible-playbook playbooks/manage_models.yml -e @examples/models.yml
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# How to Get Required Values
+# -----------------------------------------------------------------------------
+#
+# 1. Get LiteLLM URL:
+#    oc get route litemaas -n litemaas -o jsonpath='{.spec.host}'
+#    Result: litellm-admin.apps.maas.redhatworkshops.io
+#
+# 2. Get LiteLLM Master Key:
+#    oc get secret litellm-secret -n litemaas -o jsonpath='{.data.LITELLM_MASTER_KEY}' | base64 -d
+#    Result: sk-Ki6upzR5aSwKDzSHoIWneNvKqx2CcxKj
+#
+# 3. Get Model Details (from OpenShift AI or model deployment):
+#    - model_name: Your choice (e.g., "granite-8b-code-instruct-128k")
+#    - litellm_model: Format is "openai/<model-id>" for OpenAI-compatible endpoints
+#    - api_base: Model route URL + /v1
+#      oc get route <model-name> -n <namespace> -o jsonpath='{.spec.host}'
+#    - api_key: From OpenShift AI model serving endpoint
+#
+# -----------------------------------------------------------------------------
+
+# LiteLLM connection details (REQUIRED)
+litellm_url: "https://litellm-admin.apps.maas.redhatworkshops.io"
+litellm_master_key: "sk-Ki6upzR5aSwKDzSHoIWneNvKqx2CcxKj"
+
+# Namespace where LiteMaaS is deployed
+ocp4_workload_litemaas_models_namespace: "litemaas"
+
+# Enable backend database sync
+ocp4_workload_litemaas_models_backend_enabled: true
+
+# Sync all existing LiteLLM models to backend
+ocp4_workload_litemaas_models_sync_from_litellm: true
+
+# Models to add
+ocp4_workload_litemaas_models_list:
+  # IBM Granite Code Model
+  - model_name: "granite-8b-code-instruct-128k"
+    litellm_model: "openai/granite-3-2-8b-instruct"
+    api_base: "https://granite-model.apps.cluster.com/v1"
+    api_key: "sk-xxxxx"
+    display_name: "Granite 8B Code Instruct"
+    description: "IBM Granite 8B Code Instruct model with 128k context"
+    provider: "openshift-ai"
+    category: "code"
+    context_length: 131072
+    rpm: 120
+    tpm: 100000
+
+  # Mistral Model
+  - model_name: "mistral-7b-instruct"
+    litellm_model: "openai/mistral-7b-instruct-v0.2"
+    api_base: "https://mistral-model.apps.cluster.com/v1"
+    api_key: "sk-yyyyy"
+    display_name: "Mistral 7B Instruct"
+    description: "Mistral 7B Instruct v0.2"
+    provider: "openshift-ai"
+    category: "general"
+    context_length: 32768
+    rpm: 60
+    tpm: 50000

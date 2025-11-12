@@ -1,0 +1,22 @@
+---
+galaxy_info:
+  role_name: ocp4_workload_litemaas_models
+  author: Prakhar Srivastava
+  description: Manage LiteMaaS AI models - Add to LiteLLM and sync to backend database
+  company: Red Hat
+  license: MIT
+  min_ansible_version: "2.15"
+
+  platforms:
+    - name: EL
+      versions:
+        - "8"
+        - "9"
+
+  galaxy_tags:
+    - openshift
+    - ai
+    - litellm
+    - models
+
+dependencies: []

@@ -1,0 +1,32 @@
+---
+# =============================================================================
+# LiteMaaS Models Management Playbook
+# =============================================================================
+# Usage:
+#
+# 1. Add models from variables file:
+#    ansible-playbook playbooks/manage_models.yml -e @vars/models.yml
+#
+# 2. Add single model inline:
+#    ansible-playbook playbooks/manage_models.yml \
+#      -e litellm_url=https://litellm-admin.apps.cluster.com \
+#      -e litellm_master_key=sk-xxxxx \
+#      -e '{"ocp4_workload_litemaas_models_list":[{"model_name":"granite-8b","litellm_model":"openai/granite-3-2-8b-instruct","api_base":"https://...","api_key":"sk-yyy"}]}'
+#
+# 3. Sync all existing LiteLLM models to backend database:
+#    ansible-playbook playbooks/manage_models.yml \
+#      -e litellm_url=https://litellm-admin.apps.cluster.com \
+#      -e litellm_master_key=sk-xxxxx \
+#      -e ocp4_workload_litemaas_models_list=[] \
+#      -e ocp4_workload_litemaas_models_sync_from_litellm=true
+# =============================================================================
+
+- name: Manage LiteMaaS Models
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  tasks:
+    - name: Run model management role
+      ansible.builtin.include_role:
+        name: rhpds.litemaas.ocp4_workload_litemaas_models

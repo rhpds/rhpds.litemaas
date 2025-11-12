@@ -4,6 +4,12 @@ Deploy an AI model gateway on OpenShift in 3 minutes. Give users controlled acce
 
 **Version:** 0.3.0
 
+## 📚 Documentation
+
+- **[Infrastructure Team Guide](docs/INFRA_TEAM_GUIDE.md)** - Managing models after deployment
+- **[Model Management Role](roles/ocp4_workload_litemaas_models/README.md)** - Dedicated role for model sync
+- **[Examples](examples/)** - Configuration examples
+
 ---
 
 ## Quick Start - Pick Your Scenario
@@ -397,24 +403,55 @@ ocp4_workload_litemaas_litellm_models:
 - `rpm` (optional): Requests per minute limit
 - `tpm` (optional): Tokens per minute limit
 
-### Option 2: Manual Model Configuration
+### Option 2: Adding Models via LiteLLM Admin UI + Sync
 
-1. **Deploy models in OpenShift AI** (Granite, Llama, Mistral, etc.)
-2. **Get model endpoint URL**
-3. **Login to LiteLLM Admin UI**
-4. **Click "Add Model":**
+**For infrastructure teams:**
+
+1. **Login to LiteLLM Admin UI** at `https://litellm-admin.<cluster>`
+2. **Click "Add Model":**
    - Provider: OpenAI-Compatible Endpoints
    - Model Name: `openai/granite-3-2-8b-instruct`
    - API Base: `https://your-model-endpoint/v1`
    - API Key: `<from OpenShift AI>`
+3. **Sync model to backend database** (required for users to create subscriptions):
 
-5. **Create virtual keys for users:**
-   - Go to Virtual Keys → Generate Key
-   - Select models
-   - Set budget (optional)
-   - Copy key and share with users
+**Quick method (automatic):**
+```bash
+./sync-models.sh litemaas
+```
 
-**See [docs/ADDING_MODELS.md](docs/ADDING_MODELS.md) for detailed guide.**
+**Manual method:**
+```bash
+ansible-playbook playbooks/manage_models.yml \
+  -e litellm_url=https://litellm-admin.<cluster> \
+  -e litellm_master_key=sk-xxxxx \
+  -e ocp4_workload_litemaas_models_list=[] \
+  -e ocp4_workload_litemaas_models_sync_from_litellm=true
+```
+
+**Why sync is needed:**
+- Models added via UI are only in LiteLLM
+- Users need models in the backend database to create subscriptions
+- The sync process copies all LiteLLM models to backend database
+
+**See [docs/INFRA_TEAM_GUIDE.md](docs/INFRA_TEAM_GUIDE.md) for detailed instructions.**
+
+### Option 3: Managing Models Post-Deployment
+
+Use the dedicated model management playbook:
+
+```bash
+# Copy example configuration
+cp examples/models.yml my-models.yml
+
+# Edit with your models
+vi my-models.yml
+
+# Add/sync models
+ansible-playbook playbooks/manage_models.yml -e @my-models.yml
+```
+
+**See [roles/ocp4_workload_litemaas_models/README.md](roles/ocp4_workload_litemaas_models/README.md) for detailed guide.**
 
 ---
 

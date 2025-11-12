@@ -1,26 +1,10 @@
 ---
 # Configure LiteLLM models via API after deployment
+# Now uses the dedicated ocp4_workload_litemaas_models role
 
-- name: Configure models via LiteLLM API
+- name: Configure models using dedicated models role
   when: ocp4_workload_litemaas_litellm_models | length > 0
   block:
-    - name: Wait for LiteLLM to be ready
-      kubernetes.core.k8s_info:
-        api_version: v1
-        kind: Pod
-        namespace: "{{ _litemaas_namespace }}"
-        label_selectors:
-          - app=litemaas
-      register: r_litellm_pods
-      until:
-        - r_litellm_pods.resources | length > 0
-        - r_litellm_pods.resources[0].status.phase == "Running"
-        - r_litellm_pods.resources[0].status.containerStatuses is defined
-        - r_litellm_pods.resources[0].status.containerStatuses | selectattr('name', 'equalto', 'litemaas') | list | length > 0
-        - (r_litellm_pods.resources[0].status.containerStatuses | selectattr('name', 'equalto', 'litemaas') | first).ready == true
-      retries: 30
-      delay: 10
-
     - name: Get LiteLLM master key
       kubernetes.core.k8s_info:
         api_version: v1
@@ -28,10 +12,6 @@
         namespace: "{{ _litemaas_namespace }}"
         name: litellm-secret
       register: r_litellm_secret
-
-    - name: Set LiteLLM master key fact
-      ansible.builtin.set_fact:
-        _litellm_master_key: "{{ r_litellm_secret.resources[0].data.LITELLM_MASTER_KEY | b64decode }}"
 
     - name: Get LiteLLM route hostname
       kubernetes.core.k8s_info:
@@ -41,61 +21,13 @@
         name: litemaas
       register: r_litellm_route
 
-    - name: Set LiteLLM URL fact
-      ansible.builtin.set_fact:
-        _litellm_url: "https://{{ r_litellm_route.resources[0].spec.host }}"
-
-    - name: Add models to LiteLLM via API
-      ansible.builtin.uri:
-        url: "{{ _litellm_url }}/model/new"
-        method: POST
-        headers:
-          Authorization: "Bearer {{ _litellm_master_key }}"
-          Content-Type: "application/json"
-        body_format: json
-        body:
-          model_name: "{{ item.model_name }}"
-          litellm_params:
-            model: "{{ item.litellm_model }}"
-            api_base: "{{ item.api_base | default(omit) }}"
-            api_key: "{{ item.api_key | default(omit) }}"
-            api_version: "{{ item.api_version | default(omit) }}"
-            rpm: "{{ item.rpm | default(omit) }}"
-            tpm: "{{ item.tpm | default(omit) }}"
-        validate_certs: false
-        status_code: [200, 201]
-      loop: "{{ ocp4_workload_litemaas_litellm_models }}"
-      register: r_model_creation
-      failed_when: false
-
-    - name: Display model creation results
-      ansible.builtin.debug:
-        msg: "Model {{ item.item.model_name }}: {{ 'Success' if item.status in [200, 201] else 'Failed - ' + (item.msg | default('Unknown error')) }}"
-      loop: "{{ r_model_creation.results }}"
-      when: r_model_creation.results is defined
-
-    - name: Create a default team with access to all models
-      ansible.builtin.uri:
-        url: "{{ _litellm_url }}/team/new"
-        method: POST
-        headers:
-          Authorization: "Bearer {{ _litellm_master_key }}"
-          Content-Type: "application/json"
-        body_format: json
-        body:
-          team_alias: "default-users"
-          models: "{{ ocp4_workload_litemaas_litellm_models | map(attribute='model_name') | list }}"
-          max_budget: 1000
-          budget_duration: "30d"
-        validate_certs: false
-        status_code: [200, 201]
-      register: r_team_creation
-      failed_when: false
-      when: ocp4_workload_litemaas_litellm_models | length > 0
-
-    - name: Display team creation result
-      ansible.builtin.debug:
-        msg: "Default team created: {{ 'Success' if r_team_creation.status in [200, 201] else 'Failed - ' + (r_team_creation.msg | default('Unknown error')) }}"
-      when:
-        - r_team_creation is defined
-        - ocp4_workload_litemaas_litellm_models | length > 0
+    - name: Run model management role
+      ansible.builtin.include_role:
+        name: rhpds.litemaas.ocp4_workload_litemaas_models
+      vars:
+        litellm_url: "https://{{ r_litellm_route.resources[0].spec.host }}"
+        litellm_master_key: "{{ r_litellm_secret.resources[0].data.LITELLM_MASTER_KEY | b64decode }}"
+        ocp4_workload_litemaas_models_namespace: "{{ _litemaas_namespace }}"
+        ocp4_workload_litemaas_models_list: "{{ ocp4_workload_litemaas_litellm_models }}"
+        ocp4_workload_litemaas_models_backend_enabled: "{{ ocp4_workload_litemaas_deploy_backend }}"
+        ocp4_workload_litemaas_models_sync_from_litellm: false

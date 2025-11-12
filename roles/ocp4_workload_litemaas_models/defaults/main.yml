@@ -1,0 +1,39 @@
+---
+# LiteMaaS Models Management Role - Default Variables
+
+# LiteLLM connection (usually passed from parent workload)
+litellm_url: ""
+litellm_master_key: ""
+
+# Namespace where LiteMaaS is deployed
+ocp4_workload_litemaas_models_namespace: "litemaas"
+
+# Models to add/sync
+# Format:
+# ocp4_workload_litemaas_models_list:
+#   - model_name: "granite-8b-code-instruct-128k"
+#     litellm_model: "openai/granite-3-2-8b-instruct"
+#     api_base: "https://granite-model.apps.cluster.com/v1"
+#     api_key: "sk-xxxxx"
+#     display_name: "Granite 8B Code Instruct"
+#     description: "IBM Granite 8B Code Instruct model"
+#     provider: "openshift-ai"
+#     category: "code"
+#     context_length: 131072
+#     rpm: 120
+#     tpm: 100000
+ocp4_workload_litemaas_models_list: []
+
+# Sync models from LiteLLM to backend database
+ocp4_workload_litemaas_models_sync_from_litellm: true
+
+# Backend deployment flag (if false, only adds to LiteLLM, not backend DB)
+ocp4_workload_litemaas_models_backend_enabled: true
+
+# SSL verification
+ocp4_workload_litemaas_models_verify_ssl: false
+
+# Retry settings
+ocp4_workload_litemaas_models_api_timeout: 30
+ocp4_workload_litemaas_models_retry_count: 3
+ocp4_workload_litemaas_models_retry_delay: 5

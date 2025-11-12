@@ -1,0 +1,6 @@
+---
+# LiteMaaS Models Management Role
+# Adds models to both LiteLLM and backend database
+
+- name: Include workload tasks
+  ansible.builtin.include_tasks: workload.yml
