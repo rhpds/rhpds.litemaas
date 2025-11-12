@@ -54,7 +54,8 @@ spec:
             - -c
             - |
               echo "Running database migrations..."
-              npm run migrate || true
+              cd /app/backend
+              npx prisma migrate deploy || npx prisma db push || echo "Migrations not available, skipping..."
               echo "Migrations complete!"
           env:
             - name: DATABASE_URL
