@@ -1,6 +1,6 @@
 ---
 # LiteMaaS version
-ocp4_workload_litemaas_version: "0.1.2"
+ocp4_workload_litemaas_version: "0.3.0"
 
 # Namespace configuration
 ocp4_workload_litemaas_namespace: "litemaas"

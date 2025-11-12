@@ -2,7 +2,7 @@
 
 Deploy an AI model gateway on OpenShift in 3 minutes. Give users controlled access to AI models through virtual API keys.
 
-**Version:** 0.2.0
+**Version:** 0.3.0
 
 ---
 
