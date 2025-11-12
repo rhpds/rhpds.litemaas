@@ -311,3 +311,10 @@
           - "User Access:"
           - "  User Interface: {{ 'https://' + r_frontend_route.resources[0].spec.host if (ocp4_workload_litemaas_deploy_frontend | bool and r_frontend_route.resources | default([]) | length > 0) else 'Not deployed' }}"
           - "========================================="
+
+# Configure models if provided
+- name: Configure LiteLLM models for HA deployment
+  when: ocp4_workload_litemaas_litellm_models | length > 0
+  include_tasks: configure_models.yml
+  vars:
+    _litemaas_namespace: "{{ _litemaas_ha_namespace }}"

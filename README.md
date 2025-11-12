@@ -351,6 +351,54 @@ oc get secret litellm-secret -n litemaas-user1 -o jsonpath='{.data.UI_PASSWORD}'
 
 ## Adding AI Models
 
+### Option 1: Automated Model Configuration (Recommended)
+
+Pre-configure models during deployment using Ansible variables:
+
+```bash
+ansible-playbook playbooks/deploy_litemaas.yml \
+  -e '{
+    "ocp4_workload_litemaas_litellm_models": [
+      {
+        "model_name": "granite-3-8b",
+        "litellm_model": "openai/granite-3-2-8b-instruct",
+        "api_base": "https://granite-model.apps.cluster.com/v1",
+        "api_key": "sk-xxxxx",
+        "rpm": 120,
+        "tpm": 100000
+      },
+      {
+        "model_name": "llama-3-8b",
+        "litellm_model": "openai/llama-3-8b-instruct",
+        "api_base": "https://llama-model.apps.cluster.com/v1",
+        "api_key": "sk-yyyyy"
+      }
+    ]
+  }'
+```
+
+**AgnosticV Example:**
+```yaml
+# catalog_item.yml
+ocp4_workload_litemaas_litellm_models:
+  - model_name: "granite-3-8b"
+    litellm_model: "openai/granite-3-2-8b-instruct"
+    api_base: "https://granite-model.apps.cluster.com/v1"
+    api_key: "sk-xxxxx"
+    rpm: 120
+    tpm: 100000
+```
+
+**Model Parameters:**
+- `model_name`: Display name for users
+- `litellm_model`: LiteLLM model identifier (format: `provider/model-name`)
+- `api_base`: Model endpoint URL (OpenAI-compatible)
+- `api_key`: Authentication key for the model endpoint
+- `rpm` (optional): Requests per minute limit
+- `tpm` (optional): Tokens per minute limit
+
+### Option 2: Manual Model Configuration
+
 1. **Deploy models in OpenShift AI** (Granite, Llama, Mistral, etc.)
 2. **Get model endpoint URL**
 3. **Login to LiteLLM Admin UI**

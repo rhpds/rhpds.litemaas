@@ -73,6 +73,18 @@ ocp4_workload_litemaas_litellm_ui_password: "{{ lookup('password', '/dev/null le
 # Set to your enterprise license key for unlimited SSO users
 ocp4_workload_litemaas_litellm_license_key: ""
 
+# LiteLLM Models Configuration
+# Pre-configure models that will be available to users
+# Format:
+# ocp4_workload_litemaas_litellm_models:
+#   - model_name: "granite-3-8b"
+#     litellm_model: "openai/granite-3-2-8b-instruct"
+#     api_base: "https://granite-model-route.apps.cluster.com/v1"
+#     api_key: "sk-xxxxx"
+#     rpm: 120
+#     tpm: 100000
+ocp4_workload_litemaas_litellm_models: []
+
 # OAuth configuration - DISABLED for admin-only access
 # Users access models via LiteLLM virtual keys (created by admins)
 ocp4_workload_litemaas_oauth_enabled: false

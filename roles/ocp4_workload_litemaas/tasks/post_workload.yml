@@ -330,3 +330,10 @@
     dest: "{{ ansible_env.HOME }}/litemaas-deployment-info.txt"
     mode: '0600'
   when: ansible_env.HOME is defined
+
+# Configure models if provided
+- name: Configure LiteLLM models
+  when: ocp4_workload_litemaas_litellm_models | length > 0
+  include_tasks: configure_models.yml
+  vars:
+    _litemaas_namespace: "{{ ocp4_workload_litemaas_namespace }}"

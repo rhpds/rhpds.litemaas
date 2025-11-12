@@ -1,0 +1,30 @@
+model_list:
+{% if ocp4_workload_litemaas_litellm_models | length > 0 %}
+{% for model in ocp4_workload_litemaas_litellm_models %}
+  - model_name: {{ model.model_name }}
+    litellm_params:
+      model: {{ model.litellm_model }}
+{% if model.api_base is defined %}
+      api_base: {{ model.api_base }}
+{% endif %}
+{% if model.api_key is defined %}
+      api_key: {{ model.api_key }}
+{% endif %}
+{% if model.api_version is defined %}
+      api_version: {{ model.api_version }}
+{% endif %}
+{% if model.rpm is defined %}
+      rpm: {{ model.rpm }}
+{% endif %}
+{% if model.tpm is defined %}
+      tpm: {{ model.tpm }}
+{% endif %}
+{% endfor %}
+{% else %}
+  # No models configured - add models via LiteLLM Admin UI after deployment
+  # Or configure via ocp4_workload_litemaas_litellm_models variable
+{% endif %}
+
+litellm_settings:
+  drop_params: true
+  set_verbose: false
