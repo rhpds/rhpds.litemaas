@@ -98,10 +98,9 @@ ocp4_workload_litemaas_litellm_cpu_limit: "1000m"
 ocp4_workload_litemaas_remove: false
 
 # Component deployment control
-# For admin-only access, only deploy LiteLLM (no frontend/backend needed)
-ocp4_workload_litemaas_deploy_frontend: false
-ocp4_workload_litemaas_deploy_backend: false
-ocp4_workload_litemaas_deploy_litellm: true
+ocp4_workload_litemaas_deploy_frontend: true  # User-facing web interface
+ocp4_workload_litemaas_deploy_backend: true   # API server for frontend
+ocp4_workload_litemaas_deploy_litellm: true   # LiteLLM gateway (always enabled)
 
 # Common variables (AgnosticD pattern)
 become_override: false

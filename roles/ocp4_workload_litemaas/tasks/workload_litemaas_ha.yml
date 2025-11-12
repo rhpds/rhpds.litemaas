@@ -159,6 +159,52 @@
     _litemaas_ha_admin_password: "{{ lookup('password', '/dev/null length=16 chars=ascii_letters,digits') }}"
     _litemaas_ha_admin_api_key: "{{ lookup('password', '/dev/null length=32 chars=ascii_letters,digits') }}"
 
+- name: Deploy Backend (if enabled)
+  when: ocp4_workload_litemaas_deploy_backend | bool
+  block:
+    - name: Deploy LiteMaaS Backend
+      kubernetes.core.k8s:
+        state: present
+        namespace: "{{ _litemaas_ha_namespace }}"
+        definition: "{{ lookup('template', 'litemaas-backend.yml.j2') | from_yaml_all }}"
+
+    - name: Wait for Backend to be ready
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Pod
+        namespace: "{{ _litemaas_ha_namespace }}"
+        label_selectors:
+          - app=litemaas-backend
+      register: r_backend_pods
+      until:
+        - r_backend_pods.resources | length > 0
+        - r_backend_pods.resources[0].status.phase == "Running"
+      retries: 30
+      delay: 10
+
+- name: Deploy Frontend (if enabled)
+  when: ocp4_workload_litemaas_deploy_frontend | bool
+  block:
+    - name: Deploy LiteMaaS Frontend
+      kubernetes.core.k8s:
+        state: present
+        namespace: "{{ _litemaas_ha_namespace }}"
+        definition: "{{ lookup('template', 'litemaas-frontend.yml.j2') | from_yaml_all }}"
+
+    - name: Wait for Frontend to be ready
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Pod
+        namespace: "{{ _litemaas_ha_namespace }}"
+        label_selectors:
+          - app=litemaas-frontend
+      register: r_frontend_pods
+      until:
+        - r_frontend_pods.resources | length > 0
+        - r_frontend_pods.resources[0].status.phase == "Running"
+      retries: 30
+      delay: 10
+
 - name: Deploy LiteMaaS (High Availability)
   block:
     - name: Deploy LiteMaaS HA
@@ -189,6 +235,20 @@
         namespace: "{{ _litemaas_ha_namespace }}"
       register: r_litemaas_route
 
+    - name: Wait for Frontend route to be available (if deployed)
+      when: ocp4_workload_litemaas_deploy_frontend | bool
+      kubernetes.core.k8s_info:
+        api_version: route.openshift.io/v1
+        kind: Route
+        name: litemaas-frontend
+        namespace: "{{ _litemaas_ha_namespace }}"
+      register: r_frontend_route
+      until:
+        - r_frontend_route.resources | length > 0
+        - r_frontend_route.resources[0].spec.host is defined
+      retries: 10
+      delay: 5
+
     - name: Send user info messages
       agnosticd_user_info:
         msg: "{{ item }}"
@@ -197,11 +257,26 @@
         - "LiteLLM Admin Login: {{ ocp4_workload_litemaas_litellm_ui_username }} / {{ _litemaas_ha_admin_password }}"
         - "LiteLLM Master API Key: sk-{{ _litemaas_ha_admin_api_key }}"
 
+    - name: Send user info message - Frontend URL
+      when:
+        - ocp4_workload_litemaas_deploy_frontend | bool
+        - r_frontend_route.resources | length > 0
+      agnosticd_user_info:
+        msg: "LiteMaaS User Interface: https://{{ r_frontend_route.resources[0].spec.host }}"
+
     - name: Send user info data - URLs
       agnosticd_user_info:
         data:
           litellm_admin_url: "https://{{ r_litemaas_route.resources[0].spec.host }}"
           litellm_api_endpoint: "https://{{ r_litemaas_route.resources[0].spec.host }}"
+
+    - name: Send user info data - Frontend URL
+      when:
+        - ocp4_workload_litemaas_deploy_frontend | bool
+        - r_frontend_route.resources | length > 0
+      agnosticd_user_info:
+        data:
+          litemaas_frontend_url: "https://{{ r_frontend_route.resources[0].spec.host }}"
 
     - name: Send user info data - Credentials
       agnosticd_user_info:
@@ -224,7 +299,13 @@
           - "LiteMaaS HA deployment completed successfully"
           - "Namespace: {{ _litemaas_ha_namespace }}"
           - "LiteLLM Replicas: {{ ocp4_workload_litemaas_ha_litellm_replicas }}"
-          - "Route: https://{{ r_litemaas_route.resources[0].spec.host }}"
-          - "Admin Username: {{ ocp4_workload_litemaas_litellm_ui_username }}"
-          - "Admin Password: {{ _litemaas_ha_admin_password }}"
-          - "Master API Key: sk-{{ _litemaas_ha_admin_api_key }}"
+          - "========================================="
+          - "Admin Access:"
+          - "  Admin Portal: https://{{ r_litemaas_route.resources[0].spec.host }}"
+          - "  Admin Username: {{ ocp4_workload_litemaas_litellm_ui_username }}"
+          - "  Admin Password: {{ _litemaas_ha_admin_password }}"
+          - "  Master API Key: sk-{{ _litemaas_ha_admin_api_key }}"
+          - "========================================="
+          - "User Access:"
+          - "  User Interface: {{ 'https://' + r_frontend_route.resources[0].spec.host if (ocp4_workload_litemaas_deploy_frontend | bool and r_frontend_route.resources | default([]) | length > 0) else 'Not deployed' }}"
+          - "========================================="

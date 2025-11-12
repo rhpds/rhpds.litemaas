@@ -1,0 +1,97 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: litemaas-frontend
+  labels:
+    app: litemaas-frontend
+    component: web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: litemaas-frontend
+  template:
+    metadata:
+      labels:
+        app: litemaas-frontend
+        component: web
+    spec:
+      initContainers:
+        - name: wait-for-backend
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              echo "Waiting for backend to be ready..."
+              until nc -z litemaas-backend 8080; do
+                echo "Backend is not ready yet. Waiting..."
+                sleep 5
+              done
+              echo "Backend is ready! Starting frontend..."
+      containers:
+        - name: frontend
+          image: "{{ ocp4_workload_litemaas_frontend_image }}:{{ ocp4_workload_litemaas_version }}"
+          ports:
+            - containerPort: 8080
+              name: http
+          env:
+            - name: BACKEND_URL
+              value: "http://litemaas-backend:8080"
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "{{ ocp4_workload_litemaas_frontend_memory_limit }}"
+              cpu: "{{ ocp4_workload_litemaas_frontend_cpu_limit }}"
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: litemaas-frontend
+  labels:
+    app: litemaas-frontend
+    component: web
+spec:
+  ports:
+    - port: 8080
+      targetPort: 8080
+      name: http
+  selector:
+    app: litemaas-frontend
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: litemaas-frontend
+  labels:
+    app: litemaas-frontend
+    component: web
+spec:
+  host: "litellm-{{ ocp4_workload_litemaas_route_name }}.{{ ocp4_workload_litemaas_cluster_domain }}"
+  to:
+    kind: Service
+    name: litemaas-frontend
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
