@@ -1,6 +1,9 @@
 ---
-# LiteMaaS version
-ocp4_workload_litemaas_version: "0.3.0"
+# LiteMaaS Collection version (for collection metadata only)
+ocp4_workload_litemaas_collection_version: "0.3.0"
+
+# Container image versions (backend/frontend images)
+ocp4_workload_litemaas_version: "latest"
 
 # Namespace configuration
 ocp4_workload_litemaas_namespace: "litemaas"
