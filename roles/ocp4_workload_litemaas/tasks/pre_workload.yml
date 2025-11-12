@@ -173,12 +173,12 @@
   ansible.builtin.set_fact:
     _litemaas_oauth_client_secret_generated: "{{ ocp4_workload_litemaas_oauth_client_secret }}"
 
-- name: Generate OAuth redirect URIs for RHPDS namespace
+- name: Generate OAuth redirect URIs for LiteMaaS deployment
   when: ocp4_workload_litemaas_oauth_enabled | bool
   ansible.builtin.set_fact:
     _litemaas_oauth_redirect_uris:
-      - "https://litellm-admin-{{ ocp4_workload_litemaas_route_name }}.{{ ocp4_workload_litemaas_cluster_domain }}/api/auth/callback"
-      - "https://litellm-frontend-{{ ocp4_workload_litemaas_route_name }}.{{ ocp4_workload_litemaas_cluster_domain }}/api/auth/callback"
+      - "https://litellm-admin.{{ ocp4_workload_litemaas_cluster_domain }}/api/auth/callback"
+      - "https://litellm-frontend.{{ ocp4_workload_litemaas_cluster_domain }}/api/auth/callback"
 
 - name: Create OpenShift OAuthClient for backend
   when:
