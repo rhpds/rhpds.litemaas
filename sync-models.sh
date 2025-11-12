@@ -3,7 +3,18 @@
 # LiteMaaS Model Sync Script
 # =============================================================================
 # Syncs models from LiteLLM to backend database
-# Usage: ./sync-models.sh [namespace]
+#
+# Usage:
+#   Automatic mode (gets values from OpenShift):
+#     ./sync-models.sh [namespace]
+#
+#   Manual mode (provide values):
+#     LITELLM_URL=https://... LITELLM_MASTER_KEY=sk-... ./sync-models.sh [namespace]
+#
+#   Example:
+#     LITELLM_URL=https://litellm-admin.apps.cluster.com \
+#     LITELLM_MASTER_KEY=sk-Ki6upzR5aSwKDzSHoIWneNvKqx2CcxKj \
+#     ./sync-models.sh litemaas
 # =============================================================================
 
 set -e
@@ -16,42 +27,58 @@ echo "========================================="
 echo "Namespace: $NAMESPACE"
 echo ""
 
-# Check if oc is available
-if ! command -v oc &> /dev/null; then
-    echo "ERROR: oc command not found. Please install OpenShift CLI."
-    exit 1
-fi
+# Check if values are provided via environment variables
+if [ -n "$LITELLM_URL" ] && [ -n "$LITELLM_MASTER_KEY" ]; then
+    echo "Using provided environment variables"
+    echo "  LiteLLM URL: $LITELLM_URL"
+    echo "  Master Key: ${LITELLM_MASTER_KEY:0:10}..."
+else
+    echo "Automatic mode: Getting values from OpenShift..."
+    echo ""
 
-# Check if logged in
-if ! oc whoami &> /dev/null; then
-    echo "ERROR: Not logged into OpenShift. Run 'oc login' first."
-    exit 1
-fi
+    # Check if oc is available
+    if ! command -v oc &> /dev/null; then
+        echo "ERROR: oc command not found. Please install OpenShift CLI."
+        echo ""
+        echo "Alternatively, provide values manually:"
+        echo "  LITELLM_URL=https://... LITELLM_MASTER_KEY=sk-... ./sync-models.sh"
+        exit 1
+    fi
 
-# Get LiteLLM URL
-echo "Getting LiteLLM URL..."
-LITELLM_ROUTE=$(oc get route litemaas -n "$NAMESPACE" -o jsonpath='{.spec.host}' 2>/dev/null || echo "")
-if [ -z "$LITELLM_ROUTE" ]; then
-    echo "ERROR: LiteLLM route not found in namespace '$NAMESPACE'"
-    exit 1
-fi
-LITELLM_URL="https://$LITELLM_ROUTE"
-echo "  LiteLLM URL: $LITELLM_URL"
+    # Check if logged in
+    if ! oc whoami &> /dev/null; then
+        echo "ERROR: Not logged into OpenShift. Run 'oc login' first."
+        echo ""
+        echo "Alternatively, provide values manually:"
+        echo "  LITELLM_URL=https://... LITELLM_MASTER_KEY=sk-... ./sync-models.sh"
+        exit 1
+    fi
 
-# Get LiteLLM Master Key
-echo "Getting LiteLLM Master Key..."
-LITELLM_KEY=$(oc get secret litellm-secret -n "$NAMESPACE" -o jsonpath='{.data.LITELLM_MASTER_KEY}' 2>/dev/null | base64 -d || echo "")
-if [ -z "$LITELLM_KEY" ]; then
-    echo "ERROR: LiteLLM master key not found in namespace '$NAMESPACE'"
-    exit 1
+    # Get LiteLLM URL
+    echo "Getting LiteLLM URL..."
+    LITELLM_ROUTE=$(oc get route litemaas -n "$NAMESPACE" -o jsonpath='{.spec.host}' 2>/dev/null || echo "")
+    if [ -z "$LITELLM_ROUTE" ]; then
+        echo "ERROR: LiteLLM route not found in namespace '$NAMESPACE'"
+        exit 1
+    fi
+    LITELLM_URL="https://$LITELLM_ROUTE"
+    echo "  LiteLLM URL: $LITELLM_URL"
+
+    # Get LiteLLM Master Key
+    echo "Getting LiteLLM Master Key..."
+    LITELLM_MASTER_KEY=$(oc get secret litellm-secret -n "$NAMESPACE" -o jsonpath='{.data.LITELLM_MASTER_KEY}' 2>/dev/null | base64 -d || echo "")
+    if [ -z "$LITELLM_MASTER_KEY" ]; then
+        echo "ERROR: LiteLLM master key not found in namespace '$NAMESPACE'"
+        exit 1
+    fi
+    echo "  Master Key: ${LITELLM_MASTER_KEY:0:10}..."
 fi
-echo "  Master Key: ${LITELLM_KEY:0:10}..."
 
 # Create temporary config file
 TEMP_FILE=$(mktemp /tmp/litemaas-sync.XXXXXX.yml)
 cat > "$TEMP_FILE" <<EOF
 litellm_url: "$LITELLM_URL"
-litellm_master_key: "$LITELLM_KEY"
+litellm_master_key: "$LITELLM_MASTER_KEY"
 ocp4_workload_litemaas_models_namespace: "$NAMESPACE"
 ocp4_workload_litemaas_models_backend_enabled: true
 ocp4_workload_litemaas_models_sync_from_litellm: true

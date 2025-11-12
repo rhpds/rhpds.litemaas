@@ -16,8 +16,15 @@
       - litellm_url | length > 0
       - litellm_master_key is defined
       - litellm_master_key | length > 0
-      - ocp4_workload_litemaas_models_list | length > 0
-    fail_msg: "Required variables missing: litellm_url, litellm_master_key, ocp4_workload_litemaas_models_list"
+      - ocp4_workload_litemaas_models_list is defined
+    fail_msg: "Required variables missing: litellm_url, litellm_master_key"
+    quiet: true
+
+- name: Validate at least one operation is specified
+  ansible.builtin.assert:
+    that:
+      - ocp4_workload_litemaas_models_list | length > 0 or ocp4_workload_litemaas_models_sync_from_litellm | bool
+    fail_msg: "Either provide models in ocp4_workload_litemaas_models_list or enable ocp4_workload_litemaas_models_sync_from_litellm"
     quiet: true
 
 # -----------------------------------------------------------------------------
@@ -38,6 +45,7 @@
 # Step 3: Add Models to LiteLLM
 # -----------------------------------------------------------------------------
 - name: Add models to LiteLLM
+  when: ocp4_workload_litemaas_models_list | length > 0
   block:
     - name: Wait for LiteLLM to be ready
       kubernetes.core.k8s_info:
@@ -87,10 +95,12 @@
       when: r_litellm_model_creation.results is defined
 
 # -----------------------------------------------------------------------------
-# Step 4: Sync Models to Backend Database
+# Step 4: Sync Specific Models to Backend Database
 # -----------------------------------------------------------------------------
-- name: Sync models to backend database
-  when: ocp4_workload_litemaas_models_backend_enabled | bool
+- name: Sync specific models to backend database
+  when:
+    - ocp4_workload_litemaas_models_backend_enabled | bool
+    - ocp4_workload_litemaas_models_list | length > 0
   block:
     - name: Wait for backend to be ready
       kubernetes.core.k8s_info:
