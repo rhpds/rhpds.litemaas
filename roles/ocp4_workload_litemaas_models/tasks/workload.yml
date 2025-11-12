@@ -95,12 +95,10 @@
       when: r_litellm_model_creation.results is defined
 
 # -----------------------------------------------------------------------------
-# Step 4: Sync Specific Models to Backend Database
+# Step 4: Wait for Backend Components (if backend enabled)
 # -----------------------------------------------------------------------------
-- name: Sync specific models to backend database
-  when:
-    - ocp4_workload_litemaas_models_backend_enabled | bool
-    - ocp4_workload_litemaas_models_list | length > 0
+- name: Wait for backend components
+  when: ocp4_workload_litemaas_models_backend_enabled | bool
   block:
     - name: Wait for backend to be ready
       kubernetes.core.k8s_info:
@@ -132,6 +130,15 @@
         - r_postgres_pods.resources[0].status.phase == "Running"
       retries: 30
       delay: 10
+
+# -----------------------------------------------------------------------------
+# Step 5: Sync Specific Models to Backend Database
+# -----------------------------------------------------------------------------
+- name: Sync specific models to backend database
+  when:
+    - ocp4_workload_litemaas_models_backend_enabled | bool
+    - ocp4_workload_litemaas_models_list | length > 0
+  block:
 
     - name: Add models to backend database
       ansible.builtin.shell: |
@@ -204,6 +211,13 @@
         status_code: [200]
       register: r_litellm_models
 
+    - name: Display models found in LiteLLM
+      ansible.builtin.debug:
+        msg:
+          - "Found {{ r_litellm_models.json.data | default([]) | length }} models in LiteLLM"
+          - "Models: {{ r_litellm_models.json.data | default([]) | map(attribute='model_name') | list }}"
+      when: r_litellm_models.json.data is defined
+
     - name: Sync LiteLLM models to backend database
       ansible.builtin.shell: |
         oc exec -n {{ ocp4_workload_litemaas_models_namespace }} {{ r_postgres_pods.resources[0].metadata.name }} -- psql -U litemaas -d litemaas -c "
@@ -239,9 +253,17 @@
       changed_when: true
       when: r_litellm_models.json.data is defined
 
-    - name: Display full sync results
+    - name: Display individual sync results
       ansible.builtin.debug:
-        msg: "Synced {{ r_litellm_models.json.data | length }} models from LiteLLM to backend database"
+        msg: "Synced model: {{ item.item.model_name }}"
+      loop: "{{ r_full_sync.results }}"
+      when:
+        - r_full_sync.results is defined
+        - r_full_sync.results | length > 0
+
+    - name: Display full sync summary
+      ansible.builtin.debug:
+        msg: "Successfully synced {{ r_litellm_models.json.data | length }} models from LiteLLM to backend database"
       when: r_litellm_models.json.data is defined
 
 # -----------------------------------------------------------------------------
