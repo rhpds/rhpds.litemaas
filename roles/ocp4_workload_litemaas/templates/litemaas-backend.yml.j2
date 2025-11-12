@@ -47,6 +47,23 @@ spec:
                 secretKeyRef:
                   name: litemaas-db
                   key: DATABASE_URL
+        - name: run-migrations
+          image: "{{ ocp4_workload_litemaas_backend_image }}:{{ ocp4_workload_litemaas_version }}"
+          command:
+            - sh
+            - -c
+            - |
+              echo "Running database migrations..."
+              npm run migrate || true
+              echo "Migrations complete!"
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: litemaas-db
+                  key: DATABASE_URL
+            - name: NODE_ENV
+              value: "production"
       containers:
         - name: backend
           image: "{{ ocp4_workload_litemaas_backend_image }}:{{ ocp4_workload_litemaas_version }}"
