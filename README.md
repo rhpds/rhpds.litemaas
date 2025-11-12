@@ -1,553 +1,329 @@
-# LiteMaaS Ansible Collection
+# LiteMaaS - AI Model Serving Made Simple
 
-Deploy AI model serving platform on OpenShift in 3 minutes.
+Deploy an AI model gateway on OpenShift in 3 minutes. Give users controlled access to AI models through virtual API keys.
 
 **Version:** 0.2.0
 
-## What is LiteMaaS?
+---
 
-LiteMaaS provides an admin-managed AI model serving platform with:
-- **LiteLLM Gateway**: Unified API for multiple AI model providers
-- **Admin Interface**: Manage models, create user keys, track usage
-- **OpenShift AI Integration**: Host local models (Granite, Llama, Mistral)
-- **Virtual Key Management**: Control user access and budgets
+## Quick Start - Pick Your Scenario
+
+Choose the deployment that matches your needs:
+
+### 1. 🧪 **POC/Testing** - Single Instance (No OAuth)
+Perfect for: Quick tests, demos, POCs
+
+```bash
+ansible-playbook playbooks/deploy_litemaas.yml
+```
+
+**What you get:**
+- Simple admin-only setup
+- Access LiteLLM admin UI at `https://litellm-admin.<cluster>`
+- Create virtual keys for users
+- Minimal resources: 700m CPU, 1Gi RAM
+
+---
+
+### 2. 👥 **Training Labs** - Multi-User (20-80 users)
+
+Perfect for: Workshops, training sessions, each user needs isolated environment
+
+**Without OAuth (simpler):**
+```bash
+ansible-playbook playbooks/deploy_litemaas.yml \
+  -e ocp4_workload_litemaas_multi_user=true \
+  -e num_users=20 \
+  -e ocp4_workload_litemaas_multi_user_common_password="RedHat2025!"
+```
+
+**With OAuth + Frontend + Backend:**
+```bash
+ansible-playbook playbooks/deploy_litemaas.yml \
+  -e ocp4_workload_litemaas_multi_user=true \
+  -e num_users=20 \
+  -e ocp4_workload_litemaas_oauth_enabled=true \
+  -e ocp4_workload_litemaas_deploy_backend=true \
+  -e ocp4_workload_litemaas_deploy_frontend=true \
+  -e ocp4_workload_litemaas_multi_user_common_password="RedHat2025!"
+```
+
+**What you get:**
+- Each user: `litemaas-user1`, `litemaas-user2`, etc.
+- **Without OAuth**: Admin-only access per user
+- **With OAuth**: Users login with OpenShift credentials + web UI
+- Resources per user: 300m CPU, 768Mi RAM
+- Total for 20 users: ~6 CPU cores, ~15Gi RAM
+
+---
+
+### 3. 🚀 **Production** - High Availability with OAuth
+
+Perfect for: Production workloads, high traffic, need redundancy
+
+```bash
+ansible-playbook playbooks/deploy_litemaas_ha.yml \
+  -e ocp4_workload_litemaas_oauth_enabled=true \
+  -e ocp4_workload_litemaas_deploy_backend=true \
+  -e ocp4_workload_litemaas_deploy_frontend=true \
+  -e ocp4_workload_litemaas_ha_litellm_replicas=3
+```
+
+**What you get:**
+- 3 LiteLLM replicas (auto load-balanced)
+- Redis caching (reduces costs + latency)
+- PostgreSQL database
+- OAuth login via OpenShift
+- Admin UI: `https://litellm-admin.<cluster>`
+- User UI: `https://litellm-frontend.<cluster>`
+- Resources: ~3 CPU cores, ~4Gi RAM
+
+---
+
+## What Are These Components?
+
+### **LiteLLM (Always Deployed)**
+- The AI model gateway
+- Provides unified API for multiple AI providers (OpenAI, Azure, local models)
+- Includes admin web UI for managing models and creating user keys
+
+### **Backend API (Optional)**
+- REST API layer between frontend and LiteLLM
+- Handles OAuth authentication
+- User management and session handling
+- **When to use**: When deploying with OAuth and frontend
+
+### **Frontend Web UI (Optional)**
+- User-facing web interface
+- Login with OpenShift credentials
+- Browse available models
+- Make API calls through web interface
+- **When to use**: When you want users to have a web UI instead of just API access
+
+### **Without Frontend/Backend:**
+- Admin logs into LiteLLM admin UI
+- Admin creates virtual API keys for users
+- Users use API keys to call models directly via API
+- Simpler, no OAuth needed
+
+### **With Frontend/Backend:**
+- Users login via OpenShift (OAuth)
+- Users get web interface to interact with models
+- Still supports API access
+- More complex, requires OAuth setup
+
+---
+
+## AgnosticV Example - Multi-User Lab
+
+For RHDP catalog deployments with 60 users:
+
+```yaml
+# catalog_item.yml
+ocp4_workload_litemaas_multi_user: true
+num_users: 60
+ocp4_workload_litemaas_oauth_enabled: true
+ocp4_workload_litemaas_deploy_backend: true
+ocp4_workload_litemaas_deploy_frontend: true
+ocp4_workload_litemaas_multi_user_common_password: "RedHat2025!"
+ocp4_workload_litemaas_postgres_storage_class: "ocs-external-storagecluster-ceph-rbd"  # CNV clusters
+```
+
+**What happens:**
+- 60 namespaces created: `litemaas-user1` through `litemaas-user60`
+- Each user gets:
+  - Admin URL: `https://litellm-admin-user1.<cluster>`
+  - Frontend URL: `https://litellm-frontend-user1.<cluster>`
+  - Login with OpenShift user credentials
+  - Unique password: "RedHat2025!" (same for all users in lab)
+
+**User Info Variables (for Showroom):**
+```yaml
+user.info:
+  litemaas_user1_admin_url: "https://litellm-admin-user1.apps..."
+  litemaas_user1_frontend_url: "https://litellm-frontend-user1.apps..."
+  litemaas_user1_password: "RedHat2025!"
+  litemaas_user1_username: "admin"
+  # ... user2, user3, etc.
+```
+
+---
+
+## All Configuration Variables
+
+### Core Settings
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ocp4_workload_litemaas_namespace` | `litemaas` | Deployment namespace |
+| `ocp4_workload_litemaas_version` | `0.2.0` | Version to deploy |
+
+### Multi-User Settings
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ocp4_workload_litemaas_multi_user` | `false` | Enable multi-user mode |
+| `num_users` | `1` | Number of user instances |
+| `ocp4_workload_litemaas_user_prefix` | `user` | Namespace prefix (user1, user2...) |
+| `ocp4_workload_litemaas_multi_user_common_password` | `""` | Shared password for all users (empty = random per user) |
+
+### OAuth Settings
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ocp4_workload_litemaas_oauth_enabled` | `false` | Enable OAuth login |
+| `ocp4_workload_litemaas_oauth_provider` | `openshift` | OAuth provider (openshift or google) |
+| `ocp4_workload_litemaas_oauth_client_id` | `litemaas-rhpds` | OAuth client ID |
+
+### Component Control
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ocp4_workload_litemaas_deploy_backend` | `true` | Deploy backend API (needed for OAuth) |
+| `ocp4_workload_litemaas_deploy_frontend` | `true` | Deploy frontend web UI (needed for OAuth) |
+
+### High Availability
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ocp4_workload_litemaas_ha_enabled` | `false` | Enable HA mode |
+| `ocp4_workload_litemaas_ha_litellm_replicas` | `2` | Number of LiteLLM replicas |
+| `ocp4_workload_litemaas_ha_enable_redis` | `true` | Enable Redis cache (HA mode) |
+| `ocp4_workload_litemaas_ha_enable_postgres` | `true` | Enable PostgreSQL (HA mode) |
+
+### Storage
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ocp4_workload_litemaas_postgres_storage_class` | auto-detect | Storage class (gp3-csi for AWS, ODF for CNV) |
+| `ocp4_workload_litemaas_postgres_storage_size` | `10Gi` | PostgreSQL PVC size |
+
+**See `roles/ocp4_workload_litemaas/defaults/main.yml` for all variables.**
+
+---
+
+## Resource Requirements
+
+### Single Instance
+- CPU: 700m request, 2000m limit
+- Memory: 1Gi request, 2Gi limit
+- Storage: 10Gi
+
+### High Availability (3 replicas + Redis)
+- CPU: ~3 cores request, ~5 cores limit
+- Memory: ~4Gi request, ~6Gi limit
+- Storage: 15Gi (10Gi PostgreSQL + 5Gi Redis)
+
+### Multi-User (per user)
+- CPU: 300m request, 1000m limit
+- Memory: 768Mi request, 1.5Gi limit
+- Storage: 10Gi
+
+**Scaling Examples:**
+- **20 users**: 6 CPU cores, 15Gi RAM, 200Gi storage
+- **40 users**: 12 CPU cores, 30Gi RAM, 400Gi storage
+- **60 users**: 18 CPU cores, 46Gi RAM, 600Gi storage
+- **80 users**: 24 CPU cores, 62Gi RAM, 800Gi storage
+
+---
 
 ## Installation
 
 **AWS Cluster:**
 ```bash
-# Clone repository
 git clone https://github.com/rhpds/rhpds.litemaas.git
 cd rhpds.litemaas
-
-# Build and install collection
 ansible-galaxy collection build --force
 ansible-galaxy collection install rhpds-litemaas-*.tar.gz --force
 ```
 
-**CNV Cluster:**
+**CNV Cluster (OpenShift Virtualization):**
 ```bash
 # Setup Python environment
 python3 -m venv /opt/virtualenvs/k8s
 source /opt/virtualenvs/k8s/bin/activate
 pip install kubernetes openshift
 
-# Install Ansible collection
+# Install collection
 ansible-galaxy collection install kubernetes.core --force
-
-# Clone and install LiteMaaS
 git clone https://github.com/rhpds/rhpds.litemaas.git
 cd rhpds.litemaas
 ansible-galaxy collection build --force
 ansible-galaxy collection install rhpds-litemaas-*.tar.gz --force
 ```
 
-## Resource Requirements
-
-Choose your deployment based on available cluster resources:
-
-### Single Instance (Default)
-
-| Component | CPU Request | CPU Limit | Memory Request | Memory Limit | Storage |
-|-----------|-------------|-----------|----------------|--------------|---------|
-| PostgreSQL | 500m | 1000m | 512Mi | 1Gi | 10Gi |
-| LiteLLM (1 replica) | 200m | 1000m | 512Mi | 1Gi | - |
-| **Total** | **700m** | **2000m** | **~1Gi** | **~2Gi** | **10Gi** |
-
-### Multi-User Lab (Per User - Optimized)
-
-| Component | CPU Request | CPU Limit | Memory Request | Memory Limit | Storage |
-|-----------|-------------|-----------|----------------|--------------|---------|
-| PostgreSQL | 200m | 500m | 256Mi | 512Mi | 10Gi |
-| LiteLLM (1 replica) | 100m | 500m | 512Mi | 1Gi | - |
-| **Per User Total** | **300m** | **1000m** | **~768Mi** | **~1.5Gi** | **10Gi** |
-
-**Lab Sizing Examples:**
-
-| Users | Total CPU Request | Total CPU Limit | Total Memory Request | Total Memory Limit | Total Storage |
-|-------|-------------------|-----------------|----------------------|--------------------|---------------|
-| **10 users** | 3000m (3 cores) | 10000m (10 cores) | ~7.7Gi | ~15Gi | 100Gi |
-| **20 users** | 6000m (6 cores) | 20000m (20 cores) | ~15.4Gi | ~30Gi | 200Gi |
-| **40 users** | 12000m (12 cores) | 40000m (40 cores) | ~30.8Gi | ~60Gi | 400Gi |
-| **60 users** | 18000m (18 cores) | 60000m (60 cores) | ~46Gi | ~90Gi | 600Gi |
-| **80 users** | 24000m (24 cores) | 80000m (80 cores) | ~62Gi | ~120Gi | 800Gi |
-
-**Note:** Multi-user resources are optimized for lab environments. Actual usage will be lower than limits. For 60-80 user labs, ensure cluster has sufficient memory (90-120Gi limits).
-
-## Deploy
-
-Now deploy LiteMaaS - choose Single Instance, HA, or Multi-User based on your needs.
-
-See [Deployment Examples](#deployment-examples) section below for details.
+---
 
 ## Access Your Deployment
 
-After deployment completes, you'll see the access information. You can retrieve it anytime:
+### Get Admin Credentials
 
-#### Get Access Information
-
+**Single/HA Instance:**
 ```bash
-# Get all LiteMaaS access information
-echo "========================================="
-echo "LiteMaaS Access Information"
-echo "========================================="
-echo "LiteLLM Admin Portal: https://$(oc get route litellm -n litemaas -o jsonpath='{.spec.host}')"
-echo "User API Endpoint: https://$(oc get route litellm -n litemaas -o jsonpath='{.spec.host}')"
-echo ""
-echo "Admin Credentials:"
-echo "  Username: $(oc get secret litellm-secret -n litemaas -o jsonpath='{.data.UI_USERNAME}' | base64 -d)"
-echo "  Password: $(oc get secret litellm-secret -n litemaas -o jsonpath='{.data.UI_PASSWORD}' | base64 -d)"
-echo "========================================="
-```
+# Get admin URL
+echo "Admin UI: https://$(oc get route litemaas -n litemaas -o jsonpath='{.spec.host}')"
 
-**Quick Commands:**
-
-```bash
-# Just get the admin URL
-echo "https://$(oc get route litellm -n litemaas -o jsonpath='{.spec.host}')"
-
-# Just get the password
+# Get admin password
 oc get secret litellm-secret -n litemaas -o jsonpath='{.data.UI_PASSWORD}' | base64 -d
-
-# Save to file
-cat > ~/litemaas-access.txt <<EOF
-LiteLLM Admin: https://$(oc get route litellm -n litemaas -o jsonpath='{.spec.host}')
-Username: $(oc get secret litellm-secret -n litemaas -o jsonpath='{.data.UI_USERNAME}' | base64 -d)
-Password: $(oc get secret litellm-secret -n litemaas -o jsonpath='{.data.UI_PASSWORD}' | base64 -d)
-EOF
-cat ~/litemaas-access.txt
 ```
+
+**With Frontend (OAuth enabled):**
+```bash
+# Get frontend URL
+echo "Frontend: https://$(oc get route litemaas-frontend -n litemaas -o jsonpath='{.spec.host}')"
+
+# Login with OpenShift credentials
+```
+
+**Multi-User:**
+```bash
+# List all user instances
+oc get routes -A | grep litellm-admin
+
+# Get specific user's admin password
+oc get secret litellm-secret -n litemaas-user1 -o jsonpath='{.data.UI_PASSWORD}' | base64 -d
+```
+
+---
 
 ## Adding AI Models
 
-Once deployed, add AI models to make them available to users.
-
-### Step 1: Get Model Details from OpenShift AI
-
-From the OpenShift AI dashboard, get:
-- **Endpoint URL** (e.g., `https://granite-3-2-8b-instruct-predictor-maas-apicast-production.apps.maas.redhatworkshops.io:443`)
-- **API Key** from the OpenShift AI application
-
-### Step 2: Find the Correct Model Name
-
-**IMPORTANT**: Always check the `/v1/models` endpoint to get the exact model name:
-
-```bash
-curl https://YOUR-MODEL-ENDPOINT:443/v1/models \
-  -H 'Authorization: Bearer YOUR-API-KEY'
-```
-
-**Example response:**
-```json
-{
-  "object": "list",
-  "data": [{
-    "id": "granite-3-2-8b-instruct",  // ← This is the model name to use
-    "object": "model",
-    ...
-  }]
-}
-```
-
-### Step 3: Test the Endpoint
-
-```bash
-curl -X POST \
-  https://YOUR-MODEL-ENDPOINT:443/v1/completions \
-  -H 'Authorization: Bearer YOUR-API-KEY' \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "model": "MODEL-NAME-FROM-STEP-2",
-    "prompt": "Hello, what is AI?",
-    "max_tokens": 50
-  }'
-```
-
-### Step 4: Add Model in LiteLLM Admin UI
-
-1. **Login to LiteLLM Admin Portal** (use credentials from deployment)
-
-2. **Click "Add Model"**
-
-3. **Fill in the form:**
-   ```
-   Provider: OpenAI-Compatible Endpoints (Together AI, etc.)
-   LiteLLM Model Name(s): openai/MODEL-NAME-FROM-STEP-2
-   Model Mappings:
-     Public Name: MODEL-NAME-FROM-STEP-2
-     LiteLLM Model: openai/MODEL-NAME-FROM-STEP-2
-   Mode: Completion - /completions
-   API Base: https://YOUR-MODEL-ENDPOINT/v1
-   API Key: YOUR-API-KEY
-   ```
-
-   **Note**: Do not include the port (`:443`) in the API Base URL.
-
-4. **Click "Add Model"**
-
-5. **Add to Personal Models:**
-   - Go to **Personal Models** section
-   - Add: `openai/MODEL-NAME-FROM-STEP-2`
-
-### Example: Common OpenShift AI Models
-
-| Model | Endpoint Suffix | Correct Model Name |
-|-------|----------------|-------------------|
-| Granite 3.2 8B | `granite-3-2-8b-instruct-predictor-maas-apicast-production` | `granite-3-2-8b-instruct` |
-| Mistral 7B | `mistral-7b-instruct-v0-3-maas-apicast-production` | `mistral-7b-instruct` |
-
-### Create Virtual Keys for Users
-
-1. **In LiteLLM Admin → Virtual Keys → Generate Key**
-2. **Fill in:**
-   ```
-   User ID: user@example.com
-   Models: openai/granite-3-2-8b-instruct, openai/mistral-7b-instruct
-   Max Budget: 100 (optional)
-   Duration: 30d (optional)
-   ```
-3. **Copy the generated key:** `sk-xxxxxx`
-4. **Share with user:**
-   ```
-   API Endpoint: https://litellm-rhpds.apps.cluster-xxx.opentlc.com
-   Virtual Key: sk-xxxxxx
-   Available Models:
-     - openai/granite-3-2-8b-instruct
-     - openai/mistral-7b-instruct
-   ```
-
-### Troubleshooting: Virtual Key Model Access
-
-**Issue**: Virtual key returns "key not allowed to access model" error
-
-**Workaround**: Add the model to Personal Models section:
-
-1. **In LiteLLM Admin UI → Personal Models**
-2. **Add the same model** (e.g., `openai/granite-3-2-8b-instruct`)
-3. **Virtual keys should now work**
-
-This is a known workaround - proper fix TBD.
-
-### Test User Access
-
-```bash
-# Get LiteLLM URL
-LITELLM_URL=$(oc get route litellm -n litemaas -o jsonpath='{.spec.host}')
-
-# Test with virtual key
-curl https://${LITELLM_URL}/chat/completions \
-  -H "Authorization: Bearer sk-YOUR-VIRTUAL-KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "openai/granite-3-2-8b-instruct",
-    "messages": [{"role": "user", "content": "What is OpenShift?"}]
-  }'
-```
-
-**For detailed model integration guides, see:**
-- [Adding Models Guide](docs/ADDING_MODELS.md)
-- [OpenShift AI Integration](docs/OPENSHIFT_AI_INTEGRATION.md)
-
-## What Gets Deployed
-
-All components deploy to the `litemaas` namespace:
-
-| Component | Type | Description | Default |
-|-----------|------|-------------|---------|
-| **PostgreSQL** | StatefulSet | Persistent database for LiteLLM | ✅ Enabled |
-| **LiteLLM Gateway** | Deployment | AI model proxy with admin UI | ✅ Enabled (1 replica) |
-| **Routes** | Route | HTTPS access to admin portal | ✅ Enabled |
-| **Secrets** | Secret | Admin credentials and API keys | ✅ Enabled |
-
-**Note:** Frontend and Backend are optional and disabled by default. For admin-only deployments, only PostgreSQL and LiteLLM are deployed.
-
-## Multi-User Lab Deployment Details
-
-Additional details for multi-user deployments (see [Deployment Options](#deployment-options) for quick start commands).
-
-### Use Cases
-
-**1. Training Labs**
-- 20 students, each gets isolated environment
-- Deploy models once, share API keys per student
-- No cross-contamination of data or usage
-
-**2. Demo Environments**
-- Multiple sales demos running concurrently
-- Each demo has dedicated resources
-- Clean environment per session
-
-**3. Development Teams**
-- Each team gets isolated LiteMaaS
-- Independent model configurations
-- Separate budgets and usage tracking
-
-### Resource Requirements
-
-Multi-user deployments use optimized resources for lab environments:
-
-**Per user instance:**
-- 1 namespace
-- 1 PostgreSQL: 200m CPU request, 256Mi RAM request (512Mi limit)
-- 1 LiteLLM: 100m CPU request, 256Mi RAM request (512Mi limit)
-- Total per user: 300m CPU request, 512Mi RAM request, 10Gi storage
-
-**Scalability (see [Resource Requirements](#resource-requirements) for detailed tables):**
-- **10 users**: 3 CPU cores, 5Gi RAM, 100Gi storage
-- **20 users**: 6 CPU cores, 10Gi RAM, 200Gi storage
-- **40 users**: 12 CPU cores, 20Gi RAM, 400Gi storage
-- **60 users**: 18 CPU cores, 30Gi RAM, 600Gi storage
-- **80 users**: 24 CPU cores, 40Gi RAM, 800Gi storage
-
-**Cluster Requirements for 60-80 User Labs:**
-- Minimum: 24+ CPU cores, 40Gi+ RAM
-- Recommended: 32+ CPU cores, 128Gi+ RAM
-- Storage: 600-800Gi (thin provisioned)
-
-**Note:** Multi-user mode is optimized for lab simplicity. Resources are intentionally lighter (256Mi RAM per component vs 512Mi+ in production).
-
-### Showroom Integration
-
-Multi-user deployments automatically provide per-user variables for Showroom catalog integration. Each user sees their own credentials when logged in.
-
-**Example Showroom Content:**
-
-```markdown
-## Your LiteLLM Environment
-
-Access your personal LiteLLM instance:
-
-**Admin Portal:** [{{ litemaas_url }}]({{ litemaas_url }})
-
-**Admin Credentials:**
-- Username: `{{ litemaas_username }}`
-- Password: `{{ litemaas_password }}`
-
-**API Access:**
-- Endpoint: `{{ litemaas_url }}`
-- Master Key: `{{ litemaas_api_key }}`
-- Namespace: `{{ litemaas_namespace }}`
-
-### Quick Test
-
-```bash
-curl {{ litemaas_url }}/health/livenessz \
-  -H "Authorization: Bearer {{ litemaas_api_key }}"
-```
-\```
-
-**Available Variables:**
-
-Each user automatically gets their own values for:
-- `{{ litemaas_url }}` - LiteLLM Admin Portal URL
-- `{{ litemaas_username }}` - Admin username (typically "admin")
-- `{{ litemaas_password }}` - Admin password (unique per user)
-- `{{ litemaas_api_key }}` - LiteLLM Master API key (unique per user)
-- `{{ litemaas_namespace }}` - Kubernetes namespace (e.g., "litemaas-user1")
-
-**Additionally**, numbered variables are available for cross-referencing:
-- `{{ litemaas_user1_url }}`, `{{ litemaas_user2_url }}`, etc.
-- `{{ litemaas_user1_password }}`, `{{ litemaas_user2_password }}`, etc.
-
-### Removal
-
-**Remove all user instances:**
-```bash
-ansible-playbook playbooks/deploy_litemaas.yml \
-  -e ocp4_workload_litemaas_multi_user=true \
-  -e num_users=10 \
-  -e ocp4_workload_litemaas_remove=true
-```
-
-This removes all namespaces: `litemaas-user1` through `litemaas-user10`.
-
-## Variables
-
-### Core Configuration
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `ocp4_workload_litemaas_namespace` | `litemaas` | Deployment namespace |
-| `ocp4_workload_litemaas_version` | `0.2.0` | LiteMaaS version |
-| `ocp4_workload_litemaas_cloud_provider` | auto-detect | Cloud provider |
-
-### PostgreSQL Configuration
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `ocp4_workload_litemaas_postgres_storage_class` | auto-detect | Storage class |
-| `ocp4_workload_litemaas_postgres_storage_size` | `10Gi` | PVC size |
-
-### LiteLLM Scaling
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `ocp4_workload_litemaas_litellm_replicas` | `1` | Number of LiteLLM instances |
-
-### Redis Configuration (Optional)
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `ocp4_workload_litemaas_deploy_redis` | `false` | Enable Redis cache |
-| `ocp4_workload_litemaas_redis_storage_size` | `5Gi` | Redis PVC size |
-| `ocp4_workload_litemaas_redis_memory_limit` | `512Mi` | Redis memory limit |
-| `ocp4_workload_litemaas_redis_cpu_limit` | `500m` | Redis CPU limit |
-
-### Multi-User Lab Configuration
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `ocp4_workload_litemaas_multi_user` | `false` | Enable multi-user lab deployment |
-| `num_users` | `1` | Number of user instances to deploy |
-| `ocp4_workload_litemaas_user_prefix` | `user` | Namespace prefix (user1, user2...) |
-| `ocp4_workload_litemaas_multi_user_common_password` | `""` | Common admin password for all users (empty = auto-generate) |
-
-**AgnosticV Example:**
-```yaml
-# In your AgnosticV catalog config
-ocp4_workload_litemaas_multi_user: true
-num_users: 60
-ocp4_workload_litemaas_multi_user_common_password: "RedHat2025!"
-```
-
-**Showroom user.info Integration:**
-```yaml
-# All users get same password, individual URLs
-user.info:
-  litemaas_user1_url: "https://litellm-user1-rhpds.apps..."
-  litemaas_user1_password: "RedHat2025!"
-  litemaas_user2_url: "https://litellm-user2-rhpds.apps..."
-  litemaas_user2_password: "RedHat2025!"
-  # ... etc for all users
-```
-
-See `roles/ocp4_workload_litemaas/defaults/main.yml` for all variables.
-
-## Deployment Examples
-
-### 1. Single Instance (Default)
-
-**AWS Cluster:**
-```bash
-ansible-playbook playbooks/deploy_litemaas.yml
-```
-
-**CNV Cluster:**
-```bash
-ansible-playbook playbooks/deploy_litemaas.yml \
-  -e ocp4_workload_litemaas_postgres_storage_class=ocs-external-storagecluster-ceph-rbd
-```
-
-**What gets deployed:**
-- 1 PostgreSQL database
-- 1 LiteLLM gateway with admin UI
-- Auto-detects storage (gp3-csi for AWS)
-
----
-
-### 2. High Availability (HA)
-
-**AWS Cluster with HA:**
-```bash
-ansible-playbook playbooks/deploy_litemaas_ha.yml
-```
-
-**CNV Cluster with HA:**
-```bash
-ansible-playbook playbooks/deploy_litemaas_ha.yml \
-  -e ocp4_workload_litemaas_postgres_storage_class=ocs-external-storagecluster-ceph-rbd
-```
-
-**What gets deployed:**
-- 2 LiteLLM replicas (load balanced)
-- 1 Redis cache (enabled by default in HA mode)
-- 1 PostgreSQL database
-- Auto-detects storage
-
-**Customize replicas:**
-```bash
-# 3 replicas for higher load
-ansible-playbook playbooks/deploy_litemaas_ha.yml \
-  -e ocp4_workload_litemaas_ha_litellm_replicas=3
-```
-
-**Benefits:**
-- High availability with automatic failover
-- Load balancing across replicas
-- Redis caching reduces latency and costs
-- Zero-downtime rolling updates
-
----
-
-### 3. Multi-User Lab
-
-**AWS Cluster (10 users):**
-```bash
-ansible-playbook playbooks/deploy_litemaas.yml \
-  -e ocp4_workload_litemaas_multi_user=true \
-  -e num_users=10
-```
-
-**CNV Cluster (10 users):**
-```bash
-ansible-playbook playbooks/deploy_litemaas.yml \
-  -e ocp4_workload_litemaas_multi_user=true \
-  -e num_users=10 \
-  -e ocp4_workload_litemaas_postgres_storage_class=ocs-external-storagecluster-ceph-rbd
-```
-
-**What gets deployed:**
-- 10 isolated namespaces (litemaas-user1 through litemaas-user10)
-- Per user: 1 PostgreSQL + 1 LiteLLM instance
-- Unique routes per user
-- Total: 300m CPU, 768Mi RAM per user
-
-**Scale to 60 users:**
-```bash
-ansible-playbook playbooks/deploy_litemaas.yml \
-  -e ocp4_workload_litemaas_multi_user=true \
-  -e num_users=60 \
-  -e ocp4_workload_litemaas_multi_user_common_password="RedHat2025!"
-```
-
----
-
-### Remove Deployment
-
-```bash
-# Single or HA deployment
-ansible-playbook playbooks/deploy_litemaas.yml \
-  -e ocp4_workload_litemaas_remove=true
-
-# Multi-user deployment
-ansible-playbook playbooks/deploy_litemaas.yml \
-  -e ocp4_workload_litemaas_multi_user=true \
-  -e num_users=10 \
-  -e ocp4_workload_litemaas_remove=true
-```
-
-## OpenShift AI Integration
-
-Host local AI models using Red Hat OpenShift AI and make them available through LiteMaaS:
-
 1. **Deploy models in OpenShift AI** (Granite, Llama, Mistral, etc.)
-2. **Get inference endpoint URL**
-3. **Add to LiteLLM** via Admin UI
-4. **Create virtual keys** for users
+2. **Get model endpoint URL**
+3. **Login to LiteLLM Admin UI**
+4. **Click "Add Model":**
+   - Provider: OpenAI-Compatible Endpoints
+   - Model Name: `openai/granite-3-2-8b-instruct`
+   - API Base: `https://your-model-endpoint/v1`
+   - API Key: `<from OpenShift AI>`
 
-See [docs/OPENSHIFT_AI_INTEGRATION.md](docs/OPENSHIFT_AI_INTEGRATION.md) for complete guide.
+5. **Create virtual keys for users:**
+   - Go to Virtual Keys → Generate Key
+   - Select models
+   - Set budget (optional)
+   - Copy key and share with users
 
-### Quick Example
+**See [docs/ADDING_MODELS.md](docs/ADDING_MODELS.md) for detailed guide.**
 
+---
+
+## Remove Deployment
+
+**Single/HA Instance:**
 ```bash
-# Get model endpoint from OpenShift AI
-MODEL_URL=$(oc get inferenceservice granite-8b -n rhoai-models -o jsonpath='{.status.url}')
-
-# Add to LiteLLM Admin UI:
-#   Provider: OpenAI-Compatible
-#   Model: granite-8b-instruct
-#   API Base: ${MODEL_URL}/v1
+ansible-playbook playbooks/deploy_litemaas.yml \
+  -e ocp4_workload_litemaas_remove=true
 ```
+
+**Multi-User:**
+```bash
+ansible-playbook playbooks/deploy_litemaas.yml \
+  -e ocp4_workload_litemaas_multi_user=true \
+  -e num_users=20 \
+  -e ocp4_workload_litemaas_remove=true
+```
+
+---
 
 ## Prerequisites
 
@@ -555,6 +331,8 @@ MODEL_URL=$(oc get inferenceservice granite-8b -n rhoai-models -o jsonpath='{.st
 - Ansible 2.15+
 - `kubernetes.core` collection
 - Cluster admin or project admin permissions
+
+---
 
 ## Testing on RHDP Sandbox
 
@@ -571,112 +349,35 @@ cd rhpds.litemaas
 ansible-playbook playbooks/deploy_litemaas.yml
 ```
 
-## Changelog
+---
 
-### v0.2.0 (2025-11-10)
+## Troubleshooting
 
-**Major Features: Horizontal Scaling, High Availability, and Multi-User Lab Deployment**
+### OAuth Login Not Working
 
-**New Features:**
-- ✅ LiteLLM horizontal scaling (1-5 replicas)
-- ✅ Redis Operator (Community, open source) for caching
-- ✅ Production HA deployment architecture
-- ✅ Multi-user lab deployment (isolated instances per user)
-- ✅ Health probes for LiteLLM (liveness and readiness)
-- ✅ Init containers to ensure proper startup order
+Check redirect URIs match:
+```bash
+oc get oauthclient litemaas-rhpds -o yaml
+```
 
-**Architecture:**
-- Single instance (default) - backward compatible
-- Scaled + Redis - medium to large-scale production
-- Multi-user - isolated instances for lab environments (1-80+ users)
+Should show both:
+- `https://litellm-admin.<cluster>/api/auth/callback`
+- `https://litellm-frontend.<cluster>/api/auth/callback`
 
-**Configuration:**
-- `ocp4_workload_litemaas_litellm_replicas` - Scale LiteLLM instances (1-5)
-- `ocp4_workload_litemaas_deploy_redis` - Enable Redis cache (Community Operator)
-- `ocp4_workload_litemaas_multi_user` - Enable multi-user lab mode
-- `num_users` - Number of isolated user instances to deploy
-- Multi-user resource optimization variables for 60-80 user labs
+### Backend Can't Connect to OAuth
 
-**Benefits:**
-- Horizontal scaling for higher request volumes
-- Redis caching reduces costs and latency
-- High availability with load balancing
-- Zero-downtime rolling updates
-- Isolated environments for training labs and demos
-- No licensing required (all open source)
+Check backend logs:
+```bash
+oc logs deployment/litemaas-backend -n litemaas
+```
 
-**Multi-User Lab Features:**
-- Each user gets dedicated namespace
-- Isolated PostgreSQL + LiteLLM per user
-- Unique routes per user (litellm-user1-rhpds.apps...)
-- Simple, lightweight architecture (no Redis/PgBouncer overhead)
-- Optimized resources: 300m CPU, 512Mi RAM per user
-- User info data integration for Showroom catalog
-- Perfect for RHDP training labs and workshops
-- Scales from 1 to 80+ users (60-80 users tested)
+Common issue: Self-signed certificates. Backend automatically sets `NODE_TLS_REJECT_UNAUTHORIZED=0`.
 
-**Documentation:**
-- Added "Scaling and High Availability" section
-- Added "Multi-User Lab Deployment" section
-- Architecture comparison tables
-- Deployment examples for all scenarios
-- Resource requirement calculations
-- Connection flow diagrams
+### Virtual Key Access Denied
 
-**Resource Optimization:**
-- Multi-user PostgreSQL: 200m CPU, 256Mi RAM (vs 500m, 512Mi)
-- Multi-user LiteLLM: 100m CPU, 256Mi RAM (vs 200m, 512Mi)
-- Enables 60-80 user labs on standard clusters (24+ cores, 40Gi+ RAM)
-- Comprehensive resource requirement tables for all deployment modes
+Add model to "Personal Models" in LiteLLM Admin UI as a workaround.
 
-**User Info Integration:**
-- Multi-user deployments send user.info data for each user
-- Variables: URL, namespace, username, password, API key per user
-- Ready for RHDP Showroom catalog integration
-- Format: litemaas_user1_url, litemaas_user1_password, etc.
-
-**Testing:**
-- ✅ Backward compatible with v0.1.2
-- ✅ Single instance deployment (default)
-- ✅ Multi-replica with Redis
-- ✅ Production HA with Redis + PgBouncer
-- ✅ Multi-user deployment (1-10 users)
-- ✅ Resource-optimized multi-user for 60-80 user labs
-
-### v0.1.2 (2025-11-05)
-
-**Compatibility:**
-- Aligned with upstream [rh-aiservices-bu/litemaas:0.1.2](https://github.com/rh-aiservices-bu/litemaas/releases/tag/0.1.2)
-
-**Features:**
-- ✅ Admin-only architecture (no OAuth, frontend/backend disabled by default)
-- ✅ LiteLLM virtual key management for user access control
-- ✅ OpenShift AI model integration (Granite 3.2 8B, Mistral 7B)
-- ✅ Platform-specific deployment guides (AWS, CNV/Virtualization)
-- ✅ Automated PostgreSQL 16 + LiteLLM deployment
-- ✅ Auto-detected storage classes (gp3-csi for AWS, ODF for CNV)
-
-**Improvements:**
-- Add init container to wait for PostgreSQL before LiteLLM starts
-- Add health probes (`/health/liveness`, `/health/readiness`)
-- Add `component: ai-proxy` label for better resource organization
-- Update CPU request to 200m (matches upstream)
-- Add model name discovery via `/v1/models` endpoint
-- Add troubleshooting guide for virtual key access
-
-**Documentation:**
-- Platform-specific deployment instructions (AWS vs CNV)
-- CNV virtualenv setup guide (create, activate, install requirements)
-- Model addition workflow with endpoint testing
-- Virtual key creation and testing examples
-- Credential retrieval commands
-
-**Testing:**
-- ✅ Tested on AWS clusters (gp3-csi storage)
-- ✅ Tested on CNV clusters (ODF/Ceph storage)
-- ✅ Tested Granite 3.2 8B model integration
-- ✅ Tested Mistral 7B model integration
-- ✅ Tested virtual key creation and access control
+---
 
 ## Author
 
