@@ -140,9 +140,22 @@
     - ocp4_workload_litemaas_models_list | length > 0
   block:
 
+    - name: Get backend database credentials
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Secret
+        namespace: "{{ ocp4_workload_litemaas_models_namespace }}"
+        name: litemaas-db
+      register: r_backend_db_secret
+
+    - name: Set backend database facts
+      ansible.builtin.set_fact:
+        _backend_db_user: "{{ r_backend_db_secret.resources[0].data.username | b64decode }}"
+        _backend_db_name: "{{ r_backend_db_secret.resources[0].data.database | b64decode }}"
+
     - name: Add models to backend database
       ansible.builtin.shell: |
-        oc exec -n {{ ocp4_workload_litemaas_models_namespace }} {{ r_postgres_pods.resources[0].metadata.name }} -- psql -U litemaas -d litemaas -c "
+        oc exec -n {{ ocp4_workload_litemaas_models_namespace }} {{ r_postgres_pods.resources[0].metadata.name }} -- psql -U {{ _backend_db_user }} -d {{ _backend_db_name }} -c "
         INSERT INTO models (
           id,
           name,
@@ -218,9 +231,22 @@
           - "Models: {{ r_litellm_models.json.data | default([]) | map(attribute='model_name') | list }}"
       when: r_litellm_models.json.data is defined
 
+    - name: Get backend database credentials for full sync
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Secret
+        namespace: "{{ ocp4_workload_litemaas_models_namespace }}"
+        name: litemaas-db
+      register: r_backend_db_secret_sync
+
+    - name: Set backend database facts for full sync
+      ansible.builtin.set_fact:
+        _backend_db_user_sync: "{{ r_backend_db_secret_sync.resources[0].data.username | b64decode }}"
+        _backend_db_name_sync: "{{ r_backend_db_secret_sync.resources[0].data.database | b64decode }}"
+
     - name: Sync LiteLLM models to backend database
       ansible.builtin.shell: |
-        oc exec -n {{ ocp4_workload_litemaas_models_namespace }} {{ r_postgres_pods.resources[0].metadata.name }} -- psql -U litemaas -d litemaas -c "
+        oc exec -n {{ ocp4_workload_litemaas_models_namespace }} {{ r_postgres_pods.resources[0].metadata.name }} -- psql -U {{ _backend_db_user_sync }} -d {{ _backend_db_name_sync }} -c "
         INSERT INTO models (
           id,
           name,
