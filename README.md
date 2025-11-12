@@ -50,10 +50,18 @@ ansible-playbook playbooks/deploy_litemaas.yml \
 
 **What you get:**
 - Each user: `litemaas-user1`, `litemaas-user2`, etc.
-- **Without OAuth**: Admin-only access per user
-- **With OAuth**: Users login with OpenShift credentials + web UI
-- Resources per user: 300m CPU, 768Mi RAM
-- Total for 20 users: ~6 CPU cores, ~15Gi RAM
+- **Without OAuth**:
+  - Admin-only access per user via LiteLLM Admin UI
+  - Admin URL: `https://litellm-admin-user1.<cluster>`
+  - Components: PostgreSQL + LiteLLM
+  - Resources per user: 300m CPU, 768Mi RAM
+- **With OAuth**:
+  - Users login with OpenShift credentials
+  - Admin URL: `https://litellm-admin-user1.<cluster>`
+  - Frontend URL: `https://litellm-frontend-user1.<cluster>`
+  - Components: PostgreSQL + LiteLLM + Backend + Frontend
+  - Resources per user: 450m CPU, 1152Mi RAM
+- Total for 20 users (with OAuth): ~9 CPU cores, ~23Gi RAM
 
 ---
 
@@ -131,11 +139,20 @@ ocp4_workload_litemaas_postgres_storage_class: "ocs-external-storagecluster-ceph
 
 **What happens:**
 - 60 namespaces created: `litemaas-user1` through `litemaas-user60`
-- Each user gets:
+- Single OAuthClient with 120 redirect URIs (2 per user: admin + frontend)
+- Each user gets isolated environment:
+  - PostgreSQL database (10Gi)
+  - LiteLLM gateway (1 replica)
+  - Backend API (with database migrations)
+  - Frontend web UI
   - Admin URL: `https://litellm-admin-user1.<cluster>`
   - Frontend URL: `https://litellm-frontend-user1.<cluster>`
-  - Login with OpenShift user credentials
-  - Unique password: "RedHat2025!" (same for all users in lab)
+  - Login with OpenShift credentials (username: `user1`, password: "RedHat2025!")
+
+**Resource requirements (60 users):**
+- CPU: ~27 cores (450m per user)
+- Memory: ~70Gi (1152Mi per user)
+- Storage: ~600Gi (10Gi per user)
 
 **User Info Variables (for Showroom):**
 ```yaml
@@ -215,15 +232,22 @@ user.info:
 - Storage: 15Gi (10Gi PostgreSQL + 5Gi Redis)
 
 ### Multi-User (per user)
+
+**Without OAuth (PostgreSQL + LiteLLM only):**
 - CPU: 300m request, 1000m limit
 - Memory: 768Mi request, 1.5Gi limit
 - Storage: 10Gi
 
-**Scaling Examples:**
-- **20 users**: 6 CPU cores, 15Gi RAM, 200Gi storage
-- **40 users**: 12 CPU cores, 30Gi RAM, 400Gi storage
-- **60 users**: 18 CPU cores, 46Gi RAM, 600Gi storage
-- **80 users**: 24 CPU cores, 62Gi RAM, 800Gi storage
+**With OAuth (PostgreSQL + LiteLLM + Backend + Frontend):**
+- CPU: 450m request, 1450m limit
+- Memory: 1152Mi request, 2.2Gi limit
+- Storage: 10Gi
+
+**Scaling Examples (with OAuth):**
+- **20 users**: 9 CPU cores, 23Gi RAM, 200Gi storage
+- **40 users**: 18 CPU cores, 46Gi RAM, 400Gi storage
+- **60 users**: 27 CPU cores, 70Gi RAM, 600Gi storage
+- **80 users**: 36 CPU cores, 92Gi RAM, 800Gi storage
 
 ---
 
@@ -250,6 +274,45 @@ git clone https://github.com/rhpds/rhpds.litemaas.git
 cd rhpds.litemaas
 ansible-galaxy collection build --force
 ansible-galaxy collection install rhpds-litemaas-*.tar.gz --force
+```
+
+### Storage Class Configuration
+
+**AWS Clusters:**
+- Auto-detected: `gp3-csi` (default)
+- No additional configuration needed
+
+**CNV Clusters (OpenShift Virtualization):**
+- Use ODF storage: `ocs-external-storagecluster-ceph-rbd`
+- Add to all deployments:
+  ```bash
+  -e ocp4_workload_litemaas_postgres_storage_class="ocs-external-storagecluster-ceph-rbd"
+  ```
+
+**Examples:**
+
+```bash
+# POC on CNV
+ansible-playbook playbooks/deploy_litemaas.yml \
+  -e ocp4_workload_litemaas_postgres_storage_class="ocs-external-storagecluster-ceph-rbd"
+
+# Multi-User on CNV
+ansible-playbook playbooks/deploy_litemaas.yml \
+  -e ocp4_workload_litemaas_multi_user=true \
+  -e num_users=20 \
+  -e ocp4_workload_litemaas_oauth_enabled=true \
+  -e ocp4_workload_litemaas_deploy_backend=true \
+  -e ocp4_workload_litemaas_deploy_frontend=true \
+  -e ocp4_workload_litemaas_multi_user_common_password="RedHat2025!" \
+  -e ocp4_workload_litemaas_postgres_storage_class="ocs-external-storagecluster-ceph-rbd"
+
+# HA on CNV
+ansible-playbook playbooks/deploy_litemaas_ha.yml \
+  -e ocp4_workload_litemaas_oauth_enabled=true \
+  -e ocp4_workload_litemaas_deploy_backend=true \
+  -e ocp4_workload_litemaas_deploy_frontend=true \
+  -e ocp4_workload_litemaas_ha_litellm_replicas=3 \
+  -e ocp4_workload_litemaas_postgres_storage_class="ocs-external-storagecluster-ceph-rbd"
 ```
 
 ---
@@ -353,7 +416,7 @@ ansible-playbook playbooks/deploy_litemaas.yml
 
 ## Troubleshooting
 
-### OAuth Login Not Working
+### OAuth Login Not Working (Single/HA)
 
 Check redirect URIs match:
 ```bash
@@ -364,6 +427,16 @@ Should show both:
 - `https://litellm-admin.<cluster>/api/auth/callback`
 - `https://litellm-frontend.<cluster>/api/auth/callback`
 
+### OAuth Login Not Working (Multi-User)
+
+Check all user redirect URIs are registered:
+```bash
+# Should show 2 URIs per user (admin + frontend)
+oc get oauthclient litemaas-rhpds -o jsonpath='{.redirectURIs}' | jq
+```
+
+For 20 users, should see 40 redirect URIs total.
+
 ### Backend Can't Connect to OAuth
 
 Check backend logs:
@@ -372,6 +445,53 @@ oc logs deployment/litemaas-backend -n litemaas
 ```
 
 Common issue: Self-signed certificates. Backend automatically sets `NODE_TLS_REJECT_UNAUTHORIZED=0`.
+
+### Database Migrations Failed
+
+Check migration logs:
+```bash
+oc logs deployment/litemaas-backend -n litemaas -c run-migrations
+```
+
+If you see npm permission errors, the init container now uses `/tmp` for npm cache (fixed in v0.2.0+).
+
+### Backend Pod Stuck in Init
+
+Check database connectivity:
+```bash
+# Check if PostgreSQL is ready
+oc get pods -n litemaas -l app=litemaas-postgres
+
+# Check database service
+oc get svc -n litemaas postgres
+
+# View init container logs
+oc logs deployment/litemaas-backend -n litemaas -c wait-for-database
+```
+
+### Multi-User: Check Specific User
+
+```bash
+# Replace user1 with your user number
+USER=user1
+
+# Check all pods for user
+oc get pods -n litemaas-$USER
+
+# Check backend logs
+oc logs -n litemaas-$USER deployment/litemaas-backend --tail=50
+
+# Check migration logs
+oc logs -n litemaas-$USER deployment/litemaas-backend -c run-migrations
+
+# Verify database tables
+oc exec -n litemaas-$USER postgres-0 -- psql -U litemaas -d litemaas -c '\dt'
+
+# Get user credentials
+echo "Admin URL: https://litellm-admin-$USER.<cluster>"
+echo "Frontend URL: https://litellm-frontend-$USER.<cluster>"
+echo "Password: $(oc get secret litellm-secret -n litemaas-$USER -o jsonpath='{.data.UI_PASSWORD}' | base64 -d)"
+```
 
 ### Virtual Key Access Denied
 
