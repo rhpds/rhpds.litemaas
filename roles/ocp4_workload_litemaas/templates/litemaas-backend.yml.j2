@@ -9,7 +9,7 @@ type: Opaque
 stringData:
   JWT_SECRET: "{{ ocp4_workload_litemaas_jwt_secret }}"
   ADMIN_API_KEY: "{{ ocp4_workload_litemaas_admin_api_key }}"
-  OAUTH_CLIENT_SECRET: "{{ ocp4_workload_litemaas_oauth_client_secret if ocp4_workload_litemaas_oauth_provider == 'google' else _litemaas_oauth_client_secret_generated }}"
+  OAUTH_CLIENT_SECRET: "{{ _litemaas_oauth_client_secret_generated | default(ocp4_workload_litemaas_oauth_client_secret) }}"
 ---
 apiVersion: apps/v1
 kind: Deployment
