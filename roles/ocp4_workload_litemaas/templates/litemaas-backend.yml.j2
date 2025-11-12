@@ -36,17 +36,11 @@ spec:
             - sh
             - -c
             - |
-              until psql "$DATABASE_URL" -c '\q' 2>/dev/null; do
+              until pg_isready -h litemaas-postgres -p 5432 -U litemaas 2>/dev/null; do
                 echo "Waiting for database..."
                 sleep 2
               done
               echo "Database is ready!"
-          env:
-            - name: DATABASE_URL
-              valueFrom:
-                secretKeyRef:
-                  name: litemaas-db
-                  key: DATABASE_URL
         - name: run-migrations
           image: "{{ ocp4_workload_litemaas_backend_image }}:{{ ocp4_workload_litemaas_version }}"
           command:
