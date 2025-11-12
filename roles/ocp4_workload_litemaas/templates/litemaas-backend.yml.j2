@@ -49,6 +49,7 @@ spec:
             - |
               echo "Running database migrations..."
               cd /app/backend
+              export npm_config_cache=/tmp/.npm
               npx prisma migrate deploy || npx prisma db push || echo "Migrations not available, skipping..."
               echo "Migrations complete!"
           env:
@@ -59,6 +60,8 @@ spec:
                   key: DATABASE_URL
             - name: NODE_ENV
               value: "production"
+            - name: HOME
+              value: "/tmp"
       containers:
         - name: backend
           image: "{{ ocp4_workload_litemaas_backend_image }}:{{ ocp4_workload_litemaas_version }}"
