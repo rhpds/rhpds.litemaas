@@ -1,0 +1,141 @@
+---
+# =============================================================================
+# LiteMaaS Models - Cleanup Orphaned Models
+# =============================================================================
+# Removes models from backend database that don't exist in LiteLLM frontend
+# This ensures backend database stays in sync with LiteLLM
+# =============================================================================
+
+- name: Display cleanup operation start
+  ansible.builtin.debug:
+    msg:
+      - "========================================="
+      - "Cleaning Up Orphaned Models"
+      - "========================================="
+      - "Checking for models in backend that don't exist in LiteLLM..."
+
+# -----------------------------------------------------------------------------
+# Step 1: Get All Models from LiteLLM (Frontend)
+# -----------------------------------------------------------------------------
+- name: Get all models from LiteLLM frontend
+  ansible.builtin.uri:
+    url: "{{ litellm_url }}/model/info"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ litellm_master_key }}"
+    validate_certs: "{{ ocp4_workload_litemaas_models_verify_ssl }}"
+    status_code: [200]
+  register: r_litellm_models_cleanup
+
+- name: Extract LiteLLM model names
+  ansible.builtin.set_fact:
+    _litellm_model_names: "{{ r_litellm_models_cleanup.json.data | default([]) | map(attribute='model_name') | list }}"
+
+- name: Display models in LiteLLM
+  ansible.builtin.debug:
+    msg:
+      - "Found {{ _litellm_model_names | length }} models in LiteLLM frontend"
+      - "Models: {{ _litellm_model_names | join(', ') if _litellm_model_names | length > 0 else 'None' }}"
+
+# -----------------------------------------------------------------------------
+# Step 2: Get Database Credentials
+# -----------------------------------------------------------------------------
+- name: Get backend database credentials
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Secret
+    namespace: "{{ ocp4_workload_litemaas_models_namespace }}"
+    name: litemaas-db
+  register: r_backend_db_secret_cleanup
+
+- name: Set backend database facts
+  ansible.builtin.set_fact:
+    _backend_db_user_cleanup: "{{ r_backend_db_secret_cleanup.resources[0].data.username | b64decode }}"
+    _backend_db_name_cleanup: "{{ r_backend_db_secret_cleanup.resources[0].data.database | b64decode }}"
+
+# -----------------------------------------------------------------------------
+# Step 3: Get All Models from Backend Database
+# -----------------------------------------------------------------------------
+- name: Get PostgreSQL pod
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Pod
+    namespace: "{{ ocp4_workload_litemaas_models_namespace }}"
+    label_selectors:
+      - app=litemaas-postgres
+  register: r_postgres_pods_cleanup
+
+- name: Get all models from backend database
+  ansible.builtin.shell: |
+    oc exec -n {{ ocp4_workload_litemaas_models_namespace }} {{ r_postgres_pods_cleanup.resources[0].metadata.name }} -- \
+      psql -U {{ _backend_db_user_cleanup }} -d {{ _backend_db_name_cleanup }} -t -c \
+      "SELECT id FROM models;"
+  register: r_backend_models_raw
+  changed_when: false
+
+- name: Parse backend model names
+  ansible.builtin.set_fact:
+    _backend_model_names: "{{ r_backend_models_raw.stdout_lines | select('match', '^\\s*\\S+') | map('trim') | list }}"
+
+- name: Display models in backend database
+  ansible.builtin.debug:
+    msg:
+      - "Found {{ _backend_model_names | length }} models in backend database"
+      - "Models: {{ _backend_model_names | join(', ') if _backend_model_names | length > 0 else 'None' }}"
+
+# -----------------------------------------------------------------------------
+# Step 4: Identify Orphaned Models
+# -----------------------------------------------------------------------------
+- name: Identify orphaned models (in backend but not in LiteLLM)
+  ansible.builtin.set_fact:
+    _orphaned_models: "{{ _backend_model_names | difference(_litellm_model_names) }}"
+
+- name: Display orphaned models
+  ansible.builtin.debug:
+    msg:
+      - "========================================="
+      - "Orphaned Models Analysis"
+      - "========================================="
+      - "Models in LiteLLM: {{ _litellm_model_names | length }}"
+      - "Models in Backend: {{ _backend_model_names | length }}"
+      - "Orphaned (to be deleted): {{ _orphaned_models | length }}"
+      - "{{ 'Orphaned models: ' + (_orphaned_models | join(', ')) if _orphaned_models | length > 0 else 'No orphaned models found' }}"
+
+# -----------------------------------------------------------------------------
+# Step 5: Delete Orphaned Models from Backend Database
+# -----------------------------------------------------------------------------
+- name: Delete orphaned models from backend database
+  when: _orphaned_models | length > 0
+  block:
+    - name: Remove each orphaned model
+      ansible.builtin.shell: |
+        oc exec -n {{ ocp4_workload_litemaas_models_namespace }} {{ r_postgres_pods_cleanup.resources[0].metadata.name }} -- \
+          psql -U {{ _backend_db_user_cleanup }} -d {{ _backend_db_name_cleanup }} -c \
+          "DELETE FROM models WHERE id = '{{ item }}';"
+      loop: "{{ _orphaned_models }}"
+      register: r_delete_orphaned
+      changed_when: true
+
+    - name: Display deletion results
+      ansible.builtin.debug:
+        msg: "Deleted orphaned model: {{ item.item }}"
+      loop: "{{ r_delete_orphaned.results }}"
+      when: r_delete_orphaned.results is defined
+
+    - name: Display cleanup summary
+      ansible.builtin.debug:
+        msg:
+          - "========================================="
+          - "Cleanup Complete"
+          - "========================================="
+          - "Successfully deleted {{ _orphaned_models | length }} orphaned model(s) from backend database"
+          - "Backend database is now in sync with LiteLLM frontend"
+
+- name: Display no cleanup needed message
+  when: _orphaned_models | length == 0
+  ansible.builtin.debug:
+    msg:
+      - "========================================="
+      - "No Cleanup Needed"
+      - "========================================="
+      - "Backend database is already in sync with LiteLLM frontend"

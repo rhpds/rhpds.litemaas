@@ -14,6 +14,7 @@ This role solves the model synchronization issue where:
 - ✅ Add models to LiteLLM via API
 - ✅ Sync models to backend PostgreSQL database
 - ✅ Sync all existing LiteLLM models to backend
+- ✅ **Cleanup orphaned models** - automatically delete models from backend that don't exist in LiteLLM
 - ✅ Idempotent - safe to run multiple times
 - ✅ Can be used standalone or integrated into deployment
 
@@ -117,6 +118,7 @@ ocp4_workload_litemaas_litellm_models:
 | `ocp4_workload_litemaas_models_list` | `[]` | List of models to add/sync |
 | `ocp4_workload_litemaas_models_backend_enabled` | `true` | Sync to backend database |
 | `ocp4_workload_litemaas_models_sync_from_litellm` | `true` | Sync all existing LiteLLM models |
+| `ocp4_workload_litemaas_models_cleanup_orphaned` | `true` | Delete orphaned models from backend |
 | `ocp4_workload_litemaas_models_verify_ssl` | `false` | Verify SSL certificates |
 
 ## Workflow for Infrastructure Team
@@ -155,6 +157,31 @@ ansible-playbook playbooks/deploy_litemaas.yml -e @models.yml
 
 ```bash
 ansible-playbook playbooks/manage_models.yml -e @models.yml
+```
+
+### Scenario 4: Removing Models (Cleanup Orphaned Models)
+
+When you delete a model from LiteLLM Admin UI, it remains in the backend database. The sync script now automatically cleans up these orphaned models.
+
+**Automatic cleanup (default):**
+```bash
+# Run the sync script - it will automatically remove orphaned models
+./sync-models.sh litemaas
+```
+
+**What happens:**
+1. Gets all models from LiteLLM frontend
+2. Gets all models from backend database
+3. Identifies models in backend that aren't in LiteLLM (orphaned)
+4. Deletes orphaned models from backend database
+5. Backend stays in sync with LiteLLM
+
+**Disable cleanup (if you want to keep orphaned models):**
+```bash
+ansible-playbook playbooks/manage_models.yml \
+  -e litellm_url=https://litellm-admin.apps.cluster.com \
+  -e litellm_master_key=sk-xxxxx \
+  -e ocp4_workload_litemaas_models_cleanup_orphaned=false
 ```
 
 ## Troubleshooting

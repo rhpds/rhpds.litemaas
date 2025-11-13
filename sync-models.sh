@@ -82,6 +82,7 @@ litellm_master_key: "$LITELLM_MASTER_KEY"
 ocp4_workload_litemaas_models_namespace: "$NAMESPACE"
 ocp4_workload_litemaas_models_backend_enabled: true
 ocp4_workload_litemaas_models_sync_from_litellm: true
+ocp4_workload_litemaas_models_cleanup_orphaned: true
 ocp4_workload_litemaas_models_list: []
 EOF
 

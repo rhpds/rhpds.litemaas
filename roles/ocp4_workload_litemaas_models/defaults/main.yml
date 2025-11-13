@@ -27,6 +27,10 @@ ocp4_workload_litemaas_models_list: []
 # Sync models from LiteLLM to backend database
 ocp4_workload_litemaas_models_sync_from_litellm: true
 
+# Cleanup orphaned models from backend that don't exist in LiteLLM
+# When enabled, any model in backend database that isn't in LiteLLM will be deleted
+ocp4_workload_litemaas_models_cleanup_orphaned: true
+
 # Backend deployment flag (if false, only adds to LiteLLM, not backend DB)
 ocp4_workload_litemaas_models_backend_enabled: true
 

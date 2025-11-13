@@ -322,8 +322,8 @@
           'litellm',
           'Synced from LiteLLM',
           '{{ item.model_name }}',
-          {{ item.model_info.rpm | default('null') }},
-          {{ item.model_info.tpm | default('null') }},
+          {{ item.model_info.rpm if item.model_info.rpm is not none else 'null' }},
+          {{ item.model_info.tpm if item.model_info.tpm is not none else 'null' }},
           NOW(),
           NOW()
         )
@@ -351,7 +351,17 @@
       when: r_litellm_models.json.data is defined
 
 # -----------------------------------------------------------------------------
-# Step 6: Display Summary
+# Step 6: Cleanup Orphaned Models (Optional)
+# -----------------------------------------------------------------------------
+- name: Cleanup orphaned models from backend database
+  when:
+    - ocp4_workload_litemaas_models_backend_enabled | bool
+    - ocp4_workload_litemaas_models_cleanup_orphaned | bool
+  ansible.builtin.include_tasks:
+    file: cleanup_orphaned_models.yml
+
+# -----------------------------------------------------------------------------
+# Step 7: Display Summary
 # -----------------------------------------------------------------------------
 - name: Display management summary
   ansible.builtin.debug:
@@ -362,4 +372,5 @@
       - "Models added to LiteLLM: {{ ocp4_workload_litemaas_models_list | length }}"
       - "Models synced to backend: {{ 'Yes' if ocp4_workload_litemaas_models_backend_enabled else 'No' }}"
       - "Full sync from LiteLLM: {{ 'Yes' if ocp4_workload_litemaas_models_sync_from_litellm else 'No' }}"
+      - "Orphaned cleanup: {{ 'Yes' if ocp4_workload_litemaas_models_cleanup_orphaned else 'No' }}"
       - "========================================="
