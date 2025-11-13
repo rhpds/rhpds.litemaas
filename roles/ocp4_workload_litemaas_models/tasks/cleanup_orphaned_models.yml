@@ -107,11 +107,11 @@
 - name: Delete orphaned models from backend database
   when: _orphaned_models | length > 0
   block:
-    - name: Remove each orphaned model
+    - name: Remove each orphaned model (cascade delete subscriptions)
       ansible.builtin.shell: |
         oc exec -n {{ ocp4_workload_litemaas_models_namespace }} {{ r_postgres_pods_cleanup.resources[0].metadata.name }} -- \
           psql -U {{ _backend_db_user_cleanup }} -d {{ _backend_db_name_cleanup }} -c \
-          "DELETE FROM models WHERE id = '{{ item }}';"
+          "DELETE FROM subscriptions WHERE model_id = '{{ item }}'; DELETE FROM models WHERE id = '{{ item }}';"
       loop: "{{ _orphaned_models }}"
       register: r_delete_orphaned
       changed_when: true
