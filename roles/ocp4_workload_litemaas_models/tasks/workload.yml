@@ -322,8 +322,8 @@
           'litellm',
           'Synced from LiteLLM',
           '{{ item.model_name }}',
-          {{ item.model_info.rpm if item.model_info.rpm is not none else 'null' }},
-          {{ item.model_info.tpm if item.model_info.tpm is not none else 'null' }},
+          {{ item.model_info.rpm | default(None) if item.model_info.rpm | default(None) is not none else 'null' }},
+          {{ item.model_info.tpm | default(None) if item.model_info.tpm | default(None) is not none else 'null' }},
           NOW(),
           NOW()
         )
