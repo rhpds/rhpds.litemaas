@@ -9,7 +9,12 @@ ocp4_workload_litemaas_version: "latest"
 ocp4_workload_litemaas_namespace: "litemaas"
 
 # Route configuration
-ocp4_workload_litemaas_route_name: "rhpds"
+ocp4_workload_litemaas_route_name: "rhpds"  # Legacy variable, kept for backwards compatibility
+
+# Route hostnames (configure the subdomain prefix for each route)
+ocp4_workload_litemaas_api_route_prefix: "litellm"      # User-facing API route (e.g., litellm.apps.cluster.com)
+ocp4_workload_litemaas_admin_route_prefix: "litellm-admin"  # Admin/backend route (e.g., litellm-admin.apps.cluster.com)
+ocp4_workload_litemaas_frontend_route_prefix: "litellm-frontend"  # Frontend UI route
 
 # High Availability mode (set to true to enable HA deployment)
 ocp4_workload_litemaas_ha_enabled: false

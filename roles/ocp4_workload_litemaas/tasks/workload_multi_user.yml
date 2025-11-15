@@ -319,14 +319,14 @@
       apiVersion: route.openshift.io/v1
       kind: Route
       metadata:
-        name: litellm
+        name: litemaas
         labels:
           app: litellm
       spec:
-        host: "litellm-admin-{{ ocp4_workload_litemaas_user_prefix }}{{ item }}.{{ ocp4_workload_litemaas_cluster_domain }}"
+        host: "{{ ocp4_workload_litemaas_api_route_prefix }}-{{ ocp4_workload_litemaas_user_prefix }}{{ item }}.{{ ocp4_workload_litemaas_cluster_domain }}"
         to:
           kind: Service
-          name: litellm
+          name: litemaas
         port:
           targetPort: http
         tls:

@@ -210,7 +210,7 @@ metadata:
     app: litemaas
     component: ai-proxy
 spec:
-  host: "litellm-admin.{{ ocp4_workload_litemaas_cluster_domain }}"
+  host: "{{ ocp4_workload_litemaas_api_route_prefix }}.{{ ocp4_workload_litemaas_cluster_domain }}"
   to:
     kind: Service
     name: litemaas
