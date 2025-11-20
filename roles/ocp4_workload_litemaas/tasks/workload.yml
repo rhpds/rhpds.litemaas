@@ -457,17 +457,6 @@
               termination: edge
               insecureEdgeTerminationPolicy: Redirect
 
-- name: Deploy RHDP Branding ConfigMap
-  when:
-    - ocp4_workload_litemaas_branding_enabled | default(false) | bool
-    - ocp4_workload_litemaas_branding_logo_light_path | length > 0
-    - ocp4_workload_litemaas_branding_logo_dark_path | length > 0
-    - not (ocp4_workload_litemaas_multi_user | bool)
-  kubernetes.core.k8s:
-    state: present
-    namespace: "{{ ocp4_workload_litemaas_namespace }}"
-    definition: "{{ lookup('template', 'litemaas-branding-configmap.yml.j2') | from_yaml }}"
-
 - name: Deploy LiteMaaS Frontend
   when:
     - ocp4_workload_litemaas_deploy_frontend | bool
