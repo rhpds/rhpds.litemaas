@@ -61,8 +61,55 @@ spec:
               echo "Found index.html at: $INDEX_FILE"
 
               # Inject preload CSS into <head> BEFORE any other content
-              echo "Injecting preload CSS..."
-              sed -i 's|<head>|<head><style id="rhdp-preload-css">body{visibility:hidden!important}body.rhdp-ready{visibility:visible!important}img[src*="logo"],img[alt*="LiteMaaS"]{opacity:0!important}img[src*="/branding/logo-"]{opacity:1!important}h1,h2,h3,h4,h5,h6{opacity:0!important}.rhdp-branded{opacity:1!important}footer,[class*="footer"]:not(#rhdp-footer){display:none!important}</style>|' "$INDEX_FILE"
+              echo "Injecting preload CSS with smooth animations..."
+              cat > /tmp/preload.css << 'EOFCSS'
+<style id="rhdp-preload-css">
+/* Hide body until branding loads */
+body{visibility:hidden!important;opacity:0;transition:opacity 0.3s ease-in-out}
+body.rhdp-ready{visibility:visible!important;opacity:1!important}
+
+/* Hide LiteMaaS logos, show RHDP logos */
+img[src*="logo"],img[alt*="LiteMaaS"],img[alt*="litemaas"],[class*="logo"] img,[class*="Logo"] img{opacity:0!important;transition:opacity 0.3s ease-in}
+img[src*="/branding/logo-"]{opacity:1!important}
+
+/* Hide LiteMaaS headings */
+h1,h2,h3,h4,h5,h6{opacity:0!important;transition:opacity 0.3s ease-in}
+.rhdp-branded{opacity:1!important}
+
+/* Hide original footer */
+footer,[class*="footer"]:not(#rhdp-branding-footer){display:none!important}
+
+/* RHDP Footer styling */
+#rhdp-branding-footer{
+  position:fixed;
+  bottom:0;
+  left:0;
+  right:0;
+  padding:16px 32px;
+  background:linear-gradient(180deg,#0f0f0f 0%,#151515 100%);
+  color:#fff;
+  font-size:12px;
+  font-family:"Red Hat Text","Overpass",helvetica,arial,sans-serif;
+  z-index:9999;
+  border-top:3px solid #EE0000;
+  box-shadow:0 -2px 10px rgba(0,0,0,0.3);
+  animation:slideUp 0.4s ease-out;
+}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+
+/* Footer links */
+#rhdp-branding-footer a{
+  color:#C9C9C9;
+  text-decoration:none;
+  transition:all 0.2s ease;
+}
+#rhdp-branding-footer a:hover{
+  color:#EE0000;
+  text-decoration:underline;
+}
+</style>
+EOFCSS
+              sed -i "s|<head>|<head>$(cat /tmp/preload.css)|" "$INDEX_FILE"
 
               # Inject branding script before </head>
               echo "Injecting branding script..."
