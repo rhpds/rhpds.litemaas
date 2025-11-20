@@ -37,6 +37,27 @@ data:
     (function() {
       console.log('RHDP Branding: Initializing...');
 
+      // Add CSS to hide elements until branding loads (prevents flash)
+      const style = document.createElement('style');
+      style.textContent = `
+        /* Hide LiteMaaS branding until RHDP branding loads */
+        img[src*="logo"], img[alt*="LiteMaaS"], img[alt*="litemaas"] {
+          opacity: 0 !important;
+          transition: opacity 0.3s ease-in-out;
+        }
+        img[src*="/branding/logo-"] {
+          opacity: 1 !important;
+        }
+        /* Hide original footer */
+        footer, [class*="footer"] {
+          display: none !important;
+        }
+        #rhdp-branding-footer {
+          display: block !important;
+        }
+      `;
+      document.head.appendChild(style);
+
       // Configuration
       const LOGO_LIGHT_PATH = '/branding/logo-light.svg';
       const LOGO_DARK_PATH = '/branding/logo-dark.svg';
