@@ -94,6 +94,7 @@ spec:
                 secretKeyRef:
                   name: backend-secret
                   key: ADMIN_API_KEY
+{% if ocp4_workload_litemaas_oauth_enabled | default(false) | bool %}
             - name: OAUTH_CLIENT_ID
               value: "{{ ocp4_workload_litemaas_oauth_client_id }}"
             - name: OAUTH_CLIENT_SECRET
@@ -105,6 +106,10 @@ spec:
               value: "{{ _litemaas_oauth_issuer }}"
             - name: OAUTH_CALLBACK_URL
               value: "https://{{ ocp4_workload_litemaas_api_route_prefix }}.{{ ocp4_workload_litemaas_cluster_domain }}/api/auth/callback"
+{% else %}
+            - name: OAUTH_ENABLED
+              value: "false"
+{% endif %}
             - name: LITELLM_API_URL
               value: "https://{{ ocp4_workload_litemaas_api_route_prefix }}.{{ ocp4_workload_litemaas_cluster_domain }}"
             - name: LITELLM_API_KEY
