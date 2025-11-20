@@ -16,6 +16,10 @@ data:
   logo-dark.svg: |
 {{ lookup('file', ocp4_workload_litemaas_branding_logo_dark_path) | indent(4, first=True) }}
 
+  # Red Hat favicon (tab icon)
+  favicon.png: |
+{{ lookup('file', ocp4_workload_litemaas_branding_favicon_path) | b64encode | indent(4, first=True) }}
+
   # Branding injection script
   branding-inject.js: |
     (function() {
@@ -24,17 +28,19 @@ data:
       // Configuration
       const LOGO_LIGHT_PATH = '/branding/logo-light.svg';
       const LOGO_DARK_PATH = '/branding/logo-dark.svg';
+      const FAVICON_PATH = '/branding/favicon.png';
       const SERVICE_TEXT = '{{ ocp4_workload_litemaas_branding_service_text }}';
-      const ENABLE_FOOTER_TEXT = {{ ocp4_workload_litemaas_branding_enable_footer | default('false') | lower }};
+      const ENABLE_FOOTER_TEXT = {{ ocp4_workload_litemaas_branding_enable_footer | default('true') | lower }};
 
       // Wait for DOM to be ready
       function init() {
         console.log('RHDP Branding: Replacing logo...');
         replaceLogo();
+        replaceFavicon();
 
-        if (ENABLE_FOOTER_TEXT && SERVICE_TEXT) {
-          console.log('RHDP Branding: Adding footer text...');
-          addFooterText();
+        if (ENABLE_FOOTER_TEXT) {
+          console.log('RHDP Branding: Adding Red Hat footer...');
+          addRedHatFooter();
         }
 
         // Watch for theme changes
@@ -72,13 +78,30 @@ data:
         });
       }
 
-      // Add "Service provided by..." footer text
-      function addFooterText() {
+      // Replace favicon with Red Hat logo
+      function replaceFavicon() {
+        // Remove existing favicons
+        const existingIcons = document.querySelectorAll('link[rel*="icon"]');
+        existingIcons.forEach(icon => icon.remove());
+
+        // Add Red Hat favicon
+        const favicon = document.createElement('link');
+        favicon.rel = 'icon';
+        favicon.type = 'image/png';
+        favicon.href = FAVICON_PATH;
+        document.head.appendChild(favicon);
+
+        console.log('RHDP Branding: Favicon replaced');
+      }
+
+      // Add Red Hat footer with links
+      function addRedHatFooter() {
         // Check if footer already exists
         if (document.getElementById('rhdp-branding-footer')) {
           return;
         }
 
+        const currentYear = new Date().getFullYear();
         const footer = document.createElement('div');
         footer.id = 'rhdp-branding-footer';
         footer.style.cssText = `
@@ -86,23 +109,45 @@ data:
           bottom: 0;
           left: 0;
           right: 0;
-          padding: 8px 16px;
-          background-color: var(--pf-t--global--background--color--secondary--default, #f5f5f5);
-          border-top: 1px solid var(--pf-t--global--border--color--default, #d2d2d2);
+          padding: 12px 24px;
+          background-color: #151515;
+          color: #ffffff;
           text-align: center;
           font-size: 12px;
-          color: var(--pf-t--global--text--color--subtle, #6a6e73);
+          font-family: "Red Hat Text", "Overpass", overpass, helvetica, arial, sans-serif;
           z-index: 1000;
+          border-top: 3px solid #EE0000;
         `;
-        footer.innerHTML = `<span>${SERVICE_TEXT}</span>`;
+
+        footer.innerHTML = `
+          <div style="max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+            <div style="color: #C9C9C9; font-size: 11px;">
+              Copyright © ${currentYear} Red Hat, Inc.
+            </div>
+            <div style="display: flex; gap: 20px; flex-wrap: wrap; justify-content: center;">
+              <a href="https://www.redhat.com/en/about/privacy-policy" target="_blank" style="color: #ffffff; text-decoration: none; font-size: 12px; transition: color 0.2s;" onmouseover="this.style.color='#EE0000'" onmouseout="this.style.color='#ffffff'">Privacy statement</a>
+              <span style="color: #6A6E73;">|</span>
+              <a href="https://www.redhat.com/en/about/terms-use" target="_blank" style="color: #ffffff; text-decoration: none; font-size: 12px; transition: color 0.2s;" onmouseover="this.style.color='#EE0000'" onmouseout="this.style.color='#ffffff'">Terms of use</a>
+              <span style="color: #6A6E73;">|</span>
+              <a href="https://www.redhat.com/en/about/all-policies-guidelines" target="_blank" style="color: #ffffff; text-decoration: none; font-size: 12px; transition: color 0.2s;" onmouseover="this.style.color='#EE0000'" onmouseout="this.style.color='#ffffff'">All policies and guidelines</a>
+              <span style="color: #6A6E73;">|</span>
+              <a href="https://github.com/rh-aiservices-bu/litemaas" target="_blank" style="color: #ffffff; text-decoration: none; font-size: 12px; display: inline-flex; align-items: center; gap: 4px; transition: color 0.2s;" onmouseover="this.style.color='#EE0000'" onmouseout="this.style.color='#ffffff'">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg>
+                Source on GitHub
+              </a>
+            </div>
+          </div>
+        `;
 
         document.body.appendChild(footer);
 
         // Add padding to page content to prevent overlap
         const pageContent = document.querySelector('[class*="pf-v6-c-page__main"]');
         if (pageContent) {
-          pageContent.style.paddingBottom = '40px';
+          pageContent.style.paddingBottom = '60px';
         }
+
+        console.log('RHDP Branding: Red Hat footer added');
       }
 
       // Observe theme changes and update logo accordingly

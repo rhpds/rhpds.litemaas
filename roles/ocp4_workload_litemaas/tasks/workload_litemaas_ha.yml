@@ -209,6 +209,7 @@
     - ocp4_workload_litemaas_branding_enabled | default(false) | bool
     - ocp4_workload_litemaas_branding_logo_light_path | length > 0
     - ocp4_workload_litemaas_branding_logo_dark_path | length > 0
+    - ocp4_workload_litemaas_branding_favicon_path | length > 0
     - ocp4_workload_litemaas_deploy_frontend | bool
   kubernetes.core.k8s:
     state: present
