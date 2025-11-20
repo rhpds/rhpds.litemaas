@@ -246,15 +246,31 @@ data:
         init();
       }
 
-      // Re-run on navigation (for SPA)
+      // Re-run on navigation (for SPA) and DOM changes
       let lastUrl = location.href;
-      new MutationObserver(() => {
+      const observer = new MutationObserver(() => {
         const url = location.href;
         if (url !== lastUrl) {
           lastUrl = url;
+          console.log('RHDP Branding: URL changed, re-applying branding...');
           setTimeout(init, 100); // Small delay for React to render
         }
-      }).observe(document, {subtree: true, childList: true});
+        // Also re-apply logo and title on any DOM changes (React re-renders)
+        replaceLogo();
+        replacePageTitle();
+      });
+
+      observer.observe(document.body, {
+        subtree: true,
+        childList: true,
+        attributes: false
+      });
+
+      // Also run periodically to catch any missed changes
+      setInterval(() => {
+        replaceLogo();
+        replacePageTitle();
+      }, 2000);
 
       console.log('RHDP Branding: Initialization complete');
     })();
