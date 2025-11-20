@@ -10,15 +10,27 @@ metadata:
 data:
   # Red Hat Demo Platform logo (light/black version for light theme)
   logo-light.svg: |
+{% if ocp4_workload_litemaas_branding_logo_light_path != "" %}
 {{ lookup('file', ocp4_workload_litemaas_branding_logo_light_path) | indent(4, first=True) }}
+{% else %}
+{{ lookup('file', 'Logo-Red_Hat-Demo_Platform_Team-A-Black-RGB.svg') | indent(4, first=True) }}
+{% endif %}
 
   # Red Hat Demo Platform logo (dark/white version for dark theme)
   logo-dark.svg: |
+{% if ocp4_workload_litemaas_branding_logo_dark_path != "" %}
 {{ lookup('file', ocp4_workload_litemaas_branding_logo_dark_path) | indent(4, first=True) }}
+{% else %}
+{{ lookup('file', 'Logo-Red_Hat-Demo_Platform_Team-A-White-RGB.svg') | indent(4, first=True) }}
+{% endif %}
 
   # Red Hat favicon (tab icon)
   favicon.png: |
+{% if ocp4_workload_litemaas_branding_favicon_path != "" %}
 {{ lookup('file', ocp4_workload_litemaas_branding_favicon_path) | b64encode | indent(4, first=True) }}
+{% else %}
+{{ lookup('file', 'Red_Hat_logo.png') | b64encode | indent(4, first=True) }}
+{% endif %}
 
   # Branding injection script
   branding-inject.js: |

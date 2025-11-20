@@ -10,15 +10,16 @@
 # Enable branding
 ocp4_workload_litemaas_branding_enabled: true
 
-# Path to logo files (update these paths to your logo locations)
+# Path to logo files (OPTIONAL - defaults to RHDP logos included in collection)
+# Leave empty to use bundled RHDP logos, or provide custom paths
 # Light theme logo (black/dark text) - shown in light mode
-ocp4_workload_litemaas_branding_logo_light_path: "{{ playbook_dir }}/../files/Logo-Red_Hat-Demo_Platform_Team-A-Black-RGB.svg"
+ocp4_workload_litemaas_branding_logo_light_path: ""  # Uses bundled RHDP logo
 
 # Dark theme logo (white/light text) - shown in dark mode
-ocp4_workload_litemaas_branding_logo_dark_path: "{{ playbook_dir }}/../files/Logo-Red_Hat-Demo_Platform_Team-A-White-RGB.svg"
+ocp4_workload_litemaas_branding_logo_dark_path: ""  # Uses bundled RHDP logo
 
 # Red Hat favicon (browser tab icon)
-ocp4_workload_litemaas_branding_favicon_path: "{{ playbook_dir }}/../files/Red_Hat_logo.png"
+ocp4_workload_litemaas_branding_favicon_path: ""  # Uses bundled Red Hat logo
 
 # Service attribution text
 ocp4_workload_litemaas_branding_service_text: "Service provided by Red Hat Demo Platform"
