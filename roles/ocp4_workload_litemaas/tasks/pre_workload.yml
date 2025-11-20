@@ -65,6 +65,10 @@
         kind: StorageClass
       register: r_storage_classes
 
+    - name: Display available storage classes
+      ansible.builtin.debug:
+        msg: "Available storage classes: {{ r_storage_classes.resources | map(attribute='metadata.name') | list }}"
+
     - name: Try cloud-specific storage class first
       ansible.builtin.set_fact:
         _litemaas_preferred_storage_class: "{{ _ocp4_workload_litemaas_storage_class_map[ocp4_workload_litemaas_cloud_provider] | default('') }}"
@@ -81,6 +85,23 @@
         - _litemaas_preferred_storage_class != ""
         - _litemaas_storage_class_exists | default(false)
 
+    - name: Fall back to ODF storage classes for baremetal/CNV
+      when:
+        - ocp4_workload_litemaas_postgres_storage_class == ""
+        - ocp4_workload_litemaas_cloud_provider == "baremetal"
+      block:
+        - name: Try common ODF storage class names
+          ansible.builtin.set_fact:
+            ocp4_workload_litemaas_postgres_storage_class: "{{ item }}"
+          when: r_storage_classes.resources | selectattr('metadata.name', 'equalto', item) | list | length > 0
+          loop:
+            - ocs-storagecluster-ceph-rbd
+            - ocs-external-storagecluster-ceph-rbd
+            - lvms-vg1
+            - odf-lvm-vg1
+          loop_control:
+            label: "{{ item }}"
+
     - name: Fall back to default storage class
       when: ocp4_workload_litemaas_postgres_storage_class == ""
       block:
@@ -91,7 +112,12 @@
                  | selectattr('metadata.annotations.storageclass.kubernetes.io/is-default-class', 'defined')
                  | selectattr('metadata.annotations.storageclass.kubernetes.io/is-default-class', 'equalto', 'true')
                  | map(attribute='metadata.name')
-                 | first | default('gp3-csi') }}
+                 | first | default('') }}
+
+    - name: Fail if no storage class found
+      ansible.builtin.fail:
+        msg: "No suitable storage class found. Please specify ocp4_workload_litemaas_postgres_storage_class manually."
+      when: ocp4_workload_litemaas_postgres_storage_class == ""
 
 - name: Display storage configuration
   ansible.builtin.debug:
