@@ -106,23 +106,23 @@ data:
 
         // Detect PatternFly theme - check both html and body for theme classes
         const htmlTheme = document.documentElement.getAttribute('data-theme');
-        const htmlClasses = document.documentElement.className;
-        const bodyClasses = document.body.className;
+        const htmlClasses = document.documentElement.className || '';
+        const bodyClasses = document.body.className || '';
 
-        // Check if any dark theme indicator is present
-        const isDarkTheme =
-          htmlTheme === 'dark' ||
-          htmlClasses.includes('pf-v6-theme-dark') ||
-          bodyClasses.includes('pf-v6-theme-dark') ||
-          bodyClasses.includes('pf-theme-dark');
+        // Detailed check for each condition
+        const checks = {
+          htmlTheme: htmlTheme === 'dark',
+          htmlPf6: htmlClasses.includes('pf-v6-theme-dark'),
+          bodyPf6: bodyClasses.includes('pf-v6-theme-dark'),
+          bodyPf: bodyClasses.includes('pf-theme-dark')
+        };
 
+        const isDarkTheme = checks.htmlTheme || checks.htmlPf6 || checks.bodyPf6 || checks.bodyPf;
         const newSrc = isDarkTheme ? LOGO_DARK_PATH : LOGO_LIGHT_PATH;
 
-        // Debug logging
-        if (!isDarkTheme && bodyClasses.includes('dark')) {
-          console.warn('RHDP Branding: Body has "dark" class but not pf theme class. Classes:', bodyClasses);
-        }
-        console.log('RHDP Branding: Setting logo to', isDarkTheme ? 'dark' : 'light', 'theme');
+        // Debug logging - show all checks
+        console.log('RHDP Branding: Theme checks:', checks, '-> isDark:', isDarkTheme);
+        console.log('RHDP Branding: Using logo:', newSrc);
 
         logoSelectors.forEach(selector => {
           const logos = document.querySelectorAll(selector);
