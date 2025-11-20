@@ -31,7 +31,7 @@ spec:
               done
               echo "Backend is ready! Starting frontend..."
 {% if ocp4_workload_litemaas_branding_enabled | default(false) | bool %}
-        # Copy branding assets to nginx html directory
+        # Copy branding assets to frontend app directory
         - name: setup-branding
           image: busybox:1.36
           command:
@@ -39,11 +39,14 @@ spec:
             - -c
             - |
               echo "Setting up RHDP branding..."
-              mkdir -p /usr/share/nginx/html/branding
-              cp /branding-source/* /usr/share/nginx/html/branding/
+              mkdir -p /opt/app-root/src/branding
+              cp /branding-source/* /opt/app-root/src/branding/
               echo "Injecting branding script into index.html..."
-              if [ -f /usr/share/nginx/html/index.html ]; then
-                sed -i 's|</head>|<script src="/branding/branding-inject.js"></script></head>|' /usr/share/nginx/html/index.html
+              if [ -f /opt/app-root/src/index.html ]; then
+                sed -i 's|</head>|<script src="/branding/branding-inject.js"></script></head>|' /opt/app-root/src/index.html
+                echo "Branding script injected successfully"
+              else
+                echo "WARNING: /opt/app-root/src/index.html not found"
               fi
               echo "RHDP branding setup complete"
           volumeMounts:
@@ -51,7 +54,7 @@ spec:
               mountPath: /branding-source
               readOnly: true
             - name: html
-              mountPath: /usr/share/nginx/html
+              mountPath: /opt/app-root/src
 {% endif %}
       containers:
         - name: frontend
@@ -65,7 +68,7 @@ spec:
 {% if ocp4_workload_litemaas_branding_enabled | default(false) | bool %}
           volumeMounts:
             - name: html
-              mountPath: /usr/share/nginx/html
+              mountPath: /opt/app-root/src
 {% endif %}
           resources:
             requests:
