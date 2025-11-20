@@ -1,6 +1,10 @@
 ---
 # Example playbook for deploying LiteMaaS in High Availability mode
 #
+# OAuth is DISABLED by default for testing. To enable OAuth:
+#   ansible-playbook playbooks/deploy_litemaas_ha.yml \
+#     -e ocp4_workload_litemaas_oauth_enabled=true
+#
 # Usage:
 #   ansible-playbook playbooks/deploy_litemaas_ha.yml
 #
@@ -22,6 +26,11 @@
     - name: Set HA mode enabled
       ansible.builtin.set_fact:
         ocp4_workload_litemaas_ha_enabled: true
+
+    - name: Disable OAuth by default for HA deployments
+      ansible.builtin.set_fact:
+        ocp4_workload_litemaas_oauth_enabled: false
+      when: ocp4_workload_litemaas_oauth_enabled is not defined
 
     - name: Include LiteMaaS role with HA configuration
       ansible.builtin.include_role:
