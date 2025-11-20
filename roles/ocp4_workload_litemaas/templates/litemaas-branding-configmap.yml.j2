@@ -37,26 +37,49 @@ data:
     (function() {
       console.log('RHDP Branding: Initializing...');
 
-      // Add CSS to hide elements until branding loads (prevents flash)
+      // Add CSS immediately to hide elements until branding loads (prevents flash)
       const style = document.createElement('style');
+      style.id = 'rhdp-branding-preload-css';
       style.textContent = `
-        /* Hide LiteMaaS branding until RHDP branding loads */
-        img[src*="logo"], img[alt*="LiteMaaS"], img[alt*="litemaas"] {
-          opacity: 0 !important;
-          transition: opacity 0.3s ease-in-out;
+        /* Hide ALL content initially to prevent flash */
+        body {
+          visibility: hidden !important;
         }
+        /* Show body once branding is ready */
+        body.rhdp-branding-ready {
+          visibility: visible !important;
+        }
+        /* Hide LiteMaaS logos */
+        img[src*="logo"], img[alt*="LiteMaaS"], img[alt*="litemaas"],
+        [class*="logo"] img, [class*="Logo"] img {
+          opacity: 0 !important;
+          transition: opacity 0.2s ease-in;
+        }
+        /* Show RHDP logos */
         img[src*="/branding/logo-"] {
           opacity: 1 !important;
         }
+        /* Hide LiteMaaS text headings */
+        h1, h2, h3, h4, h5, h6 {
+          opacity: 0 !important;
+          transition: opacity 0.2s ease-in;
+        }
+        /* Show headings once replaced */
+        h1.rhdp-branded, h2.rhdp-branded, h3.rhdp-branded,
+        h4.rhdp-branded, h5.rhdp-branded, h6.rhdp-branded {
+          opacity: 1 !important;
+        }
         /* Hide original footer */
-        footer, [class*="footer"] {
+        footer, [class*="footer"]:not(#rhdp-branding-footer) {
           display: none !important;
         }
+        /* Show RHDP footer */
         #rhdp-branding-footer {
           display: block !important;
         }
       `;
-      document.head.appendChild(style);
+      // Insert CSS as first element in head for immediate effect
+      document.head.insertBefore(style, document.head.firstChild);
 
       // Configuration
       const LOGO_LIGHT_PATH = '/branding/logo-light.svg';
@@ -85,6 +108,12 @@ data:
 
         // Watch for theme changes
         observeThemeChanges();
+
+        // Show body now that branding is applied
+        setTimeout(() => {
+          document.body.classList.add('rhdp-branding-ready');
+          console.log('RHDP Branding: Page visible');
+        }, 50);
       }
 
       // Replace page title and headings
@@ -97,7 +126,11 @@ data:
         headings.forEach(heading => {
           if (heading.textContent.includes('Log in to LiteMaaS') || heading.textContent.includes('Welcome to LiteMaaS')) {
             heading.textContent = 'Login to MaaS provided by Red Hat Demo Platform';
+            heading.classList.add('rhdp-branded');
             console.log('RHDP Branding: Replaced heading:', heading);
+          } else if (heading.textContent.trim() !== '') {
+            // Show other headings that aren't LiteMaaS-specific
+            heading.classList.add('rhdp-branded');
           }
         });
 
