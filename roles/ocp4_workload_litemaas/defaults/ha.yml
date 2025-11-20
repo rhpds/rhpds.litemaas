@@ -15,8 +15,9 @@ ocp4_workload_litemaas_ha_redis_image: "registry.redhat.io/rhel9/redis-7:latest"
 ocp4_workload_litemaas_ha_redis_image_fallback: "quay.io/sclorg/redis-7-c9s:latest"
 
 # PostgreSQL 16 configuration for HA (uses same image as workload.yml)
+# Note: PostgreSQL runs as single replica (stateful workload)
 ocp4_workload_litemaas_ha_enable_postgres: true
-ocp4_workload_litemaas_ha_postgres_replicas: 3
+ocp4_workload_litemaas_ha_postgres_replicas: 1
 ocp4_workload_litemaas_ha_postgres_image: "postgres:16"
 ocp4_workload_litemaas_ha_postgres_image_fallback: "postgres:16"
 ocp4_workload_litemaas_ha_postgres_db: "litemaas"
