@@ -85,38 +85,41 @@
         - _litemaas_preferred_storage_class != ""
         - _litemaas_storage_class_exists | default(false)
 
-    - name: Fall back to ODF storage classes for baremetal/CNV
+    - name: Try common ODF/LVM storage classes for baremetal/CNV
       when:
         - ocp4_workload_litemaas_postgres_storage_class == ""
         - ocp4_workload_litemaas_cloud_provider == "baremetal"
-      block:
-        - name: Try common ODF storage class names
-          ansible.builtin.set_fact:
-            ocp4_workload_litemaas_postgres_storage_class: "{{ item }}"
-          when: r_storage_classes.resources | selectattr('metadata.name', 'equalto', item) | list | length > 0
-          loop:
-            - ocs-storagecluster-ceph-rbd
-            - ocs-external-storagecluster-ceph-rbd
-            - lvms-vg1
-            - odf-lvm-vg1
-          loop_control:
-            label: "{{ item }}"
+      ansible.builtin.set_fact:
+        ocp4_workload_litemaas_postgres_storage_class: >-
+          {{ r_storage_classes.resources
+             | map(attribute='metadata.name')
+             | select('in', ['ocs-storagecluster-ceph-rbd', 'ocs-external-storagecluster-ceph-rbd', 'lvms-vg1', 'odf-lvm-vg1'])
+             | first | default('') }}
 
     - name: Fall back to default storage class
       when: ocp4_workload_litemaas_postgres_storage_class == ""
-      block:
-        - name: Find default storage class
-          ansible.builtin.set_fact:
-            ocp4_workload_litemaas_postgres_storage_class: >-
-              {{ r_storage_classes.resources
-                 | selectattr('metadata.annotations.storageclass.kubernetes.io/is-default-class', 'defined')
-                 | selectattr('metadata.annotations.storageclass.kubernetes.io/is-default-class', 'equalto', 'true')
-                 | map(attribute='metadata.name')
-                 | first | default('') }}
+      ansible.builtin.set_fact:
+        ocp4_workload_litemaas_postgres_storage_class: >-
+          {{ r_storage_classes.resources
+             | selectattr('metadata.annotations.storageclass.kubernetes.io/is-default-class', 'defined')
+             | selectattr('metadata.annotations.storageclass.kubernetes.io/is-default-class', 'equalto', 'true')
+             | map(attribute='metadata.name')
+             | first | default('') }}
+
+    - name: Last resort - use first available storage class
+      when: ocp4_workload_litemaas_postgres_storage_class == ""
+      ansible.builtin.set_fact:
+        ocp4_workload_litemaas_postgres_storage_class: >-
+          {{ r_storage_classes.resources
+             | map(attribute='metadata.name')
+             | first | default('') }}
 
     - name: Fail if no storage class found
       ansible.builtin.fail:
-        msg: "No suitable storage class found. Please specify ocp4_workload_litemaas_postgres_storage_class manually."
+        msg: |
+          No storage class found on cluster.
+          Available: {{ r_storage_classes.resources | map(attribute='metadata.name') | list }}
+          Please specify ocp4_workload_litemaas_postgres_storage_class manually.
       when: ocp4_workload_litemaas_postgres_storage_class == ""
 
 - name: Display storage configuration
