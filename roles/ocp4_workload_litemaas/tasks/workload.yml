@@ -457,86 +457,25 @@
               termination: edge
               insecureEdgeTerminationPolicy: Redirect
 
+- name: Deploy RHDP Branding ConfigMap
+  when:
+    - ocp4_workload_litemaas_branding_enabled | default(false) | bool
+    - ocp4_workload_litemaas_branding_logo_light_path | length > 0
+    - ocp4_workload_litemaas_branding_logo_dark_path | length > 0
+    - not (ocp4_workload_litemaas_multi_user | bool)
+  kubernetes.core.k8s:
+    state: present
+    namespace: "{{ ocp4_workload_litemaas_namespace }}"
+    definition: "{{ lookup('template', 'litemaas-branding-configmap.yml.j2') | from_yaml }}"
+
 - name: Deploy LiteMaaS Frontend
   when:
     - ocp4_workload_litemaas_deploy_frontend | bool
     - not (ocp4_workload_litemaas_multi_user | bool)
   block:
-    - name: Create frontend deployment
+    - name: Deploy frontend (deployment, service, route)
       kubernetes.core.k8s:
         state: present
         namespace: "{{ ocp4_workload_litemaas_namespace }}"
-        definition:
-          apiVersion: apps/v1
-          kind: Deployment
-          metadata:
-            name: litemaas-frontend
-            labels:
-              app: litemaas-frontend
-          spec:
-            replicas: 1
-            selector:
-              matchLabels:
-                app: litemaas-frontend
-            template:
-              metadata:
-                labels:
-                  app: litemaas-frontend
-              spec:
-                containers:
-                  - name: frontend
-                    image: "{{ ocp4_workload_litemaas_frontend_image }}:{{ ocp4_workload_litemaas_version }}"
-                    ports:
-                      - containerPort: 8080
-                        name: http
-                    env:
-                      - name: BACKEND_URL
-                        value: "http://litemaas-backend:3000"
-                    resources:
-                      limits:
-                        memory: "{{ ocp4_workload_litemaas_frontend_memory_limit }}"
-                        cpu: "{{ ocp4_workload_litemaas_frontend_cpu_limit }}"
-                      requests:
-                        memory: "128Mi"
-                        cpu: "100m"
-
-    - name: Create frontend service
-      kubernetes.core.k8s:
-        state: present
-        namespace: "{{ ocp4_workload_litemaas_namespace }}"
-        definition:
-          apiVersion: v1
-          kind: Service
-          metadata:
-            name: litemaas-frontend
-            labels:
-              app: litemaas-frontend
-          spec:
-            ports:
-              - port: 8080
-                targetPort: 8080
-                name: http
-            selector:
-              app: litemaas-frontend
-
-    - name: Create frontend route
-      kubernetes.core.k8s:
-        state: present
-        namespace: "{{ ocp4_workload_litemaas_namespace }}"
-        definition:
-          apiVersion: route.openshift.io/v1
-          kind: Route
-          metadata:
-            name: litemaas-frontend
-            labels:
-              app: litemaas-frontend
-          spec:
-            host: "litellm-frontend.{{ ocp4_workload_litemaas_cluster_domain }}"
-            to:
-              kind: Service
-              name: litemaas-frontend
-            port:
-              targetPort: http
-            tls:
-              termination: edge
-              insecureEdgeTerminationPolicy: Redirect
+        definition: "{{ item }}"
+      loop: "{{ lookup('template', 'litemaas-frontend.yml.j2') | from_yaml_all | list }}"

@@ -1,0 +1,147 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: litemaas-branding
+  namespace: {{ ocp4_workload_litemaas_namespace }}
+  labels:
+    app: litemaas
+    component: branding
+data:
+  # Red Hat Demo Platform logo (light/black version for light theme)
+  logo-light.svg: |
+{{ lookup('file', ocp4_workload_litemaas_branding_logo_light_path) | indent(4, first=True) }}
+
+  # Red Hat Demo Platform logo (dark/white version for dark theme)
+  logo-dark.svg: |
+{{ lookup('file', ocp4_workload_litemaas_branding_logo_dark_path) | indent(4, first=True) }}
+
+  # Branding injection script
+  branding-inject.js: |
+    (function() {
+      console.log('RHDP Branding: Initializing...');
+
+      // Configuration
+      const LOGO_LIGHT_PATH = '/branding/logo-light.svg';
+      const LOGO_DARK_PATH = '/branding/logo-dark.svg';
+      const SERVICE_TEXT = '{{ ocp4_workload_litemaas_branding_service_text }}';
+      const ENABLE_FOOTER_TEXT = {{ ocp4_workload_litemaas_branding_enable_footer | default('false') | lower }};
+
+      // Wait for DOM to be ready
+      function init() {
+        console.log('RHDP Branding: Replacing logo...');
+        replaceLogo();
+
+        if (ENABLE_FOOTER_TEXT && SERVICE_TEXT) {
+          console.log('RHDP Branding: Adding footer text...');
+          addFooterText();
+        }
+
+        // Watch for theme changes
+        observeThemeChanges();
+      }
+
+      // Replace LiteMaaS logo with RHDP logo
+      function replaceLogo() {
+        const logoSelectors = [
+          'img[src*="logo"]',
+          'img[alt*="LiteMaaS"]',
+          'img[alt*="litemaas"]',
+          '[class*="logo"] img',
+          '[class*="Logo"] img'
+        ];
+
+        logoSelectors.forEach(selector => {
+          const logos = document.querySelectorAll(selector);
+          logos.forEach(img => {
+            const isDarkTheme = document.documentElement.getAttribute('data-theme') === 'dark';
+            const newSrc = isDarkTheme ? LOGO_DARK_PATH : LOGO_LIGHT_PATH;
+
+            // Only replace if not already using RHDP logo
+            if (!img.src.includes('/branding/logo-')) {
+              console.log('RHDP Branding: Replacing logo element:', img);
+              img.src = newSrc;
+              img.alt = 'Red Hat Demo Platform';
+
+              // Ensure proper sizing
+              if (!img.style.height) {
+                img.style.height = '40px';
+              }
+            }
+          });
+        });
+      }
+
+      // Add "Service provided by..." footer text
+      function addFooterText() {
+        // Check if footer already exists
+        if (document.getElementById('rhdp-branding-footer')) {
+          return;
+        }
+
+        const footer = document.createElement('div');
+        footer.id = 'rhdp-branding-footer';
+        footer.style.cssText = `
+          position: fixed;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          padding: 8px 16px;
+          background-color: var(--pf-t--global--background--color--secondary--default, #f5f5f5);
+          border-top: 1px solid var(--pf-t--global--border--color--default, #d2d2d2);
+          text-align: center;
+          font-size: 12px;
+          color: var(--pf-t--global--text--color--subtle, #6a6e73);
+          z-index: 1000;
+        `;
+        footer.innerHTML = `<span>${SERVICE_TEXT}</span>`;
+
+        document.body.appendChild(footer);
+
+        // Add padding to page content to prevent overlap
+        const pageContent = document.querySelector('[class*="pf-v6-c-page__main"]');
+        if (pageContent) {
+          pageContent.style.paddingBottom = '40px';
+        }
+      }
+
+      // Observe theme changes and update logo accordingly
+      function observeThemeChanges() {
+        const observer = new MutationObserver(() => {
+          replaceLogo();
+        });
+
+        observer.observe(document.documentElement, {
+          attributes: true,
+          attributeFilter: ['data-theme']
+        });
+      }
+
+      // Run initialization
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+      } else {
+        init();
+      }
+
+      // Re-run on navigation (for SPA)
+      let lastUrl = location.href;
+      new MutationObserver(() => {
+        const url = location.href;
+        if (url !== lastUrl) {
+          lastUrl = url;
+          setTimeout(init, 100); // Small delay for React to render
+        }
+      }).observe(document, {subtree: true, childList: true});
+
+      console.log('RHDP Branding: Initialization complete');
+    })();
+
+  # nginx config snippet to serve branding assets
+  nginx-branding.conf: |
+    # Serve branding assets
+    location /branding/ {
+      alias /usr/share/nginx/html/branding/;
+      expires 1h;
+      add_header Cache-Control "public, immutable";
+    }

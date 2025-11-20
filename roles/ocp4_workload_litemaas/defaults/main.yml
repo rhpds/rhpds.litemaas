@@ -127,6 +127,23 @@ become_override: false
 ocp_username: "opentlc-mgr"
 silent: false
 
+# Branding and UI customization
+# Enable RHDP branding (replaces LiteMaaS logo with Red Hat Demo Platform logo)
+ocp4_workload_litemaas_branding_enabled: false
+
+# Logo file paths (provide local paths to SVG files)
+# Light theme logo (black/dark colored logo)
+ocp4_workload_litemaas_branding_logo_light_path: ""
+
+# Dark theme logo (white/light colored logo)
+ocp4_workload_litemaas_branding_logo_dark_path: ""
+
+# Service attribution text (e.g., "Service provided by Red Hat Demo Platform")
+ocp4_workload_litemaas_branding_service_text: "Service provided by Red Hat Demo Platform"
+
+# Show service text in footer (set to true to display footer with branding text)
+ocp4_workload_litemaas_branding_enable_footer: false
+
 # Cloud-specific storage class defaults
 _ocp4_workload_litemaas_storage_class_map:
   aws: "gp3-csi"
