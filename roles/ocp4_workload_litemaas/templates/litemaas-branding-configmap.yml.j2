@@ -260,11 +260,14 @@ data:
         replacePageTitle();
       });
 
-      observer.observe(document.body, {
-        subtree: true,
-        childList: true,
-        attributes: false
-      });
+      // Only observe if body exists
+      if (document.body) {
+        observer.observe(document.body, {
+          subtree: true,
+          childList: true,
+          attributes: false
+        });
+      }
 
       // Also run periodically to catch any missed changes
       setInterval(() => {
