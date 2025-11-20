@@ -104,14 +104,15 @@ data:
           '[class*="Logo"] img'
         ];
 
-        // Detect dark mode from multiple sources
+        // Detect PatternFly theme (ignore OS dark mode preference)
         const isDarkTheme =
           document.documentElement.getAttribute('data-theme') === 'dark' ||
+          document.documentElement.classList.contains('pf-v6-theme-dark') ||
           document.body.classList.contains('pf-v6-theme-dark') ||
-          document.body.classList.contains('pf-theme-dark') ||
-          window.matchMedia('(prefers-color-scheme: dark)').matches;
+          document.body.classList.contains('pf-theme-dark');
 
         const newSrc = isDarkTheme ? LOGO_DARK_PATH : LOGO_LIGHT_PATH;
+        console.log('RHDP Branding: Theme detection - isDark:', isDarkTheme, 'using:', newSrc);
 
         logoSelectors.forEach(selector => {
           const logos = document.querySelectorAll(selector);

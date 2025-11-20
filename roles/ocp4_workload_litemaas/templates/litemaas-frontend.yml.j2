@@ -69,9 +69,12 @@ spec:
               echo "Injecting branding script..."
               sed -i 's|</head>|<script src="/branding/branding-inject.js"></script></head>|' "$INDEX_FILE"
 
-              # Replace favicon references
+              # Replace ALL favicon references
               echo "Replacing favicon..."
-              sed -i 's|<link[^>]*rel="icon"[^>]*>|<link rel="icon" type="image/png" href="/branding/favicon.png">|g' "$INDEX_FILE"
+              # Remove all existing favicon/icon links
+              sed -i '/<link[^>]*rel="[^"]*icon[^"]*"/d' "$INDEX_FILE"
+              # Inject new favicon links before </head>
+              sed -i 's|</head>|<link rel="icon" type="image/png" sizes="32x32" href="/branding/favicon.png"><link rel="apple-touch-icon" href="/branding/favicon.png"></head>|' "$INDEX_FILE"
 
               # Copy branding script
               cp /branding-source/branding-inject.js /app-volume/branding/
