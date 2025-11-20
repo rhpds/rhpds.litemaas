@@ -50,6 +50,7 @@ data:
         console.log('RHDP Branding: Replacing logo...');
         replaceLogo();
         replaceFavicon();
+        replacePageTitle();
 
         if (ENABLE_FOOTER_TEXT) {
           console.log('RHDP Branding: Adding Red Hat footer...');
@@ -63,6 +64,23 @@ data:
 
         // Watch for theme changes
         observeThemeChanges();
+      }
+
+      // Replace page title and headings
+      function replacePageTitle() {
+        // Replace page title
+        document.title = 'MaaS - Red Hat Demo Platform';
+
+        // Replace "Log in to LiteMaaS" heading
+        const headings = document.querySelectorAll('h1, h2, h3, h4, h5, h6');
+        headings.forEach(heading => {
+          if (heading.textContent.includes('Log in to LiteMaaS') || heading.textContent.includes('Welcome to LiteMaaS')) {
+            heading.textContent = 'Login to MaaS provided by Red Hat Demo Platform';
+            console.log('RHDP Branding: Replaced heading:', heading);
+          }
+        });
+
+        console.log('RHDP Branding: Page title updated');
       }
 
       // Replace LiteMaaS logo with RHDP logo
