@@ -76,13 +76,15 @@ data:
         // Replace page title
         document.title = 'MaaS - Red Hat Demo Platform';
 
-        // Replace "Log in to LiteMaaS" heading
+        // Replace "Log in to LiteMaaS" heading with service text
         const headings = document.querySelectorAll('h1, h2, h3, h4, h5, h6');
         headings.forEach(heading => {
-          if (heading.textContent.includes('Log in to LiteMaaS') || heading.textContent.includes('Welcome to LiteMaaS')) {
-            heading.textContent = 'Login to MaaS provided by Red Hat Demo Platform';
+          if (heading.textContent.includes('Log in to LiteMaaS') ||
+              heading.textContent.includes('Welcome to LiteMaaS') ||
+              heading.textContent.includes('Login to MaaS')) {
+            heading.textContent = SERVICE_TEXT;
             heading.classList.add('rhdp-branded');
-            console.log('RHDP Branding: Replaced heading:', heading);
+            console.log('RHDP Branding: Replaced heading with:', SERVICE_TEXT);
           } else if (heading.textContent.trim() !== '') {
             // Show other headings that aren't LiteMaaS-specific
             heading.classList.add('rhdp-branded');
@@ -102,22 +104,26 @@ data:
           '[class*="Logo"] img'
         ];
 
+        // Detect dark mode from multiple sources
+        const isDarkTheme =
+          document.documentElement.getAttribute('data-theme') === 'dark' ||
+          document.body.classList.contains('pf-v6-theme-dark') ||
+          document.body.classList.contains('pf-theme-dark') ||
+          window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+        const newSrc = isDarkTheme ? LOGO_DARK_PATH : LOGO_LIGHT_PATH;
+
         logoSelectors.forEach(selector => {
           const logos = document.querySelectorAll(selector);
           logos.forEach(img => {
-            const isDarkTheme = document.documentElement.getAttribute('data-theme') === 'dark';
-            const newSrc = isDarkTheme ? LOGO_DARK_PATH : LOGO_LIGHT_PATH;
-
-            // Only replace if not already using RHDP logo
-            if (!img.src.includes('/branding/logo-')) {
-              console.log('RHDP Branding: Replacing logo element:', img);
+            // Always update logo to match current theme
+            if (!img.src.includes('/branding/logo-') || img.src !== newSrc) {
+              console.log('RHDP Branding: Setting logo to', isDarkTheme ? 'dark' : 'light', 'theme');
               img.src = newSrc;
               img.alt = 'Red Hat Demo Platform';
-
-              // Ensure proper sizing
-              if (!img.style.height) {
-                img.style.height = '40px';
-              }
+              img.style.height = '40px';
+              img.style.maxWidth = '240px';
+              img.style.objectFit = 'contain';
             }
           });
         });
@@ -125,16 +131,21 @@ data:
 
       // Replace favicon with Red Hat logo
       function replaceFavicon() {
-        // Remove existing favicons
-        const existingIcons = document.querySelectorAll('link[rel*="icon"]');
-        existingIcons.forEach(icon => icon.remove());
+        // Remove ALL existing favicon links
+        document.querySelectorAll('link[rel*="icon"]').forEach(link => link.remove());
 
-        // Add Red Hat favicon
+        // Add Red Hat favicon with cache-busting
         const favicon = document.createElement('link');
         favicon.rel = 'icon';
         favicon.type = 'image/png';
-        favicon.href = FAVICON_PATH;
+        favicon.href = FAVICON_PATH + '?v=' + Date.now();
         document.head.appendChild(favicon);
+
+        // Also add apple-touch-icon for iOS
+        const appleFavicon = document.createElement('link');
+        appleFavicon.rel = 'apple-touch-icon';
+        appleFavicon.href = FAVICON_PATH + '?v=' + Date.now();
+        document.head.appendChild(appleFavicon);
 
         console.log('RHDP Branding: Favicon replaced');
       }
