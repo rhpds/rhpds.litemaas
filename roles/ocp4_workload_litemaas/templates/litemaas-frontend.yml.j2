@@ -31,23 +31,59 @@ spec:
               done
               echo "Backend is ready! Starting frontend..."
 {% if ocp4_workload_litemaas_branding_enabled | default(false) | bool %}
-        # Copy branding assets to a separate directory
+        # Inject RHDP branding directly into frontend files
         - name: setup-branding
-          image: busybox:1.36
+          image: "{{ ocp4_workload_litemaas_frontend_image }}:{{ ocp4_workload_litemaas_version }}"
           command:
             - sh
             - -c
             - |
-              echo "Setting up RHDP branding..."
-              mkdir -p /branding-ready
-              cp /branding-source/* /branding-ready/
-              echo "RHDP branding files copied"
+              set -e
+              echo "=== RHDP Branding: Starting setup ==="
+
+              # Copy original frontend files to shared volume
+              echo "Copying frontend files to shared volume..."
+              cp -r /opt/app-root/src/* /app-volume/
+
+              # Copy branding assets (logos, favicon)
+              echo "Copying branding assets..."
+              mkdir -p /app-volume/branding
+              cp /branding-source/logo-light.svg /app-volume/branding/
+              cp /branding-source/logo-dark.svg /app-volume/branding/
+              cp /branding-source/favicon.png /app-volume/branding/
+
+              # Find index.html
+              INDEX_FILE=$(find /app-volume -name "index.html" | head -1)
+              if [ -z "$INDEX_FILE" ]; then
+                echo "ERROR: index.html not found!"
+                exit 1
+              fi
+              echo "Found index.html at: $INDEX_FILE"
+
+              # Inject preload CSS into <head> BEFORE any other content
+              echo "Injecting preload CSS..."
+              sed -i 's|<head>|<head><style id="rhdp-preload-css">body{visibility:hidden!important}body.rhdp-ready{visibility:visible!important}img[src*="logo"],img[alt*="LiteMaaS"]{opacity:0!important}img[src*="/branding/logo-"]{opacity:1!important}h1,h2,h3,h4,h5,h6{opacity:0!important}.rhdp-branded{opacity:1!important}footer,[class*="footer"]:not(#rhdp-footer){display:none!important}</style>|' "$INDEX_FILE"
+
+              # Inject branding script before </head>
+              echo "Injecting branding script..."
+              sed -i 's|</head>|<script src="/branding/branding-inject.js"></script></head>|' "$INDEX_FILE"
+
+              # Replace favicon references
+              echo "Replacing favicon..."
+              sed -i 's|<link[^>]*rel="icon"[^>]*>|<link rel="icon" type="image/png" href="/branding/favicon.png">|g' "$INDEX_FILE"
+
+              # Copy branding script
+              cp /branding-source/branding-inject.js /app-volume/branding/
+
+              echo "=== RHDP Branding: Setup complete ==="
+              echo "Modified index.html:"
+              head -20 "$INDEX_FILE"
           volumeMounts:
             - name: branding-source
               mountPath: /branding-source
               readOnly: true
-            - name: branding-files
-              mountPath: /branding-ready
+            - name: app-volume
+              mountPath: /app-volume
 {% endif %}
       containers:
         - name: frontend
@@ -58,6 +94,11 @@ spec:
           env:
             - name: BACKEND_URL
               value: "http://litemaas-backend:8080"
+{% if ocp4_workload_litemaas_branding_enabled | default(false) | bool %}
+          volumeMounts:
+            - name: app-volume
+              mountPath: /opt/app-root/src
+{% endif %}
           resources:
             requests:
               memory: "128Mi"
@@ -82,34 +123,12 @@ spec:
             timeoutSeconds: 5
             failureThreshold: 3
 {% if ocp4_workload_litemaas_branding_enabled | default(false) | bool %}
-        # Nginx sidecar to inject branding
-        - name: branding-proxy
-          image: nginx:1.25-alpine
-          ports:
-            - containerPort: 8081
-              name: proxy
-          volumeMounts:
-            - name: branding-files
-              mountPath: /opt/app-root/src/branding
-            - name: nginx-branding-config
-              mountPath: /etc/nginx/nginx.conf
-              subPath: nginx.conf
-          resources:
-            requests:
-              memory: "64Mi"
-              cpu: "50m"
-            limits:
-              memory: "128Mi"
-              cpu: "100m"
       volumes:
         - name: branding-source
           configMap:
             name: litemaas-branding
-        - name: branding-files
+        - name: app-volume
           emptyDir: {}
-        - name: nginx-branding-config
-          configMap:
-            name: litemaas-branding-nginx-config
 {% endif %}
 ---
 apiVersion: v1
@@ -122,11 +141,7 @@ metadata:
 spec:
   ports:
     - port: 8080
-{% if ocp4_workload_litemaas_branding_enabled | default(false) | bool %}
-      targetPort: 8081  # Point to nginx branding proxy
-{% else %}
-      targetPort: 8080  # Point directly to frontend
-{% endif %}
+      targetPort: 8080
       name: http
   selector:
     app: litemaas-frontend

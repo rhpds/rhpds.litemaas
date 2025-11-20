@@ -36,50 +36,7 @@ data:
   branding-inject.js: |
     (function() {
       console.log('RHDP Branding: Initializing...');
-
-      // Add CSS immediately to hide elements until branding loads (prevents flash)
-      const style = document.createElement('style');
-      style.id = 'rhdp-branding-preload-css';
-      style.textContent = `
-        /* Hide ALL content initially to prevent flash */
-        body {
-          visibility: hidden !important;
-        }
-        /* Show body once branding is ready */
-        body.rhdp-branding-ready {
-          visibility: visible !important;
-        }
-        /* Hide LiteMaaS logos */
-        img[src*="logo"], img[alt*="LiteMaaS"], img[alt*="litemaas"],
-        [class*="logo"] img, [class*="Logo"] img {
-          opacity: 0 !important;
-          transition: opacity 0.2s ease-in;
-        }
-        /* Show RHDP logos */
-        img[src*="/branding/logo-"] {
-          opacity: 1 !important;
-        }
-        /* Hide LiteMaaS text headings */
-        h1, h2, h3, h4, h5, h6 {
-          opacity: 0 !important;
-          transition: opacity 0.2s ease-in;
-        }
-        /* Show headings once replaced */
-        h1.rhdp-branded, h2.rhdp-branded, h3.rhdp-branded,
-        h4.rhdp-branded, h5.rhdp-branded, h6.rhdp-branded {
-          opacity: 1 !important;
-        }
-        /* Hide original footer */
-        footer, [class*="footer"]:not(#rhdp-branding-footer) {
-          display: none !important;
-        }
-        /* Show RHDP footer */
-        #rhdp-branding-footer {
-          display: block !important;
-        }
-      `;
-      // Insert CSS as first element in head for immediate effect
-      document.head.insertBefore(style, document.head.firstChild);
+      // NOTE: CSS is already injected in index.html by init container
 
       // Configuration
       const LOGO_LIGHT_PATH = '/branding/logo-light.svg';
@@ -109,11 +66,9 @@ data:
         // Watch for theme changes
         observeThemeChanges();
 
-        // Show body now that branding is applied
-        setTimeout(() => {
-          document.body.classList.add('rhdp-branding-ready');
-          console.log('RHDP Branding: Page visible');
-        }, 50);
+        // Show body immediately - CSS is already in place
+        document.body.classList.add('rhdp-ready');
+        console.log('RHDP Branding: Complete');
       }
 
       // Replace page title and headings
