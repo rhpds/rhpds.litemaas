@@ -43,6 +43,7 @@ data:
       const FAVICON_PATH = '/branding/favicon.png';
       const SERVICE_TEXT = '{{ ocp4_workload_litemaas_branding_service_text }}';
       const ENABLE_FOOTER_TEXT = {{ ocp4_workload_litemaas_branding_enable_footer | default('true') | lower }};
+      const OAUTH_ENABLED = {{ ocp4_workload_litemaas_oauth_enabled | default('false') | lower }};
 
       // Wait for DOM to be ready
       function init() {
@@ -53,6 +54,11 @@ data:
         if (ENABLE_FOOTER_TEXT) {
           console.log('RHDP Branding: Adding Red Hat footer...');
           addRedHatFooter();
+        }
+
+        if (!OAUTH_ENABLED) {
+          console.log('RHDP Branding: Hiding OAuth login (OAuth disabled)...');
+          hideOAuthLogin();
         }
 
         // Watch for theme changes
@@ -160,6 +166,47 @@ data:
         }
 
         console.log('RHDP Branding: Red Hat footer added');
+      }
+
+      // Hide OAuth login button when OAuth is disabled
+      function hideOAuthLogin() {
+        // Common selectors for OAuth login buttons
+        const oauthButtonSelectors = [
+          'button:contains("OpenShift")',
+          'button:contains("Sign in with")',
+          'a:contains("Login with")',
+          '[class*="oauth"]',
+          '[class*="sso"]'
+        ];
+
+        // Hide OAuth login elements
+        const hideElements = () => {
+          // Find buttons/links with OAuth-related text
+          const allButtons = document.querySelectorAll('button, a');
+          allButtons.forEach(el => {
+            const text = el.textContent.toLowerCase();
+            if (text.includes('openshift') || text.includes('sign in with') || text.includes('login with')) {
+              console.log('RHDP Branding: Hiding OAuth element:', el);
+              el.style.display = 'none';
+            }
+          });
+
+          // Show message that OAuth is disabled
+          const loginContainer = document.querySelector('[class*="login"]') || document.querySelector('main');
+          if (loginContainer) {
+            const notice = document.createElement('div');
+            notice.style.cssText = 'padding: 20px; text-align: center; background: #f5f5f5; border-radius: 8px; margin: 20px;';
+            notice.innerHTML = '<p style="color: #666; font-size: 14px;">OAuth authentication is disabled. Please use the LiteLLM Admin UI to manage models and API keys.</p>';
+            loginContainer.prepend(notice);
+          }
+        };
+
+        // Run immediately and on mutations
+        hideElements();
+        const observer = new MutationObserver(hideElements);
+        observer.observe(document.body, { childList: true, subtree: true });
+
+        console.log('RHDP Branding: OAuth login hidden');
       }
 
       // Observe theme changes and update logo accordingly
