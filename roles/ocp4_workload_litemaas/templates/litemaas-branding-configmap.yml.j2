@@ -205,6 +205,14 @@ data:
           pageContent.style.paddingBottom = '70px';
         }
 
+        // Remove any other footer elements (LiteMaaS default footer)
+        document.querySelectorAll('footer:not(#rhdp-branding-footer), [class*="footer"]:not(#rhdp-branding-footer)').forEach(el => {
+          if (el.id !== 'rhdp-branding-footer') {
+            el.remove();
+            console.log('RHDP Branding: Removed LiteMaaS footer element');
+          }
+        });
+
         console.log('RHDP Branding: Footer added');
       }
 
