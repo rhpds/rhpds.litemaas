@@ -2,9 +2,9 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: litemaas-redis
+  name: litellm-redis
   labels:
-    app: litemaas-redis
+    app: litellm-redis
     component: cache
 spec:
   ports:
@@ -12,24 +12,24 @@ spec:
       targetPort: 6379
       name: redis
   selector:
-    app: litemaas-redis
+    app: litellm-redis
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: litemaas-redis
+  name: litellm-redis
   labels:
-    app: litemaas-redis
+    app: litellm-redis
     component: cache
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: litemaas-redis
+      app: litellm-redis
   template:
     metadata:
       labels:
-        app: litemaas-redis
+        app: litellm-redis
         component: cache
     spec:
       containers:

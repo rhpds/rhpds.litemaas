@@ -4,7 +4,7 @@ kind: Secret
 metadata:
   name: litellm-secret
   labels:
-    app: litemaas
+    app: litellm
     component: ai-proxy
 type: Opaque
 stringData:
@@ -15,19 +15,19 @@ stringData:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: litemaas
+  name: litellm
   labels:
-    app: litemaas
+    app: litellm
     component: ai-proxy
 spec:
   replicas: {{ ocp4_workload_litemaas_ha_litellm_replicas | int }}
   selector:
     matchLabels:
-      app: litemaas
+      app: litellm
   template:
     metadata:
       labels:
-        app: litemaas
+        app: litellm
         component: ai-proxy
     spec:
       initContainers:
@@ -87,7 +87,7 @@ spec:
               memory: "256Mi"
               cpu: "200m"
 {% endif %}
-        - name: litemaas
+        - name: litellm
           image: "{{ ocp4_workload_litemaas_litellm_image }}:{{ ocp4_workload_litemaas_litellm_tag }}"
           ports:
             - containerPort: 4000
@@ -180,9 +180,9 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: litemaas
+  name: litellm
   labels:
-    app: litemaas
+    app: litellm
     component: ai-proxy
 {% if ocp4_workload_litemaas_oauth_proxy_enabled | bool %}
   annotations:
@@ -200,20 +200,20 @@ spec:
       name: http
 {% endif %}
   selector:
-    app: litemaas
+    app: litellm
 ---
 apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
-  name: litemaas
+  name: litellm
   labels:
-    app: litemaas
+    app: litellm
     component: ai-proxy
 spec:
   host: "{{ ocp4_workload_litemaas_api_route_prefix }}.{{ ocp4_workload_litemaas_cluster_domain }}"
   to:
     kind: Service
-    name: litemaas
+    name: litellm
   port:
 {% if ocp4_workload_litemaas_oauth_proxy_enabled | bool %}
     targetPort: https
