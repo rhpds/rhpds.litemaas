@@ -11,7 +11,7 @@ stringData:
   username: "{{ ocp4_workload_litemaas_ha_postgres_user }}"
   password: "{{ ocp4_workload_litemaas_ha_postgres_password }}"
   database: "{{ ocp4_workload_litemaas_ha_postgres_db }}"
-  DATABASE_URL: "postgresql://{{ ocp4_workload_litemaas_ha_postgres_user }}:{{ ocp4_workload_litemaas_ha_postgres_password }}@litemaas-postgres:5432/{{ ocp4_workload_litemaas_ha_postgres_db }}?sslmode=disable"
+  DATABASE_URL: "postgresql://{{ ocp4_workload_litemaas_ha_postgres_user }}:{{ ocp4_workload_litemaas_ha_postgres_password }}@litellm-postgres:5432/{{ ocp4_workload_litemaas_ha_postgres_db }}?sslmode=disable"
 ---
 apiVersion: v1
 kind: Service
@@ -36,7 +36,7 @@ metadata:
     app: litellm-postgres
     component: database
 spec:
-  serviceName: litemaas-postgres
+  serviceName: litellm-postgres
   replicas: 1
   selector:
     matchLabels:

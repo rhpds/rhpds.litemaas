@@ -36,7 +36,7 @@ spec:
             - sh
             - -c
             - |
-              until pg_isready -h litemaas-postgres -p 5432 -U litemaas 2>/dev/null; do
+              until pg_isready -h litellm-postgres -p 5432 -U litemaas 2>/dev/null; do
                 echo "Waiting for database..."
                 sleep 2
               done

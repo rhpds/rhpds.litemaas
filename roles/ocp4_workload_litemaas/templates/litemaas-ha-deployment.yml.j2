@@ -37,7 +37,7 @@ spec:
             - sh
             - -c
             - |
-              until nc -z litemaas-postgres 5432; do
+              until nc -z litellm-postgres 5432; do
                 echo "Waiting for PostgreSQL..."
                 sleep 2
               done
@@ -48,7 +48,7 @@ spec:
             - sh
             - -c
             - |
-              until nc -z litemaas-redis 6379; do
+              until nc -z litellm-redis 6379; do
                 echo "Waiting for Redis..."
                 sleep 2
               done
@@ -120,11 +120,11 @@ spec:
               value: "{{ ocp4_workload_litemaas_litellm_license_key }}"
 {% endif %}
             - name: REDIS_HOST
-              value: "litemaas-redis"
+              value: "litellm-redis"
             - name: REDIS_PORT
               value: "6379"
             - name: DB_HOST
-              value: "litemaas-postgres"
+              value: "litellm-postgres"
             - name: DB_PORT
               value: "5432"
             - name: DB_NAME
