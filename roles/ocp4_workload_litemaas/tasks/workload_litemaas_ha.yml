@@ -181,6 +181,12 @@
       retries: 40
       delay: 10
 
+- name: Setup OAuth for Backend (if enabled)
+  when: ocp4_workload_litemaas_deploy_backend | bool
+  ansible.builtin.include_tasks: setup_oauth.yml
+  vars:
+    _litemaas_namespace: "{{ _litemaas_ha_namespace }}"
+
 - name: Deploy Backend (if enabled)
   when: ocp4_workload_litemaas_deploy_backend | bool
   block:
