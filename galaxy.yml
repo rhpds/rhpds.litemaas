@@ -1,13 +1,13 @@
 ---
 namespace: rhpds
 name: litemaas
-version: 0.3.0
+version: 0.3.2
 readme: README.md
 authors:
   - Prakhar Srivastava <psrivast@redhat.com>
 description: Ansible collection for deploying LiteMaaS on OpenShift with OAuth authentication, multi-user support, and HA - Cloud Agnostic (AWS, Azure, GCP, CNV/ODF)
 license:
-  - MIT
+  - Apache-2.0
 tags:
   - openshift
   - ai

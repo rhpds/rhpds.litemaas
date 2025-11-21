@@ -462,6 +462,13 @@
     - ocp4_workload_litemaas_deploy_frontend | bool
     - not (ocp4_workload_litemaas_multi_user | bool)
   block:
+    - name: Create custom logo ConfigMap
+      when: ocp4_workload_litemaas_enable_custom_logo | bool
+      kubernetes.core.k8s:
+        state: present
+        namespace: "{{ ocp4_workload_litemaas_namespace }}"
+        definition: "{{ lookup('template', 'litellm-logo-configmap.yml.j2') | from_yaml }}"
+
     - name: Create frontend deployment
       kubernetes.core.k8s:
         state: present
@@ -492,6 +499,15 @@
                     env:
                       - name: BACKEND_URL
                         value: "http://litellm-backend:3000"
+{% if ocp4_workload_litemaas_enable_custom_logo | bool %}
+                    volumeMounts:
+                      - name: custom-logo
+                        mountPath: /app/src/assets/images/logo-title.svg
+                        subPath: logo-light.svg
+                      - name: custom-logo
+                        mountPath: /app/src/assets/images/logo-title-white.svg
+                        subPath: logo-dark.svg
+{% endif %}
                     resources:
                       limits:
                         memory: "{{ ocp4_workload_litemaas_frontend_memory_limit }}"
@@ -499,6 +515,12 @@
                       requests:
                         memory: "128Mi"
                         cpu: "100m"
+{% if ocp4_workload_litemaas_enable_custom_logo | bool %}
+                volumes:
+                  - name: custom-logo
+                    configMap:
+                      name: litellm-custom-logo
+{% endif %}
 
     - name: Create frontend service
       kubernetes.core.k8s:

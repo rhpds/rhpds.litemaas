@@ -2,19 +2,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: litemaas-frontend
+  name: litellm-frontend
   labels:
-    app: litemaas-frontend
+    app: litellm-frontend
     component: web-ui
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: litemaas-frontend
+      app: litellm-frontend
   template:
     metadata:
       labels:
-        app: litemaas-frontend
+        app: litellm-frontend
         component: web-ui
     spec:
       containers:
@@ -25,7 +25,16 @@ spec:
               name: http
           env:
             - name: BACKEND_URL
-              value: "http://litemaas-backend:8080"
+              value: "http://litellm-backend:8080"
+{% if ocp4_workload_litemaas_enable_custom_logo | bool %}
+          volumeMounts:
+            - name: custom-logo
+              mountPath: /app/src/assets/images/logo-title.svg
+              subPath: logo-light.svg
+            - name: custom-logo
+              mountPath: /app/src/assets/images/logo-title-white.svg
+              subPath: logo-dark.svg
+{% endif %}
           resources:
             requests:
               memory: "128Mi"
@@ -49,13 +58,19 @@ spec:
             periodSeconds: 10
             timeoutSeconds: 5
             failureThreshold: 3
+{% if ocp4_workload_litemaas_enable_custom_logo | bool %}
+      volumes:
+        - name: custom-logo
+          configMap:
+            name: litellm-custom-logo
+{% endif %}
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: litemaas-frontend
+  name: litellm-frontend
   labels:
-    app: litemaas-frontend
+    app: litellm-frontend
     component: web-ui
 spec:
   ports:
@@ -63,20 +78,20 @@ spec:
       targetPort: 8080
       name: http
   selector:
-    app: litemaas-frontend
+    app: litellm-frontend
 ---
 apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
-  name: litemaas-frontend
+  name: litellm-frontend
   labels:
-    app: litemaas-frontend
+    app: litellm-frontend
     component: web-ui
 spec:
-  host: "litellm-frontend-{{ _user_suffix }}.{{ ocp4_workload_litemaas_cluster_domain }}"
+  host: "{{ ocp4_workload_litemaas_frontend_route_prefix }}-{{ _user_suffix }}.{{ ocp4_workload_litemaas_cluster_domain }}"
   to:
     kind: Service
-    name: litemaas-frontend
+    name: litellm-frontend
   port:
     targetPort: http
   tls:
