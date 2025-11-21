@@ -13,7 +13,7 @@ data:
 {% if ocp4_workload_litemaas_logo_light_path != "" %}
 {{ lookup('file', ocp4_workload_litemaas_logo_light_path) | indent(4, first=True) }}
 {% else %}
-{{ lookup('file', 'demo-black.svg') | indent(4, first=True) }}
+{{ lookup('file', role_path + '/files/demo-black.svg') | indent(4, first=True) }}
 {% endif %}
 
   # Logo for dark theme (white logo on dark background)
@@ -21,5 +21,5 @@ data:
 {% if ocp4_workload_litemaas_logo_dark_path != "" %}
 {{ lookup('file', ocp4_workload_litemaas_logo_dark_path) | indent(4, first=True) }}
 {% else %}
-{{ lookup('file', 'demo.svg') | indent(4, first=True) }}
+{{ lookup('file', role_path + '/files/demo.svg') | indent(4, first=True) }}
 {% endif %}
