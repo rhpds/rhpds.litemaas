@@ -231,6 +231,11 @@
       redirectURIs: "{{ _litemaas_oauth_redirect_uris }}"
       grantMethod: prompt
 
+# Admin Groups Creation (optional)
+- name: Create OpenShift admin groups
+  when: ocp4_workload_litemaas_create_admin_groups | bool
+  ansible.builtin.include_tasks: create_admin_groups.yml
+
 - name: Display pre-flight summary
   ansible.builtin.debug:
     msg:
@@ -243,4 +248,5 @@
       - "Storage Class: {{ ocp4_workload_litemaas_postgres_storage_class }}"
       - "Cluster Domain: {{ ocp4_workload_litemaas_cluster_domain }}"
       - "OAuth Issuer: {{ _litemaas_oauth_issuer }}"
+      - "Admin Groups: {{ 'Enabled' if ocp4_workload_litemaas_create_admin_groups | bool else 'Disabled' }}"
       - "========================================="

@@ -31,8 +31,8 @@
       metadata:
         name: "{{ ocp4_workload_litemaas_namespace }}"
         labels:
-          app: litemaas
-          workload: litemaas
+          app: litellm
+          workload: litellm
 
 # OAuth client creation removed - admin-only access via LiteLLM Admin UI
 
@@ -182,7 +182,7 @@
           metadata:
             name: backend-secret
             labels:
-              app: litemaas-backend
+              app: litellm-backend
           type: Opaque
           stringData:
             JWT_SECRET: "{{ ocp4_workload_litemaas_jwt_secret }}"
@@ -197,18 +197,18 @@
           apiVersion: apps/v1
           kind: Deployment
           metadata:
-            name: litemaas-backend
+            name: litellm-backend
             labels:
-              app: litemaas-backend
+              app: litellm-backend
           spec:
             replicas: 1
             selector:
               matchLabels:
-                app: litemaas-backend
+                app: litellm-backend
             template:
               metadata:
                 labels:
-                  app: litemaas-backend
+                  app: litellm-backend
               spec:
                 containers:
                   - name: backend
@@ -274,16 +274,16 @@
           apiVersion: v1
           kind: Service
           metadata:
-            name: litemaas-backend
+            name: litellm-backend
             labels:
-              app: litemaas-backend
+              app: litellm-backend
           spec:
             ports:
               - port: 3000
                 targetPort: 3000
                 name: http
             selector:
-              app: litemaas-backend
+              app: litellm-backend
 
     - name: Create backend route (for OAuth callback and API)
       kubernetes.core.k8s:
@@ -293,15 +293,15 @@
           apiVersion: route.openshift.io/v1
           kind: Route
           metadata:
-            name: litemaas-backend
+            name: litellm-backend
             labels:
-              app: litemaas-backend
+              app: litellm-backend
           spec:
             host: "{{ ocp4_workload_litemaas_admin_route_prefix }}.{{ ocp4_workload_litemaas_cluster_domain }}"
             path: /api
             to:
               kind: Service
-              name: litemaas-backend
+              name: litellm-backend
             port:
               targetPort: http
             tls:
@@ -443,14 +443,14 @@
           apiVersion: route.openshift.io/v1
           kind: Route
           metadata:
-            name: litemaas
+            name: litellm
             labels:
               app: litellm
           spec:
             host: "{{ ocp4_workload_litemaas_api_route_prefix }}.{{ ocp4_workload_litemaas_cluster_domain }}"
             to:
               kind: Service
-              name: litemaas
+              name: litellm
             port:
               targetPort: http
             tls:
@@ -470,18 +470,18 @@
           apiVersion: apps/v1
           kind: Deployment
           metadata:
-            name: litemaas-frontend
+            name: litellm-frontend
             labels:
-              app: litemaas-frontend
+              app: litellm-frontend
           spec:
             replicas: 1
             selector:
               matchLabels:
-                app: litemaas-frontend
+                app: litellm-frontend
             template:
               metadata:
                 labels:
-                  app: litemaas-frontend
+                  app: litellm-frontend
               spec:
                 containers:
                   - name: frontend
@@ -491,7 +491,7 @@
                         name: http
                     env:
                       - name: BACKEND_URL
-                        value: "http://litemaas-backend:3000"
+                        value: "http://litellm-backend:3000"
                     resources:
                       limits:
                         memory: "{{ ocp4_workload_litemaas_frontend_memory_limit }}"
@@ -508,16 +508,16 @@
           apiVersion: v1
           kind: Service
           metadata:
-            name: litemaas-frontend
+            name: litellm-frontend
             labels:
-              app: litemaas-frontend
+              app: litellm-frontend
           spec:
             ports:
               - port: 8080
                 targetPort: 8080
                 name: http
             selector:
-              app: litemaas-frontend
+              app: litellm-frontend
 
     - name: Create frontend route
       kubernetes.core.k8s:
@@ -527,14 +527,14 @@
           apiVersion: route.openshift.io/v1
           kind: Route
           metadata:
-            name: litemaas-frontend
+            name: litellm-frontend
             labels:
-              app: litemaas-frontend
+              app: litellm-frontend
           spec:
             host: "litellm-frontend.{{ ocp4_workload_litemaas_cluster_domain }}"
             to:
               kind: Service
-              name: litemaas-frontend
+              name: litellm-frontend
             port:
               targetPort: http
             tls:

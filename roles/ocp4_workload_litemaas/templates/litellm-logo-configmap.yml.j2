@@ -1,0 +1,25 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: litellm-custom-logo
+  namespace: {{ _litemaas_ha_namespace | default(ocp4_workload_litemaas_namespace) }}
+  labels:
+    app: litellm-frontend
+    component: branding
+data:
+  # Logo for light theme (dark logo on light background)
+  logo-light.svg: |
+{% if ocp4_workload_litemaas_logo_light_path != "" %}
+{{ lookup('file', ocp4_workload_litemaas_logo_light_path) | indent(4, first=True) }}
+{% else %}
+{{ lookup('file', 'demo-black.svg') | indent(4, first=True) }}
+{% endif %}
+
+  # Logo for dark theme (white logo on dark background)
+  logo-dark.svg: |
+{% if ocp4_workload_litemaas_logo_dark_path != "" %}
+{{ lookup('file', ocp4_workload_litemaas_logo_dark_path) | indent(4, first=True) }}
+{% else %}
+{{ lookup('file', 'demo.svg') | indent(4, first=True) }}
+{% endif %}

@@ -31,8 +31,8 @@
       metadata:
         name: "litemaas-{{ ocp4_workload_litemaas_user_prefix }}{{ item }}"
         labels:
-          app: litemaas
-          workload: litemaas
+          app: litellm
+          workload: litellm
           user: "{{ ocp4_workload_litemaas_user_prefix }}{{ item }}"
   loop: "{{ range(1, num_users | int + 1) | list }}"
 
@@ -319,14 +319,14 @@
       apiVersion: route.openshift.io/v1
       kind: Route
       metadata:
-        name: litemaas
+        name: litellm
         labels:
           app: litellm
       spec:
         host: "{{ ocp4_workload_litemaas_api_route_prefix }}-{{ ocp4_workload_litemaas_user_prefix }}{{ item }}.{{ ocp4_workload_litemaas_cluster_domain }}"
         to:
           kind: Service
-          name: litemaas
+          name: litellm
         port:
           targetPort: http
         tls:
@@ -348,7 +348,7 @@
           metadata:
             name: backend-secret
             labels:
-              app: litemaas-backend
+              app: litellm-backend
           type: Opaque
           stringData:
             JWT_SECRET: "{{ lookup('password', '/dev/null length=32 chars=ascii_letters,digits') }}"

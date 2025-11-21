@@ -1,0 +1,34 @@
+---
+# Create OpenShift groups for admin access to LiteMaaS
+# These groups can be used with OAuth to automatically grant admin privileges
+
+- name: Create admin group for full access
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: user.openshift.io/v1
+      kind: Group
+      metadata:
+        name: "{{ ocp4_workload_litemaas_admin_group_name }}"
+      users: []
+
+- name: Create admin read-only group
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: user.openshift.io/v1
+      kind: Group
+      metadata:
+        name: "{{ ocp4_workload_litemaas_admin_readonly_group_name }}"
+      users: []
+
+- name: Display admin groups information
+  ansible.builtin.debug:
+    msg:
+      - "Admin groups created successfully"
+      - "Full admin group: {{ ocp4_workload_litemaas_admin_group_name }}"
+      - "Read-only admin group: {{ ocp4_workload_litemaas_admin_readonly_group_name }}"
+      - ""
+      - "To add users to admin groups:"
+      - "  oc adm groups add-users {{ ocp4_workload_litemaas_admin_group_name }} <username>"
+      - "  oc adm groups add-users {{ ocp4_workload_litemaas_admin_readonly_group_name }} <username>"

@@ -25,7 +25,7 @@
       metadata:
         name: "{{ _litemaas_ha_namespace }}"
         labels:
-          app: litemaas
+          app: litellm
           deployment-mode: ha
 
 - name: Deploy PostgreSQL 16 database
@@ -233,7 +233,7 @@
       kubernetes.core.k8s_info:
         api_version: route.openshift.io/v1
         kind: Route
-        name: litemaas
+        name: litellm
         namespace: "{{ _litemaas_ha_namespace }}"
       register: r_litemaas_route
 
@@ -242,7 +242,7 @@
       kubernetes.core.k8s_info:
         api_version: route.openshift.io/v1
         kind: Route
-        name: litemaas-frontend
+        name: litellm-frontend
         namespace: "{{ _litemaas_ha_namespace }}"
       register: r_frontend_route
       until:
