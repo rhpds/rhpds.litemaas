@@ -83,7 +83,7 @@
         kind: Pod
         namespace: "{{ _litemaas_ha_namespace }}"
         label_selectors:
-          - app=litemaas-postgres
+          - app=litellm-postgres
       register: r_postgres_pods
       until:
         - r_postgres_pods.resources | length > 0
@@ -146,7 +146,7 @@
         kind: Pod
         namespace: "{{ _litemaas_ha_namespace }}"
         label_selectors:
-          - app=litemaas-redis
+          - app=litellm-redis
       register: r_redis_pods
       until:
         - r_redis_pods.resources | length > 0
@@ -167,13 +167,13 @@
         namespace: "{{ _litemaas_ha_namespace }}"
         definition: "{{ lookup('template', 'litemaas-ha-deployment.yml.j2') | from_yaml_all }}"
 
-    - name: Wait for LiteMaaS pods to be ready
+    - name: Wait for LiteLLM pods to be ready
       kubernetes.core.k8s_info:
         api_version: v1
         kind: Pod
         namespace: "{{ _litemaas_ha_namespace }}"
         label_selectors:
-          - app=litemaas
+          - app=litellm
       register: r_litemaas_pods
       until:
         - r_litemaas_pods.resources | length == (ocp4_workload_litemaas_ha_litellm_replicas | int)
@@ -196,7 +196,7 @@
         kind: Pod
         namespace: "{{ _litemaas_ha_namespace }}"
         label_selectors:
-          - app=litemaas-backend
+          - app=litellm-backend
       register: r_backend_pods
       until:
         - r_backend_pods.resources | length > 0
