@@ -207,6 +207,13 @@
 - name: Deploy Frontend (if enabled)
   when: ocp4_workload_litemaas_deploy_frontend | bool
   block:
+    - name: Create custom logo ConfigMap
+      when: ocp4_workload_litemaas_enable_custom_logo | bool
+      kubernetes.core.k8s:
+        state: present
+        namespace: "{{ _litemaas_ha_namespace }}"
+        definition: "{{ lookup('template', 'litellm-logo-configmap.yml.j2') | from_yaml }}"
+
     - name: Deploy LiteMaaS Frontend
       kubernetes.core.k8s:
         state: present
@@ -219,7 +226,7 @@
         kind: Pod
         namespace: "{{ _litemaas_ha_namespace }}"
         label_selectors:
-          - app=litemaas-frontend
+          - app=litellm-frontend
       register: r_frontend_pods
       until:
         - r_frontend_pods.resources | length > 0
