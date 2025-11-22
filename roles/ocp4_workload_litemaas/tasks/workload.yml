@@ -537,10 +537,10 @@
                             sed -i 's/Welcome to LiteMaaS/Welcome to Red Hat Demo Platform MaaS service/g' "$jsfile"
                             echo "✓ Updated welcome message in $(basename $jsfile)"
                           fi
-                          # Add disclaimer after the subtitle
+                          # Replace subtitle with disclaimer
                           if grep -q "Your Model as a Service platform" "$jsfile" 2>/dev/null; then
-                            sed -i 's/Your Model as a Service platform for accessing and managing AI models\./Your Model as a Service platform for accessing and managing AI models. This service is intended for demos, workshops, and training purposes only. Do not share credentials or use for customer-facing production workloads./g' "$jsfile"
-                            echo "✓ Added disclaimer in $(basename $jsfile)"
+                            sed -i 's/Your Model as a Service platform for accessing and managing AI models\./This service is intended for demos, workshops, and training purposes only. Do not share credentials or use for customer-facing production workloads./g' "$jsfile"
+                            echo "✓ Replaced subtitle with disclaimer in $(basename $jsfile)"
                           fi
                         done
                     volumeMounts:
