@@ -23,3 +23,11 @@ data:
 {% else %}
 {{ lookup('ansible.builtin.file', 'demo.svg') | indent(4, first=True) }}
 {% endif %}
+
+  # Favicon (Red Hat logo by default)
+  favicon.svg: |
+{% if ocp4_workload_litemaas_favicon_path != "" %}
+{{ lookup('file', ocp4_workload_litemaas_favicon_path) | indent(4, first=True) }}
+{% else %}
+{{ lookup('ansible.builtin.file', 'redhat-favicon.svg') | indent(4, first=True) }}
+{% endif %}

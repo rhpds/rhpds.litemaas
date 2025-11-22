@@ -18,6 +18,44 @@ spec:
         component: web
     spec:
       initContainers:
+{% if ocp4_workload_litemaas_enable_custom_logo | bool %}
+        - name: copy-custom-logos
+          image: "{{ ocp4_workload_litemaas_frontend_image }}:{{ ocp4_workload_litemaas_version }}"
+          command:
+            - sh
+            - -c
+            - |
+              echo "Copying custom logos and favicon to assets directory..."
+              # Find the hashed filenames
+              LOGO_LIGHT=$(ls /opt/app-root/src/assets/logo-title-*.svg 2>/dev/null | head -1)
+              LOGO_DARK=$(ls /opt/app-root/src/assets/logo-title-white-*.svg 2>/dev/null | head -1)
+              FAVICON=$(ls /opt/app-root/src/assets/litemaas_favicon-*.svg 2>/dev/null | head -1)
+
+              if [ -n "$LOGO_LIGHT" ]; then
+                echo "Found light logo: $LOGO_LIGHT"
+                cp /tmp/logos/logo-light.svg "$LOGO_LIGHT"
+                echo "✓ Replaced light logo"
+              fi
+
+              if [ -n "$LOGO_DARK" ]; then
+                echo "Found dark logo: $LOGO_DARK"
+                cp /tmp/logos/logo-dark.svg "$LOGO_DARK"
+                echo "✓ Replaced dark logo"
+              fi
+
+              if [ -n "$FAVICON" ]; then
+                echo "Found favicon: $FAVICON"
+                cp /tmp/logos/favicon.svg "$FAVICON"
+                echo "✓ Replaced favicon"
+              fi
+
+              echo "Logo and favicon replacement complete!"
+          volumeMounts:
+            - name: custom-logo
+              mountPath: /tmp/logos
+            - name: assets-volume
+              mountPath: /opt/app-root/src/assets
+{% endif %}
         - name: wait-for-backend
           image: busybox:1.36
           command:
@@ -41,12 +79,8 @@ spec:
               value: "http://litellm-backend:8080"
 {% if ocp4_workload_litemaas_enable_custom_logo | bool %}
           volumeMounts:
-            - name: custom-logo
-              mountPath: /app/src/assets/images/logo-title.svg
-              subPath: logo-light.svg
-            - name: custom-logo
-              mountPath: /app/src/assets/images/logo-title-white.svg
-              subPath: logo-dark.svg
+            - name: assets-volume
+              mountPath: /opt/app-root/src/assets
 {% endif %}
           resources:
             requests:
@@ -76,6 +110,8 @@ spec:
         - name: custom-logo
           configMap:
             name: litellm-custom-logo
+        - name: assets-volume
+          emptyDir: {}
 {% endif %}
 ---
 apiVersion: v1

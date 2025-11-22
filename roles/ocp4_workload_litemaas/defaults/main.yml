@@ -139,6 +139,7 @@ ocp4_workload_litemaas_admin_readonly_group_name: "litemaas-admins-readonly"  # 
 ocp4_workload_litemaas_enable_custom_logo: false
 ocp4_workload_litemaas_logo_light_path: ""   # Path to dark logo for light theme (e.g., demo-black.svg)
 ocp4_workload_litemaas_logo_dark_path: ""    # Path to white logo for dark theme (e.g., demo.svg)
+ocp4_workload_litemaas_favicon_path: ""      # Path to favicon SVG (defaults to logo_light_path if not set)
 
 # Common variables (AgnosticD pattern)
 become_override: false
