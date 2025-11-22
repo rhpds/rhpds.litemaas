@@ -529,6 +529,15 @@
                         fi
 
                         echo "✓ Assets setup complete!"
+
+                        # Replace welcome message in JavaScript bundle
+                        echo "Customizing welcome message..."
+                        for jsfile in /shared-assets/*.js; do
+                          if grep -q "Welcome to LiteMaaS" "$jsfile" 2>/dev/null; then
+                            sed -i 's/Welcome to LiteMaaS/Welcome to Red Hat Demo Platform MaaS service/g' "$jsfile"
+                            echo "✓ Updated welcome message in $(basename $jsfile)"
+                          fi
+                        done
                     volumeMounts:
                       - name: custom-logo
                         mountPath: /tmp/logos
