@@ -248,7 +248,7 @@
                       - name: OAUTH_ISSUER
                         value: "{{ _litemaas_oauth_issuer }}"
                       - name: OAUTH_CALLBACK_URL
-                        value: "https://litemaas-rhpds.{{ ocp4_workload_litemaas_cluster_domain }}/api/auth/callback"
+                        value: "https://{{ ocp4_workload_litemaas_frontend_route_name }}.{{ ocp4_workload_litemaas_cluster_domain }}/api/auth/callback"
                       - name: LITELLM_API_URL
                         value: "http://litellm:4000"
                       - name: LITELLM_API_KEY
@@ -257,7 +257,7 @@
                             name: litellm-secret
                             key: LITELLM_MASTER_KEY
                       - name: CORS_ORIGIN
-                        value: "https://litemaas-rhpds.{{ ocp4_workload_litemaas_cluster_domain }}"
+                        value: "https://{{ ocp4_workload_litemaas_frontend_route_name }}.{{ ocp4_workload_litemaas_cluster_domain }}"
                     resources:
                       limits:
                         memory: "{{ ocp4_workload_litemaas_backend_memory_limit }}"
