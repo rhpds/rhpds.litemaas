@@ -25,11 +25,17 @@ spec:
             - sh
             - -c
             - |
-              echo "Copying custom logos and favicon to assets directory..."
-              # Find the hashed filenames
-              LOGO_LIGHT=$(ls /opt/app-root/src/assets/logo-title-*.svg 2>/dev/null | head -1)
-              LOGO_DARK=$(ls /opt/app-root/src/assets/logo-title-white-*.svg 2>/dev/null | head -1)
-              FAVICON=$(ls /opt/app-root/src/assets/litemaas_favicon-*.svg 2>/dev/null | head -1)
+              echo "Setting up assets with custom logos..."
+
+              # First, copy ALL assets from the image to the shared volume
+              echo "Copying all frontend assets to shared volume..."
+              cp -r /opt/app-root/src/assets/* /shared-assets/
+
+              # Now replace the logo files with custom ones
+              echo "Replacing logos with custom versions..."
+              LOGO_LIGHT=$(ls /shared-assets/logo-title-*.svg 2>/dev/null | head -1)
+              LOGO_DARK=$(ls /shared-assets/logo-title-white-*.svg 2>/dev/null | head -1)
+              FAVICON=$(ls /shared-assets/litemaas_favicon-*.svg 2>/dev/null | head -1)
 
               if [ -n "$LOGO_LIGHT" ]; then
                 echo "Found light logo: $LOGO_LIGHT"
@@ -49,12 +55,12 @@ spec:
                 echo "✓ Replaced favicon"
               fi
 
-              echo "Logo and favicon replacement complete!"
+              echo "✓ Assets setup complete!"
           volumeMounts:
             - name: custom-logo
               mountPath: /tmp/logos
             - name: assets-volume
-              mountPath: /opt/app-root/src/assets
+              mountPath: /shared-assets
 {% endif %}
         - name: wait-for-backend
           image: busybox:1.36
@@ -81,6 +87,7 @@ spec:
           volumeMounts:
             - name: assets-volume
               mountPath: /opt/app-root/src/assets
+              readOnly: true
 {% endif %}
           resources:
             requests:
