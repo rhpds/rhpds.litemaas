@@ -181,15 +181,26 @@
       retries: 40
       delay: 10
 
-- name: Setup OAuth for Backend (if enabled)
-  when: ocp4_workload_litemaas_deploy_backend | bool
-  ansible.builtin.include_tasks: setup_oauth.yml
-  vars:
-    _litemaas_namespace: "{{ _litemaas_ha_namespace }}"
-
 - name: Deploy Backend (if enabled)
   when: ocp4_workload_litemaas_deploy_backend | bool
   block:
+    - name: Create backend secret
+      kubernetes.core.k8s:
+        state: present
+        namespace: "{{ _litemaas_ha_namespace }}"
+        definition:
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: backend-secret
+            labels:
+              app: litellm-backend
+          type: Opaque
+          stringData:
+            JWT_SECRET: "{{ ocp4_workload_litemaas_jwt_secret }}"
+            ADMIN_API_KEY: "{{ ocp4_workload_litemaas_admin_api_key }}"
+            OAUTH_CLIENT_SECRET: "{{ _litemaas_oauth_client_secret_generated | default(ocp4_workload_litemaas_oauth_client_secret) }}"
+
     - name: Deploy LiteMaaS Backend
       kubernetes.core.k8s:
         state: present
