@@ -32,11 +32,17 @@ spec:
       initContainers:
         - name: wait-for-database
           image: postgres:16-alpine
+          env:
+            - name: PGUSER
+              valueFrom:
+                secretKeyRef:
+                  name: litemaas-db
+                  key: username
           command:
             - sh
             - -c
             - |
-              until pg_isready -h litellm-postgres -p 5432 -U litemaas 2>/dev/null; do
+              until pg_isready -h litellm-postgres -p 5432 -U $PGUSER 2>/dev/null; do
                 echo "Waiting for database..."
                 sleep 2
               done
