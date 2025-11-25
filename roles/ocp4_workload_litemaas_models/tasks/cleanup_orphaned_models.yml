@@ -62,7 +62,7 @@
     kind: Pod
     namespace: "{{ ocp4_workload_litemaas_models_namespace }}"
     label_selectors:
-      - app=litemaas-postgres
+      - app=litellm-postgres
   register: r_postgres_pods_cleanup
 
 - name: Get all models from backend database
