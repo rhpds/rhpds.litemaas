@@ -56,9 +56,13 @@ else
 
     # Get LiteLLM URL
     echo "Getting LiteLLM URL..."
-    LITELLM_ROUTE=$(oc get route litemaas -n "$NAMESPACE" -o jsonpath='{.spec.host}' 2>/dev/null || echo "")
+    # Try litellm-rhpds first, fall back to litemaas, then litellm
+    LITELLM_ROUTE=$(oc get route litellm-rhpds -n "$NAMESPACE" -o jsonpath='{.spec.host}' 2>/dev/null || \
+                    oc get route litemaas -n "$NAMESPACE" -o jsonpath='{.spec.host}' 2>/dev/null || \
+                    oc get route litellm -n "$NAMESPACE" -o jsonpath='{.spec.host}' 2>/dev/null || echo "")
     if [ -z "$LITELLM_ROUTE" ]; then
         echo "ERROR: LiteLLM route not found in namespace '$NAMESPACE'"
+        echo "       Tried: litellm-rhpds, litemaas, litellm"
         exit 1
     fi
     LITELLM_URL="https://$LITELLM_ROUTE"
@@ -98,8 +102,8 @@ if ansible-playbook playbooks/manage_models.yml -e @"$TEMP_FILE"; then
     echo "========================================="
     echo ""
     echo "Verify sync:"
-    echo "  oc exec -n $NAMESPACE litemaas-postgres-0 -- \\"
-    echo "    psql -U litemaas -d litemaas -c 'SELECT id, name FROM models;'"
+    echo "  oc exec -n $NAMESPACE deployment/litellm-postgres -- \\"
+    echo "    psql -U litellm -d litellm -c 'SELECT id, name FROM models;'"
 else
     echo ""
     echo "ERROR: Sync failed. Check the output above for details."
