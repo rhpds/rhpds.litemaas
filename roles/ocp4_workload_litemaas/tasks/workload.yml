@@ -250,7 +250,7 @@
                       - name: OAUTH_CALLBACK_URL
                         value: "https://{{ ocp4_workload_litemaas_frontend_route_name }}.{{ ocp4_workload_litemaas_cluster_domain }}/api/auth/callback"
                       - name: LITELLM_API_URL
-                        value: "http://litellm:4000"
+                        value: "https://{{ ocp4_workload_litemaas_api_route_prefix }}.{{ ocp4_workload_litemaas_cluster_domain }}"
                       - name: LITELLM_API_KEY
                         valueFrom:
                           secretKeyRef:
