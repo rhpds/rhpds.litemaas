@@ -102,8 +102,11 @@ if ansible-playbook playbooks/manage_models.yml -e @"$TEMP_FILE"; then
     echo "========================================="
     echo ""
     echo "Verify sync:"
-    echo "  oc exec -n $NAMESPACE deployment/litellm-postgres -- \\"
-    echo "    psql -U litellm -d litellm -c 'SELECT id, name FROM models;'"
+    echo "  # Get database credentials from secret"
+    echo "  DB_USER=\$(oc get secret litemaas-db -n $NAMESPACE -o jsonpath='{.data.username}' | base64 -d)"
+    echo "  DB_NAME=\$(oc get secret litemaas-db -n $NAMESPACE -o jsonpath='{.data.database}' | base64 -d)"
+    echo "  oc exec -n $NAMESPACE litellm-postgres-0 -- \\"
+    echo "    psql -U \$DB_USER -d \$DB_NAME -c 'SELECT id, name FROM models;'"
 else
     echo ""
     echo "ERROR: Sync failed. Check the output above for details."
