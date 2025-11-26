@@ -205,7 +205,7 @@ spec:
 apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
-  name: litellm
+  name: "{{ ocp4_workload_litemaas_api_route_name }}"
   labels:
     app: litellm
     component: ai-proxy

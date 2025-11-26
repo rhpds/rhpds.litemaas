@@ -257,7 +257,7 @@
       kubernetes.core.k8s_info:
         api_version: route.openshift.io/v1
         kind: Route
-        name: litellm
+        name: "{{ ocp4_workload_litemaas_api_route_name }}"
         namespace: "{{ _litemaas_ha_namespace }}"
       register: r_litemaas_route
 
@@ -266,7 +266,7 @@
       kubernetes.core.k8s_info:
         api_version: route.openshift.io/v1
         kind: Route
-        name: litellm-frontend
+        name: "{{ ocp4_workload_litemaas_frontend_route_name }}"
         namespace: "{{ _litemaas_ha_namespace }}"
       register: r_frontend_route
       until:

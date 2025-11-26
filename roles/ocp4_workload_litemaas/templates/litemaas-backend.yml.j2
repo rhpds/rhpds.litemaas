@@ -172,12 +172,12 @@ spec:
 apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
-  name: litellm-backend
+  name: "{{ ocp4_workload_litemaas_admin_route_name }}"
   labels:
     app: litellm-backend
     component: api
 spec:
-  host: "litellm-admin.{{ ocp4_workload_litemaas_cluster_domain }}"
+  host: "{{ ocp4_workload_litemaas_admin_route_prefix }}.{{ ocp4_workload_litemaas_cluster_domain }}"
   path: /api
   to:
     kind: Service
