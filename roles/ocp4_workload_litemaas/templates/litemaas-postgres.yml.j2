@@ -4,21 +4,21 @@ kind: Secret
 metadata:
   name: litemaas-db
   labels:
-    app: litemaas-postgres
+    app: litellm-postgres
     component: database
 type: Opaque
 stringData:
   username: "{{ ocp4_workload_litemaas_ha_postgres_user }}"
   password: "{{ ocp4_workload_litemaas_ha_postgres_password }}"
   database: "{{ ocp4_workload_litemaas_ha_postgres_db }}"
-  DATABASE_URL: "postgresql://{{ ocp4_workload_litemaas_ha_postgres_user }}:{{ ocp4_workload_litemaas_ha_postgres_password }}@litemaas-postgres:5432/{{ ocp4_workload_litemaas_ha_postgres_db }}?sslmode=disable"
+  DATABASE_URL: "postgresql://{{ ocp4_workload_litemaas_ha_postgres_user }}:{{ ocp4_workload_litemaas_ha_postgres_password }}@litellm-postgres:5432/{{ ocp4_workload_litemaas_ha_postgres_db }}?sslmode=disable"
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: litemaas-postgres
+  name: litellm-postgres
   labels:
-    app: litemaas-postgres
+    app: litellm-postgres
     component: database
 spec:
   ports:
@@ -26,25 +26,25 @@ spec:
       targetPort: 5432
       name: postgres
   selector:
-    app: litemaas-postgres
+    app: litellm-postgres
 ---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: litemaas-postgres
+  name: litellm-postgres
   labels:
-    app: litemaas-postgres
+    app: litellm-postgres
     component: database
 spec:
-  serviceName: litemaas-postgres
+  serviceName: litellm-postgres
   replicas: 1
   selector:
     matchLabels:
-      app: litemaas-postgres
+      app: litellm-postgres
   template:
     metadata:
       labels:
-        app: litemaas-postgres
+        app: litellm-postgres
         component: database
     spec:
       containers:
@@ -102,7 +102,7 @@ spec:
     - metadata:
         name: postgres-storage
         labels:
-          app: litemaas-postgres
+          app: litellm-postgres
       spec:
         accessModes:
           - "{{ ocp4_workload_litemaas_postgres_storage_access_mode }}"

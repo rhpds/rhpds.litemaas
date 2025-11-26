@@ -4,7 +4,7 @@ kind: Secret
 metadata:
   name: backend-secret
   labels:
-    app: litemaas-backend
+    app: litellm-backend
 type: Opaque
 stringData:
   JWT_SECRET: "{{ ocp4_workload_litemaas_jwt_secret }}"
@@ -14,29 +14,35 @@ stringData:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: litemaas-backend
+  name: litellm-backend
   labels:
-    app: litemaas-backend
+    app: litellm-backend
     component: api
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: litemaas-backend
+      app: litellm-backend
   template:
     metadata:
       labels:
-        app: litemaas-backend
+        app: litellm-backend
         component: api
     spec:
       initContainers:
         - name: wait-for-database
           image: postgres:16-alpine
+          env:
+            - name: PGUSER
+              valueFrom:
+                secretKeyRef:
+                  name: litemaas-db
+                  key: username
           command:
             - sh
             - -c
             - |
-              until pg_isready -h litemaas-postgres -p 5432 -U litemaas 2>/dev/null; do
+              until pg_isready -h litellm-postgres -p 5432 -U $PGUSER 2>/dev/null; do
                 echo "Waiting for database..."
                 sleep 2
               done
@@ -107,7 +113,7 @@ spec:
             - name: OAUTH_ISSUER
               value: "{{ _litemaas_oauth_issuer }}"
             - name: OAUTH_CALLBACK_URL
-              value: "https://{{ ocp4_workload_litemaas_api_route_prefix }}.{{ ocp4_workload_litemaas_cluster_domain }}/api/auth/callback"
+              value: "https://{{ ocp4_workload_litemaas_admin_route_prefix }}.{{ ocp4_workload_litemaas_cluster_domain }}/api/auth/callback"
 {% else %}
             - name: OAUTH_CLIENT_ID
               value: "disabled"
@@ -164,9 +170,9 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: litemaas-backend
+  name: litellm-backend
   labels:
-    app: litemaas-backend
+    app: litellm-backend
     component: api
 spec:
   ports:
@@ -174,21 +180,21 @@ spec:
       targetPort: 8080
       name: http
   selector:
-    app: litemaas-backend
+    app: litellm-backend
 ---
 apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
-  name: litemaas-backend
+  name: "{{ ocp4_workload_litemaas_admin_route_name }}"
   labels:
-    app: litemaas-backend
+    app: litellm-backend
     component: api
 spec:
-  host: "litellm-admin.{{ ocp4_workload_litemaas_cluster_domain }}"
+  host: "{{ ocp4_workload_litemaas_admin_route_prefix }}.{{ ocp4_workload_litemaas_cluster_domain }}"
   path: /api
   to:
     kind: Service
-    name: litemaas-backend
+    name: litellm-backend
   port:
     targetPort: http
   tls:

@@ -16,6 +16,12 @@ ocp4_workload_litemaas_api_route_prefix: "litellm"      # User-facing API route 
 ocp4_workload_litemaas_admin_route_prefix: "litellm-admin"  # Admin/backend route (e.g., litellm-admin.apps.cluster.com)
 ocp4_workload_litemaas_frontend_route_prefix: "litellm-frontend"  # Frontend UI route
 
+# Route names (deployment-specific naming)
+# These control the actual route resource names in OpenShift
+ocp4_workload_litemaas_api_route_name: "litellm"         # API route name
+ocp4_workload_litemaas_admin_route_name: "litellm-admin" # Admin route name
+ocp4_workload_litemaas_frontend_route_name: "litellm-frontend"  # Frontend route name
+
 # High Availability mode (set to true to enable HA deployment)
 ocp4_workload_litemaas_ha_enabled: false
 
@@ -94,7 +100,7 @@ ocp4_workload_litemaas_litellm_models: []
 # Users access models via LiteLLM virtual keys (created by admins)
 ocp4_workload_litemaas_oauth_enabled: false
 ocp4_workload_litemaas_oauth_provider: "openshift"  # google or openshift
-ocp4_workload_litemaas_oauth_client_id: "litemaas-rhpds"
+ocp4_workload_litemaas_oauth_client_id: "{{ ocp4_workload_litemaas_namespace }}"  # Use namespace as OAuth client ID
 ocp4_workload_litemaas_oauth_client_secret: "{{ lookup('password', '/dev/null length=32 chars=ascii_letters,digits') }}"
 
 # Admin access
@@ -121,6 +127,19 @@ ocp4_workload_litemaas_remove: false
 ocp4_workload_litemaas_deploy_frontend: true  # User-facing web interface
 ocp4_workload_litemaas_deploy_backend: true   # API server for frontend
 ocp4_workload_litemaas_deploy_litellm: true   # LiteLLM gateway (always enabled)
+
+# OpenShift Admin Groups (optional - disabled by default)
+# When enabled, creates OpenShift groups for admin access via OAuth
+ocp4_workload_litemaas_create_admin_groups: false
+ocp4_workload_litemaas_admin_group_name: "litemaas-admins"           # Full admin access
+ocp4_workload_litemaas_admin_readonly_group_name: "litemaas-admins-readonly"  # Read-only admin
+
+# Custom Logo Support (optional - disabled by default)
+# When enabled, replaces LiteMaaS default logo with custom RHDP branding
+ocp4_workload_litemaas_enable_custom_logo: false
+ocp4_workload_litemaas_logo_light_path: ""   # Path to dark logo for light theme (e.g., demo-black.svg)
+ocp4_workload_litemaas_logo_dark_path: ""    # Path to white logo for dark theme (e.g., demo.svg)
+ocp4_workload_litemaas_favicon_path: ""      # Path to favicon SVG (defaults to logo_light_path if not set)
 
 # Common variables (AgnosticD pattern)
 become_override: false

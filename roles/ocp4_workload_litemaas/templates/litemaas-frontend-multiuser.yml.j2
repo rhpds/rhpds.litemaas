@@ -2,21 +2,80 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: litemaas-frontend
+  name: litellm-frontend
   labels:
-    app: litemaas-frontend
+    app: litellm-frontend
     component: web-ui
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: litemaas-frontend
+      app: litellm-frontend
   template:
     metadata:
       labels:
-        app: litemaas-frontend
+        app: litellm-frontend
         component: web-ui
     spec:
+{% if ocp4_workload_litemaas_enable_custom_logo | bool %}
+      initContainers:
+        - name: copy-custom-logos
+          image: "{{ ocp4_workload_litemaas_frontend_image }}:{{ ocp4_workload_litemaas_version }}"
+          command:
+            - sh
+            - -c
+            - |
+              echo "Setting up assets with custom logos..."
+
+              # First, copy ALL assets from the image to the shared volume
+              echo "Copying all frontend assets to shared volume..."
+              cp -r /opt/app-root/src/assets/* /shared-assets/
+
+              # Now replace the logo files with custom ones
+              echo "Replacing logos with custom versions..."
+              LOGO_LIGHT=$(ls /shared-assets/logo-title-*.svg 2>/dev/null | head -1)
+              LOGO_DARK=$(ls /shared-assets/logo-title-white-*.svg 2>/dev/null | head -1)
+              FAVICON=$(ls /shared-assets/litemaas_favicon-*.svg 2>/dev/null | head -1)
+
+              if [ -n "$LOGO_LIGHT" ]; then
+                echo "Found light logo: $LOGO_LIGHT"
+                cp /tmp/logos/logo-light.svg "$LOGO_LIGHT"
+                echo "✓ Replaced light logo"
+              fi
+
+              if [ -n "$LOGO_DARK" ]; then
+                echo "Found dark logo: $LOGO_DARK"
+                cp /tmp/logos/logo-dark.svg "$LOGO_DARK"
+                echo "✓ Replaced dark logo"
+              fi
+
+              if [ -n "$FAVICON" ]; then
+                echo "Found favicon: $FAVICON"
+                cp /tmp/logos/favicon.svg "$FAVICON"
+                echo "✓ Replaced favicon"
+              fi
+
+              echo "✓ Assets setup complete!"
+
+              # Replace welcome message and add disclaimer
+              echo "Customizing welcome message and adding disclaimer..."
+              for jsfile in /shared-assets/*.js; do
+                if grep -q "Welcome to LiteMaaS" "$jsfile" 2>/dev/null; then
+                  sed -i 's/Welcome to LiteMaaS/Welcome to Red Hat Demo Platform MaaS service/g' "$jsfile"
+                  echo "✓ Updated welcome message in $(basename $jsfile)"
+                fi
+                # Replace subtitle with disclaimer
+                if grep -q "Your Model as a Service platform" "$jsfile" 2>/dev/null; then
+                  sed -i 's/Your Model as a Service platform for accessing and managing AI models\./This service is intended for demos, workshops, and training purposes only. Do not share credentials or use for customer-facing production workloads./g' "$jsfile"
+                  echo "✓ Replaced subtitle with disclaimer in $(basename $jsfile)"
+                fi
+              done
+          volumeMounts:
+            - name: custom-logo
+              mountPath: /tmp/logos
+            - name: assets-volume
+              mountPath: /shared-assets
+{% endif %}
       containers:
         - name: frontend
           image: "{{ ocp4_workload_litemaas_frontend_image }}:{{ ocp4_workload_litemaas_version }}"
@@ -25,7 +84,13 @@ spec:
               name: http
           env:
             - name: BACKEND_URL
-              value: "http://litemaas-backend:8080"
+              value: "http://litellm-backend:8080"
+{% if ocp4_workload_litemaas_enable_custom_logo | bool %}
+          volumeMounts:
+            - name: assets-volume
+              mountPath: /opt/app-root/src/assets
+              readOnly: true
+{% endif %}
           resources:
             requests:
               memory: "128Mi"
@@ -49,13 +114,21 @@ spec:
             periodSeconds: 10
             timeoutSeconds: 5
             failureThreshold: 3
+{% if ocp4_workload_litemaas_enable_custom_logo | bool %}
+      volumes:
+        - name: custom-logo
+          configMap:
+            name: litellm-custom-logo
+        - name: assets-volume
+          emptyDir: {}
+{% endif %}
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: litemaas-frontend
+  name: litellm-frontend
   labels:
-    app: litemaas-frontend
+    app: litellm-frontend
     component: web-ui
 spec:
   ports:
@@ -63,20 +136,20 @@ spec:
       targetPort: 8080
       name: http
   selector:
-    app: litemaas-frontend
+    app: litellm-frontend
 ---
 apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
-  name: litemaas-frontend
+  name: litellm-frontend
   labels:
-    app: litemaas-frontend
+    app: litellm-frontend
     component: web-ui
 spec:
-  host: "litellm-frontend-{{ _user_suffix }}.{{ ocp4_workload_litemaas_cluster_domain }}"
+  host: "{{ ocp4_workload_litemaas_frontend_route_prefix }}-{{ _user_suffix }}.{{ ocp4_workload_litemaas_cluster_domain }}"
   to:
     kind: Service
-    name: litemaas-frontend
+    name: litellm-frontend
   port:
     targetPort: http
   tls:

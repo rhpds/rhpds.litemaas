@@ -1,0 +1,9 @@
+---
+# Quick test - sync existing LiteLLM models to backend database
+
+litellm_url: "https://litellm-admin.apps.maas.redhatworkshops.io"
+litellm_master_key: "sk-Ki6upzR5aSwKDzSHoIWneNvKqx2CcxKj"
+ocp4_workload_litemaas_models_namespace: "litemaas"
+ocp4_workload_litemaas_models_backend_enabled: true
+ocp4_workload_litemaas_models_sync_from_litellm: true
+ocp4_workload_litemaas_models_list: []

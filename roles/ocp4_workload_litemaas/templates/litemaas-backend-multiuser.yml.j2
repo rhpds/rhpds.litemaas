@@ -4,7 +4,7 @@ kind: Secret
 metadata:
   name: backend-secret
   labels:
-    app: litemaas-backend
+    app: litellm-backend
 type: Opaque
 stringData:
   JWT_SECRET: "{{ ocp4_workload_litemaas_jwt_secret }}"
@@ -14,19 +14,19 @@ stringData:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: litemaas-backend
+  name: litellm-backend
   labels:
-    app: litemaas-backend
+    app: litellm-backend
     component: api
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: litemaas-backend
+      app: litellm-backend
   template:
     metadata:
       labels:
-        app: litemaas-backend
+        app: litellm-backend
         component: api
     spec:
       initContainers:
@@ -151,9 +151,9 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: litemaas-backend
+  name: litellm-backend
   labels:
-    app: litemaas-backend
+    app: litellm-backend
     component: api
 spec:
   ports:
@@ -161,21 +161,21 @@ spec:
       targetPort: 8080
       name: http
   selector:
-    app: litemaas-backend
+    app: litellm-backend
 ---
 apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
-  name: litemaas-backend
+  name: litellm-backend
   labels:
-    app: litemaas-backend
+    app: litellm-backend
     component: api
 spec:
   host: "litellm-admin-{{ _user_suffix }}.{{ ocp4_workload_litemaas_cluster_domain }}"
   path: /api
   to:
     kind: Service
-    name: litemaas-backend
+    name: litellm-backend
   port:
     targetPort: http
   tls:

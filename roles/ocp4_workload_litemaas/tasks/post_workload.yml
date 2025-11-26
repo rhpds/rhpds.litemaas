@@ -222,7 +222,7 @@
     api_version: route.openshift.io/v1
     kind: Route
     namespace: "{{ ocp4_workload_litemaas_namespace }}"
-    name: litemaas-frontend
+    name: litellm-frontend
   register: r_frontend_route
 
 - name: Get LiteLLM route

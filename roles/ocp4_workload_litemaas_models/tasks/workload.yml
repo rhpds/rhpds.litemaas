@@ -106,7 +106,7 @@
         kind: Pod
         namespace: "{{ ocp4_workload_litemaas_models_namespace }}"
         label_selectors:
-          - app=litemaas-backend
+          - app=litellm-backend
       register: r_backend_pods
       until:
         - r_backend_pods.resources | length > 0
@@ -123,7 +123,7 @@
         kind: Pod
         namespace: "{{ ocp4_workload_litemaas_models_namespace }}"
         label_selectors:
-          - app=litemaas-postgres
+          - app=litellm-postgres
       register: r_postgres_pods
       until:
         - r_postgres_pods.resources | length > 0

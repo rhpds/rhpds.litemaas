@@ -12,6 +12,89 @@ Deploy an AI model gateway on OpenShift in 3 minutes. Give users controlled acce
 
 ---
 
+## 🎯 RHDP Production Deployment (Full Stack)
+
+**Complete deployment with OAuth, custom logos, Beta labels, and custom routes:**
+
+```bash
+ansible-playbook playbooks/deploy_litemaas_ha.yml \
+  -e ocp4_workload_litemaas_namespace=litellm-rhpds \
+  -e ocp4_workload_litemaas_ha_litellm_replicas=3 \
+  -e ocp4_workload_litemaas_oauth_enabled=true \
+  -e ocp4_workload_litemaas_deploy_backend=true \
+  -e ocp4_workload_litemaas_deploy_frontend=true \
+  -e ocp4_workload_litemaas_enable_custom_logo=true \
+  -e ocp4_workload_litemaas_api_route_name=litellm-prod \
+  -e ocp4_workload_litemaas_admin_route_name=litellm-prod-admin \
+  -e ocp4_workload_litemaas_frontend_route_name=litellm-prod-frontend \
+  -e ocp4_workload_litemaas_api_route_prefix=litellm-prod \
+  -e ocp4_workload_litemaas_admin_route_prefix=litellm-prod-admin \
+  -e ocp4_workload_litemaas_frontend_route_prefix=litellm-prod-frontend
+```
+
+**What you get:**
+- ✅ **High Availability**: 3 LiteLLM replicas with Redis caching
+- ✅ **OAuth Integration**: Users login with OpenShift credentials
+- ✅ **Custom Red Hat Logos**: RHDP branding on all pages
+- ✅ **Beta Labels**: Login page, welcome message, and disclaimer
+- ✅ **Custom Routes**:
+  - API: `https://litellm-prod.apps.cluster.com`
+  - Admin: `https://litellm-prod-admin.apps.cluster.com`
+  - Frontend: `https://litellm-prod-frontend.apps.cluster.com`
+- ✅ **Full Stack**: PostgreSQL + Redis + LiteLLM + Backend + Frontend
+- ✅ **OAuth Persistence**: Secrets automatically reused on redeployment
+
+**Post-Deployment: Sync Models**
+
+```bash
+# From bastion (automatic - reads from cluster)
+cd ~/work/code/rhpds.litemaas
+./sync-models.sh litellm-rhpds
+
+# Or with explicit credentials
+ansible-playbook playbooks/manage_models.yml \
+  -e ocp4_workload_litemaas_models_namespace=litellm-rhpds \
+  -e ocp4_workload_litemaas_models_litellm_url=https://litellm-prod.apps.cluster.com \
+  -e ocp4_workload_litemaas_models_litellm_api_key=sk-xxxxx
+```
+
+**Key Variables Reference:**
+
+| Variable | Purpose | Example |
+|----------|---------|---------|
+| `ocp4_workload_litemaas_namespace` | Namespace name | `litellm-rhpds` |
+| `ocp4_workload_litemaas_ha_litellm_replicas` | Number of LiteLLM pods | `3` |
+| `ocp4_workload_litemaas_oauth_enabled` | Enable OAuth login | `true` |
+| `ocp4_workload_litemaas_deploy_backend` | Deploy backend API | `true` |
+| `ocp4_workload_litemaas_deploy_frontend` | Deploy frontend UI | `true` |
+| `ocp4_workload_litemaas_enable_custom_logo` | Use RHDP logos + Beta labels | `true` |
+| `ocp4_workload_litemaas_api_route_name` | API route resource name | `litellm-prod` |
+| `ocp4_workload_litemaas_api_route_prefix` | API hostname prefix | `litellm-prod` |
+| `ocp4_workload_litemaas_admin_route_name` | Admin route resource name | `litellm-prod-admin` |
+| `ocp4_workload_litemaas_admin_route_prefix` | Admin hostname prefix | `litellm-prod-admin` |
+| `ocp4_workload_litemaas_frontend_route_name` | Frontend route resource name | `litellm-prod-frontend` |
+| `ocp4_workload_litemaas_frontend_route_prefix` | Frontend hostname prefix | `litellm-prod-frontend` |
+
+**Troubleshooting OAuth:**
+
+If OAuth login fails after redeployment:
+```bash
+# Sync backend secret to match OAuth client
+OAUTH_SECRET=$(oc get oauthclient litellm-rhpds -o jsonpath='{.secret}')
+oc patch secret backend-secret -n litellm-rhpds -p "{\"data\":{\"OAUTH_CLIENT_SECRET\":\"$(echo -n $OAUTH_SECRET | base64)\"}}"
+oc rollout restart deployment/litellm-backend -n litellm-rhpds
+```
+
+**Rebuilding Collection:**
+
+```bash
+cd ~/work/code/rhpds.litemaas
+ansible-galaxy collection build --force
+ansible-galaxy collection install rhpds-litemaas-*.tar.gz --force
+```
+
+---
+
 ## Quick Start - Pick Your Scenario
 
 Choose the deployment that matches your needs:

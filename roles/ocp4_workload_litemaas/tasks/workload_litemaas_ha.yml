@@ -25,7 +25,7 @@
       metadata:
         name: "{{ _litemaas_ha_namespace }}"
         labels:
-          app: litemaas
+          app: litellm
           deployment-mode: ha
 
 - name: Deploy PostgreSQL 16 database
@@ -83,7 +83,7 @@
         kind: Pod
         namespace: "{{ _litemaas_ha_namespace }}"
         label_selectors:
-          - app=litemaas-postgres
+          - app=litellm-postgres
       register: r_postgres_pods
       until:
         - r_postgres_pods.resources | length > 0
@@ -146,7 +146,7 @@
         kind: Pod
         namespace: "{{ _litemaas_ha_namespace }}"
         label_selectors:
-          - app=litemaas-redis
+          - app=litellm-redis
       register: r_redis_pods
       until:
         - r_redis_pods.resources | length > 0
@@ -167,13 +167,13 @@
         namespace: "{{ _litemaas_ha_namespace }}"
         definition: "{{ lookup('template', 'litemaas-ha-deployment.yml.j2') | from_yaml_all }}"
 
-    - name: Wait for LiteMaaS pods to be ready
+    - name: Wait for LiteLLM pods to be ready
       kubernetes.core.k8s_info:
         api_version: v1
         kind: Pod
         namespace: "{{ _litemaas_ha_namespace }}"
         label_selectors:
-          - app=litemaas
+          - app=litellm
       register: r_litemaas_pods
       until:
         - r_litemaas_pods.resources | length == (ocp4_workload_litemaas_ha_litellm_replicas | int)
@@ -184,6 +184,23 @@
 - name: Deploy Backend (if enabled)
   when: ocp4_workload_litemaas_deploy_backend | bool
   block:
+    - name: Create backend secret
+      kubernetes.core.k8s:
+        state: present
+        namespace: "{{ _litemaas_ha_namespace }}"
+        definition:
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: backend-secret
+            labels:
+              app: litellm-backend
+          type: Opaque
+          stringData:
+            JWT_SECRET: "{{ ocp4_workload_litemaas_jwt_secret }}"
+            ADMIN_API_KEY: "{{ ocp4_workload_litemaas_admin_api_key }}"
+            OAUTH_CLIENT_SECRET: "{{ _litemaas_oauth_client_secret_generated | default(ocp4_workload_litemaas_oauth_client_secret) }}"
+
     - name: Deploy LiteMaaS Backend
       kubernetes.core.k8s:
         state: present
@@ -196,7 +213,7 @@
         kind: Pod
         namespace: "{{ _litemaas_ha_namespace }}"
         label_selectors:
-          - app=litemaas-backend
+          - app=litellm-backend
       register: r_backend_pods
       until:
         - r_backend_pods.resources | length > 0
@@ -224,6 +241,13 @@
 - name: Deploy Frontend (if enabled)
   when: ocp4_workload_litemaas_deploy_frontend | bool
   block:
+    - name: Create custom logo ConfigMap
+      when: ocp4_workload_litemaas_enable_custom_logo | bool
+      kubernetes.core.k8s:
+        state: present
+        namespace: "{{ _litemaas_ha_namespace }}"
+        definition: "{{ lookup('template', 'litellm-logo-configmap.yml.j2') | from_yaml }}"
+
     - name: Deploy LiteMaaS Frontend
       kubernetes.core.k8s:
         state: present
@@ -236,7 +260,7 @@
         kind: Pod
         namespace: "{{ _litemaas_ha_namespace }}"
         label_selectors:
-          - app=litemaas-frontend
+          - app=litellm-frontend
       register: r_frontend_pods
       until:
         - r_frontend_pods.resources | length > 0
@@ -250,7 +274,7 @@
       kubernetes.core.k8s_info:
         api_version: route.openshift.io/v1
         kind: Route
-        name: litemaas
+        name: "{{ ocp4_workload_litemaas_api_route_name }}"
         namespace: "{{ _litemaas_ha_namespace }}"
       register: r_litemaas_route
 
@@ -259,7 +283,7 @@
       kubernetes.core.k8s_info:
         api_version: route.openshift.io/v1
         kind: Route
-        name: litemaas-frontend
+        name: "{{ ocp4_workload_litemaas_frontend_route_name }}"
         namespace: "{{ _litemaas_ha_namespace }}"
       register: r_frontend_route
       until:

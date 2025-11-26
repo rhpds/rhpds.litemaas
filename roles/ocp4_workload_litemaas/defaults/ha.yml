@@ -20,8 +20,8 @@ ocp4_workload_litemaas_ha_enable_postgres: true
 ocp4_workload_litemaas_ha_postgres_replicas: 1
 ocp4_workload_litemaas_ha_postgres_image: "postgres:16"
 ocp4_workload_litemaas_ha_postgres_image_fallback: "postgres:16"
-ocp4_workload_litemaas_ha_postgres_db: "litemaas"
-ocp4_workload_litemaas_ha_postgres_user: "litemaas"
+ocp4_workload_litemaas_ha_postgres_db: "litellm"
+ocp4_workload_litemaas_ha_postgres_user: "litellm"
 ocp4_workload_litemaas_ha_postgres_password: "{{ lookup('password', '/dev/null length=32 chars=ascii_letters,digits') }}"
 ocp4_workload_litemaas_ha_postgres_pvc_size: "10Gi"
 

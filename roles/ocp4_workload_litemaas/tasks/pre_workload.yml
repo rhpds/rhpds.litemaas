@@ -178,9 +178,7 @@
             - r_oauth_server.resources[0].status.issuer != ""
 
 - name: Check if OAuth client already exists
-  when:
-    - ocp4_workload_litemaas_oauth_enabled | bool
-    - ocp4_workload_litemaas_oauth_provider == "openshift"
+  when: ocp4_workload_litemaas_oauth_provider == "openshift"
   kubernetes.core.k8s_info:
     api_version: oauth.openshift.io/v1
     kind: OAuthClient
@@ -189,9 +187,8 @@
 
 - name: Reuse existing OAuth client secret if available
   when:
-    - ocp4_workload_litemaas_oauth_enabled | bool
     - ocp4_workload_litemaas_oauth_provider == "openshift"
-    - r_existing_oauth_client.resources | length > 0
+    - r_existing_oauth_client.resources | default([]) | length > 0
   ansible.builtin.set_fact:
     _litemaas_oauth_client_secret_generated: "{{ r_existing_oauth_client.resources[0].secret }}"
 
@@ -202,9 +199,10 @@
   ansible.builtin.set_fact:
     _litemaas_oauth_client_secret_generated: "{{ lookup('password', '/dev/null length=32 chars=ascii_letters,digits') }}"
 
-- name: Set default OAuth client secret for non-OAuth deployments
+- name: Set default OAuth client secret for non-OAuth deployments (only if no existing OAuth client)
   when:
     - not (ocp4_workload_litemaas_oauth_enabled | bool)
+    - r_existing_oauth_client.resources | default([]) | length == 0
   ansible.builtin.set_fact:
     _litemaas_oauth_client_secret_generated: "{{ lookup('password', '/dev/null length=32 chars=ascii_letters,digits') }}"
 
@@ -260,6 +258,11 @@
       redirectURIs: "{{ _litemaas_oauth_redirect_uris }}"
       grantMethod: prompt
 
+# Admin Groups Creation (optional)
+- name: Create OpenShift admin groups
+  when: ocp4_workload_litemaas_create_admin_groups | bool
+  ansible.builtin.include_tasks: create_admin_groups.yml
+
 - name: Display pre-flight summary
   ansible.builtin.debug:
     msg:
@@ -272,4 +275,5 @@
       - "Storage Class: {{ ocp4_workload_litemaas_postgres_storage_class }}"
       - "Cluster Domain: {{ ocp4_workload_litemaas_cluster_domain }}"
       - "OAuth Issuer: {{ _litemaas_oauth_issuer }}"
+      - "Admin Groups: {{ 'Enabled' if ocp4_workload_litemaas_create_admin_groups | bool else 'Disabled' }}"
       - "========================================="

@@ -2,22 +2,90 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: litemaas-frontend
+  name: litellm-frontend
   labels:
-    app: litemaas-frontend
+    app: litellm-frontend
     component: web
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: litemaas-frontend
+      app: litellm-frontend
   template:
     metadata:
       labels:
-        app: litemaas-frontend
+        app: litellm-frontend
         component: web
     spec:
       initContainers:
+{% if ocp4_workload_litemaas_enable_custom_logo | bool %}
+        - name: copy-custom-logos
+          image: "{{ ocp4_workload_litemaas_frontend_image }}:{{ ocp4_workload_litemaas_version }}"
+          command:
+            - sh
+            - -c
+            - |
+              echo "Setting up assets with custom logos..."
+
+              # First, copy ALL assets from the image to the shared volume
+              echo "Copying all frontend assets to shared volume..."
+              cp -r /opt/app-root/src/assets/* /shared-assets/
+
+              # Now replace the logo files with custom ones
+              echo "Replacing logos with custom versions..."
+              LOGO_LIGHT=$(ls /shared-assets/logo-title-*.svg 2>/dev/null | head -1)
+              LOGO_DARK=$(ls /shared-assets/logo-title-white-*.svg 2>/dev/null | head -1)
+              FAVICON=$(ls /shared-assets/litemaas_favicon-*.svg 2>/dev/null | head -1)
+
+              if [ -n "$LOGO_LIGHT" ]; then
+                echo "Found light logo: $LOGO_LIGHT"
+                cp /tmp/logos/logo-light.svg "$LOGO_LIGHT"
+                echo "✓ Replaced light logo"
+              fi
+
+              if [ -n "$LOGO_DARK" ]; then
+                echo "Found dark logo: $LOGO_DARK"
+                cp /tmp/logos/logo-dark.svg "$LOGO_DARK"
+                echo "✓ Replaced dark logo"
+              fi
+
+              if [ -n "$FAVICON" ]; then
+                echo "Found favicon: $FAVICON"
+                cp /tmp/logos/favicon.svg "$FAVICON"
+                echo "✓ Replaced favicon"
+              fi
+
+              echo "✓ Assets setup complete!"
+
+              # Replace welcome message and add disclaimer
+              echo "Customizing welcome message and adding disclaimer..."
+              for jsfile in /shared-assets/*.js; do
+                if grep -q "Welcome to LiteMaaS" "$jsfile" 2>/dev/null; then
+                  sed -i 's/Welcome to LiteMaaS/Welcome to Red Hat Demo Platform MaaS service (Beta)/g' "$jsfile"
+                  echo "✓ Updated welcome message in $(basename $jsfile)"
+                fi
+                # Replace subtitle with disclaimer
+                if grep -q "Your Model as a Service platform" "$jsfile" 2>/dev/null; then
+                  sed -i 's/Your Model as a Service platform for accessing and managing AI models\./BETA: This service is intended for demos, workshops, and training purposes only. Do not share credentials or use for customer-facing production workloads./g' "$jsfile"
+                  echo "✓ Replaced subtitle with disclaimer in $(basename $jsfile)"
+                fi
+                # Add Beta to login page title
+                if grep -q "Sign in to LiteMaaS" "$jsfile" 2>/dev/null; then
+                  sed -i 's/Sign in to LiteMaaS/Sign in to Red Hat Demo Platform MaaS (Beta)/g' "$jsfile"
+                  echo "✓ Updated login page title in $(basename $jsfile)"
+                fi
+                # Handle "Log in to LiteMaaS" variant
+                if grep -q "Log in to LiteMaaS" "$jsfile" 2>/dev/null; then
+                  sed -i 's/Log in to LiteMaaS/Log in to Red Hat Demo Platform MaaS (Beta)/g' "$jsfile"
+                  echo "✓ Updated login page title (Log in variant) in $(basename $jsfile)"
+                fi
+              done
+          volumeMounts:
+            - name: custom-logo
+              mountPath: /tmp/logos
+            - name: assets-volume
+              mountPath: /shared-assets
+{% endif %}
         - name: wait-for-backend
           image: busybox:1.36
           command:
@@ -25,70 +93,11 @@ spec:
             - -c
             - |
               echo "Waiting for backend to be ready..."
-              until nc -z litemaas-backend 8080; do
+              until nc -z litellm-backend 8080; do
                 echo "Backend is not ready yet. Waiting..."
                 sleep 5
               done
               echo "Backend is ready! Starting frontend..."
-{% if ocp4_workload_litemaas_branding_enabled | default(false) | bool %}
-        # Inject RHDP branding directly into frontend files
-        - name: setup-branding
-          image: "{{ ocp4_workload_litemaas_frontend_image }}:{{ ocp4_workload_litemaas_version }}"
-          command:
-            - sh
-            - -c
-            - |
-              set -e
-              echo "=== RHDP Branding: Starting setup ==="
-
-              # Copy original frontend files to shared volume
-              echo "Copying frontend files to shared volume..."
-              cp -r /opt/app-root/src/* /app-volume/
-
-              # Copy branding assets (logos, favicon)
-              echo "Copying branding assets..."
-              mkdir -p /app-volume/branding
-              cp /branding-source/logo-light.svg /app-volume/branding/
-              cp /branding-source/logo-dark.svg /app-volume/branding/
-              cp /branding-source/favicon.png /app-volume/branding/
-
-              # Find index.html
-              INDEX_FILE=$(find /app-volume -name "index.html" | head -1)
-              if [ -z "$INDEX_FILE" ]; then
-                echo "ERROR: index.html not found!"
-                exit 1
-              fi
-              echo "Found index.html at: $INDEX_FILE"
-
-              # Inject preload CSS into <head> BEFORE any other content
-              echo "Injecting preload CSS with smooth animations..."
-              CSS_CONTENT='<style id="rhdp-preload-css">body{visibility:hidden!important;opacity:0;transition:opacity 0.3s ease-in-out}body.rhdp-ready{visibility:visible!important;opacity:1!important}img[src*="logo"],img[alt*="LiteMaaS"],img[alt*="litemaas"],[class*="logo"] img,[class*="Logo"] img{opacity:0!important;transition:opacity 0.3s ease-in}img[src*="/branding/logo-"]{opacity:1!important}h1,h2,h3,h4,h5,h6{opacity:0!important;transition:opacity 0.3s ease-in}.rhdp-branded{opacity:1!important}footer:not(#rhdp-branding-footer),[class*="footer"]:not(#rhdp-branding-footer),div[class*="absolute"]:has(a[href*="github"]):not(#rhdp-branding-footer){display:none!important;visibility:hidden!important}#rhdp-branding-footer{position:fixed;bottom:0;left:0;right:0;padding:16px 32px;background:linear-gradient(180deg,#0f0f0f 0%,#151515 100%);color:#fff;font-size:12px;font-family:"Red Hat Text","Overpass",helvetica,arial,sans-serif;z-index:9999;border-top:3px solid #EE0000;box-shadow:0 -2px 10px rgba(0,0,0,0.3);animation:slideUp 0.4s ease-out}@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}#rhdp-branding-footer a{color:#C9C9C9;text-decoration:none;transition:all 0.2s ease}#rhdp-branding-footer a:hover{color:#EE0000;text-decoration:underline}</style>'
-              sed -i "s|<head>|<head>${CSS_CONTENT}|" "$INDEX_FILE"
-
-              # Inject branding script before </head>
-              echo "Injecting branding script..."
-              sed -i 's|</head>|<script src="/branding/branding-inject.js"></script></head>|' "$INDEX_FILE"
-
-              # Replace ALL favicon references
-              echo "Replacing favicon..."
-              # Remove all existing favicon/icon links
-              sed -i '/<link[^>]*rel="[^"]*icon[^"]*"/d' "$INDEX_FILE"
-              # Inject new favicon links before </head>
-              sed -i 's|</head>|<link rel="icon" type="image/png" sizes="32x32" href="/branding/favicon.png"><link rel="apple-touch-icon" href="/branding/favicon.png"></head>|' "$INDEX_FILE"
-
-              # Copy branding script
-              cp /branding-source/branding-inject.js /app-volume/branding/
-
-              echo "=== RHDP Branding: Setup complete ==="
-              echo "Modified index.html:"
-              head -20 "$INDEX_FILE"
-          volumeMounts:
-            - name: branding-source
-              mountPath: /branding-source
-              readOnly: true
-            - name: app-volume
-              mountPath: /app-volume
-{% endif %}
       containers:
         - name: frontend
           image: "{{ ocp4_workload_litemaas_frontend_image }}:{{ ocp4_workload_litemaas_version }}"
@@ -97,11 +106,12 @@ spec:
               name: http
           env:
             - name: BACKEND_URL
-              value: "http://litemaas-backend:8080"
-{% if ocp4_workload_litemaas_branding_enabled | default(false) | bool %}
+              value: "http://litellm-backend:8080"
+{% if ocp4_workload_litemaas_enable_custom_logo | bool %}
           volumeMounts:
-            - name: app-volume
-              mountPath: /opt/app-root/src
+            - name: assets-volume
+              mountPath: /opt/app-root/src/assets
+              readOnly: true
 {% endif %}
           resources:
             requests:
@@ -126,21 +136,21 @@ spec:
             periodSeconds: 15
             timeoutSeconds: 5
             failureThreshold: 3
-{% if ocp4_workload_litemaas_branding_enabled | default(false) | bool %}
+{% if ocp4_workload_litemaas_enable_custom_logo | bool %}
       volumes:
-        - name: branding-source
+        - name: custom-logo
           configMap:
-            name: litemaas-branding
-        - name: app-volume
+            name: litellm-custom-logo
+        - name: assets-volume
           emptyDir: {}
 {% endif %}
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: litemaas-frontend
+  name: litellm-frontend
   labels:
-    app: litemaas-frontend
+    app: litellm-frontend
     component: web
 spec:
   ports:
@@ -148,20 +158,20 @@ spec:
       targetPort: 8080
       name: http
   selector:
-    app: litemaas-frontend
+    app: litellm-frontend
 ---
 apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
-  name: litemaas-frontend
+  name: "{{ ocp4_workload_litemaas_frontend_route_name }}"
   labels:
-    app: litemaas-frontend
+    app: litellm-frontend
     component: web
 spec:
-  host: "litellm-frontend.{{ ocp4_workload_litemaas_cluster_domain }}"
+  host: "{{ ocp4_workload_litemaas_frontend_route_prefix }}.{{ ocp4_workload_litemaas_cluster_domain }}"
   to:
     kind: Service
-    name: litemaas-frontend
+    name: litellm-frontend
   port:
     targetPort: http
   tls:
