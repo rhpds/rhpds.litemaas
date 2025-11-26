@@ -100,7 +100,7 @@ ocp4_workload_litemaas_litellm_models: []
 # Users access models via LiteLLM virtual keys (created by admins)
 ocp4_workload_litemaas_oauth_enabled: false
 ocp4_workload_litemaas_oauth_provider: "openshift"  # google or openshift
-ocp4_workload_litemaas_oauth_client_id: "litellm-rhpds"
+ocp4_workload_litemaas_oauth_client_id: "{{ ocp4_workload_litemaas_namespace }}"  # Use namespace as OAuth client ID
 ocp4_workload_litemaas_oauth_client_secret: "{{ lookup('password', '/dev/null length=32 chars=ascii_letters,digits') }}"
 
 # Admin access
