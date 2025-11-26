@@ -534,13 +534,18 @@
                         echo "Customizing welcome message and adding disclaimer..."
                         for jsfile in /shared-assets/*.js; do
                           if grep -q "Welcome to LiteMaaS" "$jsfile" 2>/dev/null; then
-                            sed -i 's/Welcome to LiteMaaS/Welcome to Red Hat Demo Platform MaaS service/g' "$jsfile"
+                            sed -i 's/Welcome to LiteMaaS/Welcome to Red Hat Demo Platform MaaS service (Beta)/g' "$jsfile"
                             echo "✓ Updated welcome message in $(basename $jsfile)"
                           fi
                           # Replace subtitle with disclaimer
                           if grep -q "Your Model as a Service platform" "$jsfile" 2>/dev/null; then
-                            sed -i 's/Your Model as a Service platform for accessing and managing AI models\./This service is intended for demos, workshops, and training purposes only. Do not share credentials or use for customer-facing production workloads./g' "$jsfile"
+                            sed -i 's/Your Model as a Service platform for accessing and managing AI models\./BETA: This service is intended for demos, workshops, and training purposes only. Do not share credentials or use for customer-facing production workloads./g' "$jsfile"
                             echo "✓ Replaced subtitle with disclaimer in $(basename $jsfile)"
+                          fi
+                          # Add Beta to login page title
+                          if grep -q "Sign in to LiteMaaS" "$jsfile" 2>/dev/null; then
+                            sed -i 's/Sign in to LiteMaaS/Sign in to Red Hat Demo Platform MaaS (Beta)/g' "$jsfile"
+                            echo "✓ Updated login page title in $(basename $jsfile)"
                           fi
                         done
                     volumeMounts:
