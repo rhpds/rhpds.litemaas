@@ -149,9 +149,7 @@
             - r_oauth_server.resources[0].status.issuer != ""
 
 - name: Check if OAuth client already exists
-  when:
-    - ocp4_workload_litemaas_oauth_enabled | bool
-    - ocp4_workload_litemaas_oauth_provider == "openshift"
+  when: ocp4_workload_litemaas_oauth_provider == "openshift"
   kubernetes.core.k8s_info:
     api_version: oauth.openshift.io/v1
     kind: OAuthClient
@@ -160,9 +158,8 @@
 
 - name: Reuse existing OAuth client secret if available
   when:
-    - ocp4_workload_litemaas_oauth_enabled | bool
     - ocp4_workload_litemaas_oauth_provider == "openshift"
-    - r_existing_oauth_client.resources | length > 0
+    - r_existing_oauth_client.resources | default([]) | length > 0
   ansible.builtin.set_fact:
     _litemaas_oauth_client_secret_generated: "{{ r_existing_oauth_client.resources[0].secret }}"
 
@@ -173,9 +170,10 @@
   ansible.builtin.set_fact:
     _litemaas_oauth_client_secret_generated: "{{ lookup('password', '/dev/null length=32 chars=ascii_letters,digits') }}"
 
-- name: Set default OAuth client secret for non-OAuth deployments
+- name: Set default OAuth client secret for non-OAuth deployments (only if no existing OAuth client)
   when:
     - not (ocp4_workload_litemaas_oauth_enabled | bool)
+    - r_existing_oauth_client.resources | default([]) | length == 0
   ansible.builtin.set_fact:
     _litemaas_oauth_client_secret_generated: "{{ lookup('password', '/dev/null length=32 chars=ascii_letters,digits') }}"
 
