@@ -547,6 +547,11 @@
                             sed -i 's/Sign in to LiteMaaS/Sign in to Red Hat Demo Platform MaaS (Beta)/g' "$jsfile"
                             echo "✓ Updated login page title in $(basename $jsfile)"
                           fi
+                          # Handle "Log in to LiteMaaS" variant
+                          if grep -q "Log in to LiteMaaS" "$jsfile" 2>/dev/null; then
+                            sed -i 's/Log in to LiteMaaS/Log in to Red Hat Demo Platform MaaS (Beta)/g' "$jsfile"
+                            echo "✓ Updated login page title (Log in variant) in $(basename $jsfile)"
+                          fi
                         done
                     volumeMounts:
                       - name: custom-logo
