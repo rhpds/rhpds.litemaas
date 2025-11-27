@@ -37,28 +37,35 @@ The `deploy-litemaas.sh` script automatically:
 ./deploy-litemaas.sh my-litemaas --multi-user --num-users 10
 ```
 
-**High Availability (3 replicas):**
+**High Availability (auto-enables backend + frontend):**
 ```bash
-./deploy-litemaas.sh litellm-prod --ha --replicas 3
+./deploy-litemaas.sh litellm-rhpds --ha --replicas 3
 ```
 
-**Full Production Stack:**
+**HA with OAuth and custom routes:**
 ```bash
 ./deploy-litemaas.sh litellm-rhpds \
   --ha --replicas 3 \
   --oauth \
-  --backend \
-  --frontend \
+  --route-prefix litellm-prod
+```
+
+**Full RHDP Production (HA + OAuth + branding):**
+```bash
+./deploy-litemaas.sh litellm-rhpds \
+  --ha --replicas 3 \
+  --oauth \
   --logos \
   --route-prefix litellm-prod
 ```
 
 **Feature Flags:**
+- `--ha` - High availability mode (auto-enables backend + frontend for full stack)
 - `--oauth` - Enable OAuth authentication with OpenShift
-- `--backend` - Deploy backend API service
-- `--frontend` - Deploy frontend UI service
-- `--logos` - Enable custom Red Hat logos and Beta labels
+- `--logos` - Enable Red Hat logos and Beta labels (RHDP branding)
 - `--route-prefix <name>` - Set custom route prefix (automatically sets all route names)
+
+**Note:** HA mode automatically deploys backend and frontend - you don't need to specify them!
 
 **Remove Deployment:**
 ```bash
@@ -93,36 +100,34 @@ The `deploy-litemaas.sh` script automatically:
   --ha \
   --replicas 3 \
   --oauth \
-  --backend \
-  --frontend \
   --logos \
   --route-prefix litellm-prod
 ```
 
 **What you get:**
 - Namespace: `litellm-rhpds`
-- LiteLLM replicas: 3
+- LiteLLM replicas: 3 (with backend + frontend auto-enabled)
 - Routes:
   - API: `https://litellm-prod.apps.cluster.com`
   - Admin Backend: `https://litellm-prod-admin.apps.cluster.com`
   - Frontend: `https://litellm-prod-frontend.apps.cluster.com`
-- Features: OAuth login, Red Hat logos, Beta labels
+- Features: Full stack, OAuth login, Red Hat logos, Beta labels
 
 ### Example 2: Development/Test Environment
 **Scenario:** Simple HA setup for testing without OAuth
 
 ```bash
-./deploy-litemaas.sh litellm-dev \
-  --ha \
-  --replicas 2
+./deploy-litemaas.sh litellm-dev --ha --replicas 2
 ```
 
 **What you get:**
 - Namespace: `litellm-dev`
-- LiteLLM replicas: 2
+- LiteLLM replicas: 2 (backend + frontend auto-enabled)
 - Routes:
   - API: `https://litellm.apps.cluster.com`
-- Features: Basic HA, no OAuth
+  - Admin Backend: `https://litellm-admin.apps.cluster.com`
+  - Frontend: `https://litellm-frontend.apps.cluster.com`
+- Features: Full stack, API key authentication
 
 ### Example 3: Custom Namespace with Custom Routes
 **Scenario:** Deploy to specific namespace with custom route naming
@@ -132,68 +137,49 @@ The `deploy-litemaas.sh` script automatically:
   --ha \
   --replicas 3 \
   --oauth \
-  --backend \
-  --frontend \
   --route-prefix ai-gateway
 ```
 
 **What you get:**
 - Namespace: `ai-models-production`
-- LiteLLM replicas: 3
+- LiteLLM replicas: 3 (backend + frontend auto-enabled)
 - Routes:
   - API: `https://ai-gateway.apps.cluster.com`
   - Admin Backend: `https://ai-gateway-admin.apps.cluster.com`
   - Frontend: `https://ai-gateway-frontend.apps.cluster.com`
-- Features: OAuth, full stack
+- Features: Full stack with OAuth
 
 ### Example 4: Staging Environment
-**Scenario:** Staging with backend/frontend but no OAuth
+**Scenario:** Staging with custom routes, no OAuth
 
 ```bash
 ./deploy-litemaas.sh litellm-staging \
   --ha \
   --replicas 2 \
-  --backend \
-  --frontend \
   --route-prefix litellm-stage
 ```
 
 **What you get:**
 - Namespace: `litellm-staging`
-- LiteLLM replicas: 2
+- LiteLLM replicas: 2 (backend + frontend auto-enabled)
 - Routes:
   - API: `https://litellm-stage.apps.cluster.com`
   - Admin Backend: `https://litellm-stage-admin.apps.cluster.com`
   - Frontend: `https://litellm-stage-frontend.apps.cluster.com`
-- Features: Full stack without OAuth (API key only)
+- Features: Full stack with API key authentication
 
 ### Example 5: Multi-Cluster Setup
 **Scenario:** Different deployments for different environments
 
 ```bash
 # Cluster 1: Production
-./deploy-litemaas.sh litellm-prod \
-  --ha \
-  --replicas 3 \
-  --oauth \
-  --backend \
-  --frontend \
-  --logos \
-  --route-prefix litellm-prod
+./deploy-litemaas.sh litellm-prod --ha --replicas 3 --oauth --logos --route-prefix litellm-prod
 
 # Cluster 2: Staging
-./deploy-litemaas.sh litellm-stage \
-  --ha \
-  --replicas 2 \
-  --oauth \
-  --backend \
-  --frontend \
-  --route-prefix litellm-stage
+./deploy-litemaas.sh litellm-stage --ha --replicas 2 --oauth --route-prefix litellm-stage
 
 # Cluster 3: Development
-./deploy-litemaas.sh litellm-dev \
-  --ha \
-  --replicas 1
+./deploy-litemaas.sh litellm-dev --ha --replicas 1
 ```
 
 ### Example 6: Custom Domain Prefix
@@ -204,18 +190,18 @@ The `deploy-litemaas.sh` script automatically:
   --ha \
   --replicas 3 \
   --oauth \
-  --backend \
-  --frontend \
   --logos \
   --route-prefix rh-ai
 ```
 
 **What you get:**
 - Namespace: `redhat-ai-services`
+- LiteLLM replicas: 3 (backend + frontend auto-enabled)
 - Routes:
   - API: `https://rh-ai.apps.cluster.com`
   - Admin Backend: `https://rh-ai-admin.apps.cluster.com`
   - Frontend: `https://rh-ai-frontend.apps.cluster.com`
+- Features: Full stack with OAuth and RHDP branding
 
 ### Verify Your Deployment
 
@@ -250,12 +236,14 @@ After successful deployment, sync models from LiteLLM to backend:
 | Scenario | Command |
 |----------|---------|
 | **Simple HA** | `./deploy-litemaas.sh <namespace> --ha --replicas 3` |
-| **HA + OAuth** | `./deploy-litemaas.sh <namespace> --ha --replicas 3 --oauth --backend --frontend` |
-| **Full Production** | `./deploy-litemaas.sh <namespace> --ha --replicas 3 --oauth --backend --frontend --logos --route-prefix <name>` |
-| **Custom Routes** | `./deploy-litemaas.sh <namespace> --ha --replicas 2 --route-prefix my-custom-name` |
+| **HA + OAuth** | `./deploy-litemaas.sh <namespace> --ha --replicas 3 --oauth` |
+| **Full Production** | `./deploy-litemaas.sh <namespace> --ha --replicas 3 --oauth --logos --route-prefix <name>` |
+| **Custom Routes** | `./deploy-litemaas.sh <namespace> --ha --replicas 2 --route-prefix <name>` |
 | **Single User** | `./deploy-litemaas.sh <namespace>` |
 | **Multi-User Lab** | `./deploy-litemaas.sh <namespace> --multi-user --num-users 10` |
 | **Remove** | `./deploy-litemaas.sh <namespace> --remove` |
+
+**Note:** HA mode (`--ha`) automatically enables backend and frontend - no need to specify them manually!
 
 ### Route Naming Explained
 

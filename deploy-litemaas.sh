@@ -64,32 +64,38 @@ if [ $# -eq 0 ]; then
     echo ""
     echo "Usage: $0 <namespace> [options]"
     echo ""
-    echo "Options:"
+    echo "Deployment Modes:"
     echo "  --multi-user          Deploy multi-user lab environment"
     echo "  --num-users <count>   Number of users (default: 1)"
-    echo "  --ha                  Deploy high availability setup"
+    echo "  --ha                  Deploy high availability (auto-enables backend + frontend)"
     echo "  --replicas <count>    Number of LiteLLM replicas (default: 2)"
     echo "  --remove              Remove existing deployment"
     echo ""
-    echo "Feature Flags:"
-    echo "  --oauth               Enable OAuth authentication"
-    echo "  --backend             Deploy backend API"
-    echo "  --frontend            Deploy frontend UI"
-    echo "  --logos               Enable custom Red Hat logos and Beta labels"
+    echo "Optional Features:"
+    echo "  --oauth               Enable OAuth authentication with OpenShift"
+    echo "  --logos               Enable Red Hat logos and Beta labels (RHDP branding)"
     echo "  --route-prefix <name> Set custom route prefix (e.g., litellm-prod)"
     echo ""
     echo "Advanced:"
     echo "  -e <key=value>        Pass extra variables to Ansible"
     echo ""
     echo "Examples:"
-    echo "  # Simple deployment"
-    echo "  $0 litellm-rhpds"
+    echo "  # Simple single-user deployment"
+    echo "  $0 litellm-dev"
     echo ""
-    echo "  # Full production stack"
-    echo "  $0 litellm-rhpds --ha --replicas 3 --oauth --backend --frontend --logos --route-prefix litellm-prod"
+    echo "  # HA deployment (auto-enables backend + frontend)"
+    echo "  $0 litellm-rhpds --ha --replicas 3"
     echo ""
-    echo "  # Multi-user lab"
-    echo "  $0 my-litemaas --multi-user --num-users 10"
+    echo "  # HA with OAuth and custom routes"
+    echo "  $0 litellm-rhpds --ha --replicas 3 --oauth --route-prefix litellm-prod"
+    echo ""
+    echo "  # Full RHDP production (HA + OAuth + branding)"
+    echo "  $0 litellm-rhpds --ha --replicas 3 --oauth --logos --route-prefix litellm-prod"
+    echo ""
+    echo "  # Multi-user lab (10 users)"
+    echo "  $0 my-lab --multi-user --num-users 10"
+    echo ""
+    echo "Note: HA mode automatically deploys backend and frontend for full stack experience."
     exit 1
 fi
 
@@ -261,6 +267,14 @@ case $DEPLOYMENT_MODE in
     ha)
         ANSIBLE_VARS="$ANSIBLE_VARS -e ocp4_workload_litemaas_ha_litellm_replicas=$HA_REPLICAS"
         PLAYBOOK="playbooks/deploy_litemaas_ha.yml"
+
+        # HA mode: Enable backend and frontend by default (unless explicitly disabled)
+        if [ "$ENABLE_BACKEND" = false ]; then
+            ENABLE_BACKEND=true
+        fi
+        if [ "$ENABLE_FRONTEND" = false ]; then
+            ENABLE_FRONTEND=true
+        fi
         ;;
     single)
         PLAYBOOK="playbooks/deploy_litemaas.yml"
