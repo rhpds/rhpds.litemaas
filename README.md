@@ -12,6 +12,77 @@ Deploy an AI model gateway on OpenShift in 3 minutes. Give users controlled acce
 
 ---
 
+## 🚀 Quick Deploy Script (Recommended)
+
+**One command to deploy LiteMaaS - automatic Python venv setup included!**
+
+The `deploy-litemaas.sh` script automatically:
+- Creates and activates Python virtual environment
+- Installs Ansible and Kubernetes Python dependencies
+- Builds and installs the collection
+- Deploys LiteMaaS with your chosen configuration
+
+**Prerequisites:**
+- OpenShift CLI (`oc`) installed and logged in
+- Python 3 installed
+- `jq` installed (for resource discovery)
+
+**Single-User Deployment:**
+```bash
+./deploy-litemaas.sh litellm-rhpds
+```
+
+**Multi-User Lab (10 users):**
+```bash
+./deploy-litemaas.sh my-litemaas --multi-user --num-users 10
+```
+
+**High Availability (3 replicas):**
+```bash
+./deploy-litemaas.sh litellm-prod --ha --replicas 3
+```
+
+**Full Production Stack:**
+```bash
+./deploy-litemaas.sh litellm-rhpds \
+  --ha --replicas 3 \
+  --oauth \
+  --backend \
+  --frontend \
+  --logos \
+  --route-prefix litellm-prod
+```
+
+**Feature Flags:**
+- `--oauth` - Enable OAuth authentication with OpenShift
+- `--backend` - Deploy backend API service
+- `--frontend` - Deploy frontend UI service
+- `--logos` - Enable custom Red Hat logos and Beta labels
+- `--route-prefix <name>` - Set custom route prefix (automatically sets all route names)
+
+**Remove Deployment:**
+```bash
+./deploy-litemaas.sh litellm-rhpds --remove
+```
+
+**What the script does:**
+1. ✅ Validates OpenShift login
+2. ✅ Creates `.venv` directory (only first time)
+3. ✅ Activates Python virtual environment
+4. ✅ Installs/upgrades pip
+5. ✅ Installs `ansible` and `kubernetes` Python packages
+6. ✅ Builds Ansible collection from source
+7. ✅ Installs collection to Ansible
+8. ✅ Runs deployment playbook with your parameters
+9. ✅ Shows access URLs and next steps
+
+**After deployment, sync models:**
+```bash
+./sync-models.sh litellm-rhpds
+```
+
+---
+
 ## 🎯 RHDP Production Deployment (Full Stack)
 
 **Complete deployment with OAuth, custom logos, Beta labels, and custom routes:**
