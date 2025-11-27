@@ -83,6 +83,197 @@ The `deploy-litemaas.sh` script automatically:
 
 ---
 
+## 📋 HA Deployment Examples
+
+### Example 1: RHDP Production (Full Stack)
+**Scenario:** Production deployment with OAuth, custom branding, and custom routes
+
+```bash
+./deploy-litemaas.sh litellm-rhpds \
+  --ha \
+  --replicas 3 \
+  --oauth \
+  --backend \
+  --frontend \
+  --logos \
+  --route-prefix litellm-prod
+```
+
+**What you get:**
+- Namespace: `litellm-rhpds`
+- LiteLLM replicas: 3
+- Routes:
+  - API: `https://litellm-prod.apps.cluster.com`
+  - Admin Backend: `https://litellm-prod-admin.apps.cluster.com`
+  - Frontend: `https://litellm-prod-frontend.apps.cluster.com`
+- Features: OAuth login, Red Hat logos, Beta labels
+
+### Example 2: Development/Test Environment
+**Scenario:** Simple HA setup for testing without OAuth
+
+```bash
+./deploy-litemaas.sh litellm-dev \
+  --ha \
+  --replicas 2
+```
+
+**What you get:**
+- Namespace: `litellm-dev`
+- LiteLLM replicas: 2
+- Routes:
+  - API: `https://litellm.apps.cluster.com`
+- Features: Basic HA, no OAuth
+
+### Example 3: Custom Namespace with Custom Routes
+**Scenario:** Deploy to specific namespace with custom route naming
+
+```bash
+./deploy-litemaas.sh ai-models-production \
+  --ha \
+  --replicas 3 \
+  --oauth \
+  --backend \
+  --frontend \
+  --route-prefix ai-gateway
+```
+
+**What you get:**
+- Namespace: `ai-models-production`
+- LiteLLM replicas: 3
+- Routes:
+  - API: `https://ai-gateway.apps.cluster.com`
+  - Admin Backend: `https://ai-gateway-admin.apps.cluster.com`
+  - Frontend: `https://ai-gateway-frontend.apps.cluster.com`
+- Features: OAuth, full stack
+
+### Example 4: Staging Environment
+**Scenario:** Staging with backend/frontend but no OAuth
+
+```bash
+./deploy-litemaas.sh litellm-staging \
+  --ha \
+  --replicas 2 \
+  --backend \
+  --frontend \
+  --route-prefix litellm-stage
+```
+
+**What you get:**
+- Namespace: `litellm-staging`
+- LiteLLM replicas: 2
+- Routes:
+  - API: `https://litellm-stage.apps.cluster.com`
+  - Admin Backend: `https://litellm-stage-admin.apps.cluster.com`
+  - Frontend: `https://litellm-stage-frontend.apps.cluster.com`
+- Features: Full stack without OAuth (API key only)
+
+### Example 5: Multi-Cluster Setup
+**Scenario:** Different deployments for different environments
+
+```bash
+# Cluster 1: Production
+./deploy-litemaas.sh litellm-prod \
+  --ha \
+  --replicas 3 \
+  --oauth \
+  --backend \
+  --frontend \
+  --logos \
+  --route-prefix litellm-prod
+
+# Cluster 2: Staging
+./deploy-litemaas.sh litellm-stage \
+  --ha \
+  --replicas 2 \
+  --oauth \
+  --backend \
+  --frontend \
+  --route-prefix litellm-stage
+
+# Cluster 3: Development
+./deploy-litemaas.sh litellm-dev \
+  --ha \
+  --replicas 1
+```
+
+### Example 6: Custom Domain Prefix
+**Scenario:** Use organization-specific route prefix
+
+```bash
+./deploy-litemaas.sh redhat-ai-services \
+  --ha \
+  --replicas 3 \
+  --oauth \
+  --backend \
+  --frontend \
+  --logos \
+  --route-prefix rh-ai
+```
+
+**What you get:**
+- Namespace: `redhat-ai-services`
+- Routes:
+  - API: `https://rh-ai.apps.cluster.com`
+  - Admin Backend: `https://rh-ai-admin.apps.cluster.com`
+  - Frontend: `https://rh-ai-frontend.apps.cluster.com`
+
+### Verify Your Deployment
+
+After deployment, verify the routes:
+
+```bash
+# List all routes in namespace
+oc get routes -n litellm-rhpds
+
+# Get specific route URLs
+oc get route litellm-prod -n litellm-rhpds -o jsonpath='{.spec.host}'
+
+# Check pod status
+oc get pods -n litellm-rhpds
+```
+
+### Sync Models
+
+After successful deployment, sync models from LiteLLM to backend:
+
+```bash
+# Auto-discovery mode
+./sync-models.sh litellm-rhpds
+
+# Works with any custom namespace
+./sync-models.sh ai-models-production
+./sync-models.sh redhat-ai-services
+```
+
+### Quick Reference Table
+
+| Scenario | Command |
+|----------|---------|
+| **Simple HA** | `./deploy-litemaas.sh <namespace> --ha --replicas 3` |
+| **HA + OAuth** | `./deploy-litemaas.sh <namespace> --ha --replicas 3 --oauth --backend --frontend` |
+| **Full Production** | `./deploy-litemaas.sh <namespace> --ha --replicas 3 --oauth --backend --frontend --logos --route-prefix <name>` |
+| **Custom Routes** | `./deploy-litemaas.sh <namespace> --ha --replicas 2 --route-prefix my-custom-name` |
+| **Single User** | `./deploy-litemaas.sh <namespace>` |
+| **Multi-User Lab** | `./deploy-litemaas.sh <namespace> --multi-user --num-users 10` |
+| **Remove** | `./deploy-litemaas.sh <namespace> --remove` |
+
+### Route Naming Explained
+
+When you use `--route-prefix <name>`, the script automatically sets:
+
+| Route Type | Route Name (Resource) | Route Hostname |
+|------------|----------------------|----------------|
+| **API** | `<prefix>` | `https://<prefix>.apps.cluster.com` |
+| **Admin Backend** | `<prefix>-admin` | `https://<prefix>-admin.apps.cluster.com` |
+| **Frontend** | `<prefix>-frontend` | `https://<prefix>-frontend.apps.cluster.com` |
+
+**Example:** `--route-prefix litellm-prod` creates:
+- API: `https://litellm-prod.apps.cluster.com`
+- Admin: `https://litellm-prod-admin.apps.cluster.com`
+- Frontend: `https://litellm-prod-frontend.apps.cluster.com`
+
+---
+
 ## 🎯 RHDP Production Deployment (Full Stack)
 
 **Complete deployment with OAuth, custom logos, Beta labels, and custom routes:**
