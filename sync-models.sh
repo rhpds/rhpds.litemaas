@@ -5,16 +5,29 @@
 # Syncs models from LiteLLM to backend database
 #
 # Usage:
-#   Automatic mode (gets values from OpenShift):
+#   Automatic mode (auto-discovers all resources):
 #     ./sync-models.sh [namespace]
 #
-#   Manual mode (provide values):
+#     The script will automatically find:
+#     - LiteLLM API route (targeting 'litellm' service)
+#     - Secret with LITELLM_MASTER_KEY
+#     - Database secret (with username/password/database keys)
+#     - PostgreSQL pod (app=litellm-postgres or app=litemaas-postgres)
+#
+#   Manual mode (bypass auto-discovery):
 #     LITELLM_URL=https://... LITELLM_MASTER_KEY=sk-... ./sync-models.sh [namespace]
 #
-#   Example:
-#     LITELLM_URL=https://litellm-admin.apps.cluster.com \
-#     LITELLM_MASTER_KEY=sk-Ki6upzR5aSwKDzSHoIWneNvKqx2CcxKj \
+#   Examples:
+#     # Standard namespace
 #     ./sync-models.sh litemaas
+#
+#     # Custom namespace
+#     ./sync-models.sh litellm-rhpds
+#
+#     # Manual mode
+#     LITELLM_URL=https://litellm-prod.apps.cluster.com \
+#     LITELLM_MASTER_KEY=sk-Ki6upzR5aSwKDzSHoIWneNvKqx2CcxKj \
+#     ./sync-models.sh my-custom-namespace
 # =============================================================================
 
 set -e
@@ -45,6 +58,18 @@ else
         exit 1
     fi
 
+    # Check if jq is available (needed for auto-discovery)
+    if ! command -v jq &> /dev/null; then
+        echo "ERROR: jq command not found. Please install jq."
+        echo "  macOS: brew install jq"
+        echo "  RHEL/Fedora: dnf install jq"
+        echo "  Ubuntu/Debian: apt install jq"
+        echo ""
+        echo "Alternatively, provide values manually:"
+        echo "  LITELLM_URL=https://... LITELLM_MASTER_KEY=sk-... ./sync-models.sh"
+        exit 1
+    fi
+
     # Check if logged in
     if ! oc whoami &> /dev/null; then
         echo "ERROR: Not logged into OpenShift. Run 'oc login' first."
@@ -54,27 +79,46 @@ else
         exit 1
     fi
 
-    # Get LiteLLM URL
+    # Get LiteLLM URL - find route targeting litellm service
     echo "Getting LiteLLM URL..."
-    # Try litellm-rhpds first, fall back to litemaas, then litellm
-    LITELLM_ROUTE=$(oc get route litellm-rhpds -n "$NAMESPACE" -o jsonpath='{.spec.host}' 2>/dev/null || \
-                    oc get route litemaas -n "$NAMESPACE" -o jsonpath='{.spec.host}' 2>/dev/null || \
-                    oc get route litellm -n "$NAMESPACE" -o jsonpath='{.spec.host}' 2>/dev/null || echo "")
+    echo "  Discovering routes in namespace '$NAMESPACE'..."
+
+    # Find route that targets the litellm service (API route)
+    LITELLM_ROUTE=$(oc get routes -n "$NAMESPACE" -o json 2>/dev/null | \
+                    jq -r '.items[] | select(.spec.to.name == "litellm") | .spec.host' 2>/dev/null | head -1)
+
+    # If not found, try finding any route with "litellm" in the service name (but not backend/frontend)
     if [ -z "$LITELLM_ROUTE" ]; then
-        echo "ERROR: LiteLLM route not found in namespace '$NAMESPACE'"
-        echo "       Tried: litellm-rhpds, litemaas, litellm"
+        LITELLM_ROUTE=$(oc get routes -n "$NAMESPACE" -o json 2>/dev/null | \
+                        jq -r '.items[] | select(.spec.to.name | test("litellm|litemaas")) | select(.spec.to.name | test("backend|frontend") | not) | .spec.host' 2>/dev/null | head -1)
+    fi
+
+    if [ -z "$LITELLM_ROUTE" ]; then
+        echo "ERROR: LiteLLM API route not found in namespace '$NAMESPACE'"
+        echo "       Could not find route targeting 'litellm' service"
+        echo ""
+        echo "Available routes:"
+        oc get routes -n "$NAMESPACE" 2>/dev/null || echo "  None found"
         exit 1
     fi
     LITELLM_URL="https://$LITELLM_ROUTE"
     echo "  LiteLLM URL: $LITELLM_URL"
 
-    # Get LiteLLM Master Key
+    # Get LiteLLM Master Key - find secret containing LITELLM_MASTER_KEY
     echo "Getting LiteLLM Master Key..."
-    LITELLM_MASTER_KEY=$(oc get secret litellm-secret -n "$NAMESPACE" -o jsonpath='{.data.LITELLM_MASTER_KEY}' 2>/dev/null | base64 -d || echo "")
-    if [ -z "$LITELLM_MASTER_KEY" ]; then
-        echo "ERROR: LiteLLM master key not found in namespace '$NAMESPACE'"
+    echo "  Discovering secrets in namespace '$NAMESPACE'..."
+
+    # Find secret with LITELLM_MASTER_KEY key
+    LITELLM_SECRET_NAME=$(oc get secrets -n "$NAMESPACE" -o json 2>/dev/null | \
+                          jq -r '.items[] | select(.data.LITELLM_MASTER_KEY != null) | .metadata.name' 2>/dev/null | head -1)
+
+    if [ -z "$LITELLM_SECRET_NAME" ]; then
+        echo "ERROR: Secret with LITELLM_MASTER_KEY not found in namespace '$NAMESPACE'"
         exit 1
     fi
+
+    LITELLM_MASTER_KEY=$(oc get secret "$LITELLM_SECRET_NAME" -n "$NAMESPACE" -o jsonpath='{.data.LITELLM_MASTER_KEY}' | base64 -d)
+    echo "  Found secret: $LITELLM_SECRET_NAME"
     echo "  Master Key: ${LITELLM_MASTER_KEY:0:10}..."
 fi
 
@@ -101,12 +145,28 @@ if ansible-playbook playbooks/manage_models.yml -e @"$TEMP_FILE"; then
     echo "Sync Complete!"
     echo "========================================="
     echo ""
-    echo "Verify sync:"
-    echo "  # Get database credentials from secret"
-    echo "  DB_USER=\$(oc get secret litemaas-db -n $NAMESPACE -o jsonpath='{.data.username}' | base64 -d)"
-    echo "  DB_NAME=\$(oc get secret litemaas-db -n $NAMESPACE -o jsonpath='{.data.database}' | base64 -d)"
-    echo "  oc exec -n $NAMESPACE litellm-postgres-0 -- \\"
-    echo "    psql -U \$DB_USER -d \$DB_NAME -c 'SELECT id, name FROM models;'"
+
+    # Find database secret (contains username, password, database keys)
+    DB_SECRET_NAME=$(oc get secrets -n "$NAMESPACE" -o json 2>/dev/null | \
+                     jq -r '.items[] | select(.data.username != null and .data.database != null) | .metadata.name' 2>/dev/null | head -1)
+
+    # Find PostgreSQL pod
+    POSTGRES_POD=$(oc get pods -n "$NAMESPACE" -l app=litellm-postgres -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+    if [ -z "$POSTGRES_POD" ]; then
+        POSTGRES_POD=$(oc get pods -n "$NAMESPACE" -l app=litemaas-postgres -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+    fi
+
+    if [ -n "$DB_SECRET_NAME" ] && [ -n "$POSTGRES_POD" ]; then
+        echo "Verify sync:"
+        echo "  # Get database credentials from secret"
+        echo "  DB_USER=\$(oc get secret $DB_SECRET_NAME -n $NAMESPACE -o jsonpath='{.data.username}' | base64 -d)"
+        echo "  DB_NAME=\$(oc get secret $DB_SECRET_NAME -n $NAMESPACE -o jsonpath='{.data.database}' | base64 -d)"
+        echo "  oc exec -n $NAMESPACE $POSTGRES_POD -- \\"
+        echo "    psql -U \$DB_USER -d \$DB_NAME -c 'SELECT id, name FROM models;'"
+    else
+        echo "Verify sync manually:"
+        echo "  oc get pods -n $NAMESPACE"
+    fi
 else
     echo ""
     echo "ERROR: Sync failed. Check the output above for details."
