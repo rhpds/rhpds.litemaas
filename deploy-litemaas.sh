@@ -155,28 +155,6 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-echo "========================================="
-echo "LiteMaaS Deployment"
-echo "========================================="
-echo "Namespace:        $NAMESPACE"
-echo "Deployment Mode:  $DEPLOYMENT_MODE"
-if [ "$DEPLOYMENT_MODE" == "multi-user" ]; then
-    echo "Number of Users:  $NUM_USERS"
-elif [ "$DEPLOYMENT_MODE" == "ha" ]; then
-    echo "HA Replicas:      $HA_REPLICAS"
-fi
-echo "Remove Mode:      $REMOVE_MODE"
-echo ""
-echo "Features:"
-echo "  OAuth:          $ENABLE_OAUTH"
-echo "  Backend:        $ENABLE_BACKEND"
-echo "  Frontend:       $ENABLE_FRONTEND"
-echo "  Logos/Beta:     $ENABLE_LOGOS"
-if [ -n "$ROUTE_PREFIX" ]; then
-    echo "  Route Prefix:   $ROUTE_PREFIX"
-fi
-echo ""
-
 # Check if oc is available
 if ! command -v oc &> /dev/null; then
     echo -e "${RED}ERROR: oc command not found. Please install OpenShift CLI.${NC}"
@@ -280,6 +258,29 @@ case $DEPLOYMENT_MODE in
         PLAYBOOK="playbooks/deploy_litemaas.yml"
         ;;
 esac
+
+# Display deployment configuration (after auto-enable logic)
+echo "========================================="
+echo "LiteMaaS Deployment"
+echo "========================================="
+echo "Namespace:        $NAMESPACE"
+echo "Deployment Mode:  $DEPLOYMENT_MODE"
+if [ "$DEPLOYMENT_MODE" == "multi-user" ]; then
+    echo "Number of Users:  $NUM_USERS"
+elif [ "$DEPLOYMENT_MODE" == "ha" ]; then
+    echo "HA Replicas:      $HA_REPLICAS"
+fi
+echo "Remove Mode:      $REMOVE_MODE"
+echo ""
+echo "Features:"
+echo "  OAuth:          $ENABLE_OAUTH"
+echo "  Backend:        $ENABLE_BACKEND"
+echo "  Frontend:       $ENABLE_FRONTEND"
+echo "  Logos/Beta:     $ENABLE_LOGOS"
+if [ -n "$ROUTE_PREFIX" ]; then
+    echo "  Route Prefix:   $ROUTE_PREFIX"
+fi
+echo ""
 
 # Add feature flags
 if [ "$ENABLE_OAUTH" = true ]; then
