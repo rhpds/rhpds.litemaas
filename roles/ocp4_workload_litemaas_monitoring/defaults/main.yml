@@ -35,6 +35,8 @@ ocp4_workload_litemaas_monitoring_otel_collector_memory_limit: "512Mi"
 # LiteLLM configuration (will be patched to use OTel)
 ocp4_workload_litemaas_monitoring_patch_litellm_config: true
 ocp4_workload_litemaas_monitoring_litellm_deployment_name: "litellm"
+ocp4_workload_litemaas_monitoring_litellm_service_name: "litellm"
+ocp4_workload_litemaas_monitoring_litellm_app_label: "litellm"
 
 # -----------------------------------------------------------------------------
 # Grafana Operator Configuration
