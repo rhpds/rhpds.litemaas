@@ -115,9 +115,17 @@
     msg: "✅ PrometheusRule removed"
 
 # =============================================================================
-# 5. Remove ServiceMonitor
+# 5. Remove ServiceMonitors
 # =============================================================================
-- name: Remove ServiceMonitor for LiteLLM
+- name: Remove ServiceMonitor for OpenTelemetry Collector
+  kubernetes.core.k8s:
+    state: absent
+    api_version: monitoring.coreos.com/v1
+    kind: ServiceMonitor
+    name: otel-collector
+    namespace: "{{ ocp4_workload_litemaas_monitoring_namespace }}"
+
+- name: Remove ServiceMonitor for LiteLLM (old, if exists)
   kubernetes.core.k8s:
     state: absent
     api_version: monitoring.coreos.com/v1
@@ -127,7 +135,73 @@
 
 - name: Display ServiceMonitor removal
   ansible.builtin.debug:
-    msg: "✅ ServiceMonitor removed"
+    msg: "✅ ServiceMonitors removed"
+
+# =============================================================================
+# 6. Remove OpenTelemetry Collector
+# =============================================================================
+- name: Remove OpenTelemetry Collector Deployment
+  kubernetes.core.k8s:
+    state: absent
+    api_version: apps/v1
+    kind: Deployment
+    name: otel-collector
+    namespace: "{{ ocp4_workload_litemaas_monitoring_namespace }}"
+
+- name: Remove OpenTelemetry Collector Service
+  kubernetes.core.k8s:
+    state: absent
+    api_version: v1
+    kind: Service
+    name: otel-collector
+    namespace: "{{ ocp4_workload_litemaas_monitoring_namespace }}"
+
+- name: Remove OpenTelemetry Collector ConfigMap
+  kubernetes.core.k8s:
+    state: absent
+    api_version: v1
+    kind: ConfigMap
+    name: otel-collector-config
+    namespace: "{{ ocp4_workload_litemaas_monitoring_namespace }}"
+
+- name: Display OTel Collector removal
+  ansible.builtin.debug:
+    msg: "✅ OpenTelemetry Collector removed"
+
+# =============================================================================
+# 7. Restore LiteLLM to default state
+# =============================================================================
+- name: Remove LiteLLM config ConfigMap
+  kubernetes.core.k8s:
+    state: absent
+    api_version: v1
+    kind: ConfigMap
+    name: litellm-config
+    namespace: "{{ ocp4_workload_litemaas_monitoring_namespace }}"
+
+- name: Remove config volume from LiteLLM deployment
+  kubernetes.core.k8s:
+    state: present
+    kind: Deployment
+    name: "{{ ocp4_workload_litemaas_monitoring_litellm_deployment_name }}"
+    namespace: "{{ ocp4_workload_litemaas_monitoring_namespace }}"
+    definition:
+      spec:
+        template:
+          spec:
+            volumes:
+              - name: litellm-config
+                $patch: delete
+            containers:
+              - name: litellm
+                args: []
+                volumeMounts:
+                  - name: litellm-config
+                    $patch: delete
+
+- name: Display LiteLLM restoration
+  ansible.builtin.debug:
+    msg: "✅ LiteLLM restored to default configuration"
 
 # =============================================================================
 # Final Summary

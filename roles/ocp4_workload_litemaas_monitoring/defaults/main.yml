@@ -18,13 +18,23 @@
 ocp4_workload_litemaas_monitoring_scrape_interval: "30s"
 ocp4_workload_litemaas_monitoring_scrape_timeout: "10s"
 
-# LiteLLM metrics endpoint
-ocp4_workload_litemaas_monitoring_metrics_port: 4000
-ocp4_workload_litemaas_monitoring_metrics_path: "/metrics"
+# -----------------------------------------------------------------------------
+# OpenTelemetry Collector Configuration
+# -----------------------------------------------------------------------------
+# LiteLLM Prometheus metrics requires Enterprise license ($$$)
+# OpenTelemetry is FREE and provides same metrics via OTLP -> Prometheus export
+ocp4_workload_litemaas_monitoring_deploy_otel: true
+ocp4_workload_litemaas_monitoring_otel_collector_version: "0.91.0"
 
-# Service selector (to find LiteLLM service)
-ocp4_workload_litemaas_monitoring_litellm_service_name: "litellm"
-ocp4_workload_litemaas_monitoring_litellm_app_label: "litellm"
+# OTel Collector resources
+ocp4_workload_litemaas_monitoring_otel_collector_cpu_request: "100m"
+ocp4_workload_litemaas_monitoring_otel_collector_memory_request: "128Mi"
+ocp4_workload_litemaas_monitoring_otel_collector_cpu_limit: "500m"
+ocp4_workload_litemaas_monitoring_otel_collector_memory_limit: "512Mi"
+
+# LiteLLM configuration (will be patched to use OTel)
+ocp4_workload_litemaas_monitoring_patch_litellm_config: true
+ocp4_workload_litemaas_monitoring_litellm_deployment_name: "litellm"
 
 # -----------------------------------------------------------------------------
 # Grafana Operator Configuration

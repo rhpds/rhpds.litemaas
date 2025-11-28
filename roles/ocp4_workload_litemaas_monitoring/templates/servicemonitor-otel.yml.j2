@@ -1,0 +1,39 @@
+---
+# =============================================================================
+# ServiceMonitor for OpenTelemetry Collector
+# =============================================================================
+# Scrapes Prometheus metrics from OTel Collector
+# OTel Collector receives OTLP metrics from LiteLLM and exports as Prometheus
+# =============================================================================
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: otel-collector
+  namespace: {{ ocp4_workload_litemaas_monitoring_namespace }}
+  labels:
+    app: otel-collector
+    app.kubernetes.io/name: otel-collector
+    app.kubernetes.io/component: metrics-collector
+    app.kubernetes.io/part-of: litemaas
+spec:
+  # Service selector - finds the OTel Collector service
+  selector:
+    matchLabels:
+      app: otel-collector
+
+  # Scrape configuration
+  endpoints:
+    - port: prometheus
+      path: /metrics
+      interval: {{ ocp4_workload_litemaas_monitoring_scrape_interval }}
+      scrapeTimeout: {{ ocp4_workload_litemaas_monitoring_scrape_timeout }}
+      scheme: http
+
+      # Metric relabeling (add namespace label)
+      relabelings:
+        - sourceLabels: [__meta_kubernetes_namespace]
+          targetLabel: namespace
+        - sourceLabels: [__meta_kubernetes_pod_name]
+          targetLabel: pod
+        - sourceLabels: [__meta_kubernetes_service_name]
+          targetLabel: service

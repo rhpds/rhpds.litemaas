@@ -1,0 +1,22 @@
+---
+# =============================================================================
+# LiteLLM Configuration - Enable OpenTelemetry Metrics
+# =============================================================================
+# Configures LiteLLM to send metrics to OpenTelemetry Collector
+# OpenTelemetry is free (no Enterprise license required)
+# =============================================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: litellm-config
+  namespace: {{ ocp4_workload_litemaas_monitoring_namespace }}
+  labels:
+    app: litellm
+data:
+  config.yaml: |
+    general_settings:
+      success_callback: ["otel"]
+
+    litellm_settings:
+      success_callback: ["otel"]
+      otel_endpoint: "http://otel-collector:4318"

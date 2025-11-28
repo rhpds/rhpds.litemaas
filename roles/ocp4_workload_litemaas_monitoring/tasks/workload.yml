@@ -3,7 +3,44 @@
 # Main Workload - Deploy Monitoring Components
 # =============================================================================
 # Deploys ServiceMonitor, PrometheusRules, Grafana Operator, and Dashboards
+# Uses OpenTelemetry (FREE) instead of LiteLLM Enterprise Prometheus
 # =============================================================================
+
+# =============================================================================
+# 0. Cleanup Enterprise Prometheus attempt (if exists)
+# =============================================================================
+- name: Remove Enterprise Prometheus environment variables from LiteLLM
+  kubernetes.core.k8s:
+    state: present
+    kind: Deployment
+    name: "{{ ocp4_workload_litemaas_monitoring_litellm_deployment_name }}"
+    namespace: "{{ ocp4_workload_litemaas_monitoring_namespace }}"
+    definition:
+      spec:
+        template:
+          spec:
+            containers:
+              - name: litellm
+                env:
+                  - name: LITELLM_ENABLE_METRICS
+                    $patch: delete
+                  - name: PROMETHEUS_MULTIPROC_DIR
+                    $patch: delete
+
+- name: Remove old LiteLLM ServiceMonitor (if exists)
+  kubernetes.core.k8s:
+    state: absent
+    api_version: monitoring.coreos.com/v1
+    kind: ServiceMonitor
+    name: litellm
+    namespace: "{{ ocp4_workload_litemaas_monitoring_namespace }}"
+
+- name: Display cleanup info
+  ansible.builtin.debug:
+    msg:
+      - "✅ Removed Enterprise Prometheus environment variables"
+      - "✅ Removed old litellm ServiceMonitor (if existed)"
+      - "   Switching to OpenTelemetry (FREE alternative)..."
 
 # =============================================================================
 # 1. Enable OpenShift User Workload Monitoring
@@ -58,19 +95,111 @@
   delay: 10
 
 # =============================================================================
-# 2. Deploy ServiceMonitor for LiteLLM
+# 2. Deploy OpenTelemetry Collector (Free alternative to LiteLLM Enterprise)
 # =============================================================================
-- name: Create ServiceMonitor for LiteLLM
+- name: Deploy OpenTelemetry Collector
+  when: ocp4_workload_litemaas_monitoring_deploy_otel | bool
   kubernetes.core.k8s:
     state: present
-    definition: "{{ lookup('template', 'servicemonitor-litellm.yml.j2') | from_yaml }}"
+    definition: "{{ lookup('template', 'otel-collector.yml.j2') | from_yaml_all }}"
+
+- name: Wait for OTel Collector to be ready
+  when: ocp4_workload_litemaas_monitoring_deploy_otel | bool
+  kubernetes.core.k8s_info:
+    api_version: apps/v1
+    kind: Deployment
+    name: otel-collector
+    namespace: "{{ ocp4_workload_litemaas_monitoring_namespace }}"
+  register: r_otel_collector
+  until:
+    - r_otel_collector.resources | length > 0
+    - r_otel_collector.resources[0].status.readyReplicas is defined
+    - r_otel_collector.resources[0].status.readyReplicas > 0
+  retries: 30
+  delay: 10
+
+- name: Display OTel Collector info
+  when: ocp4_workload_litemaas_monitoring_deploy_otel | bool
+  ansible.builtin.debug:
+    msg:
+      - "✅ OpenTelemetry Collector deployed"
+      - "   ConfigMap: otel-collector-config"
+      - "   Service: otel-collector (OTLP HTTP: 4318, Prometheus: 8889)"
+
+# =============================================================================
+# 3. Patch LiteLLM to use OpenTelemetry
+# =============================================================================
+- name: Create LiteLLM config ConfigMap with OpenTelemetry
+  when: ocp4_workload_litemaas_monitoring_patch_litellm_config | bool
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ lookup('template', 'litellm-config.yml.j2') | from_yaml }}"
+
+- name: Add config volume to LiteLLM deployment
+  when: ocp4_workload_litemaas_monitoring_patch_litellm_config | bool
+  kubernetes.core.k8s:
+    state: patched
+    kind: Deployment
+    name: "{{ ocp4_workload_litemaas_monitoring_litellm_deployment_name }}"
+    namespace: "{{ ocp4_workload_litemaas_monitoring_namespace }}"
+    definition:
+      spec:
+        template:
+          spec:
+            volumes:
+              - name: litellm-config
+                configMap:
+                  name: litellm-config
+            containers:
+              - name: litellm
+                args:
+                  - "--config"
+                  - "/app/config.yaml"
+                volumeMounts:
+                  - name: litellm-config
+                    mountPath: /app/config.yaml
+                    subPath: config.yaml
+
+- name: Wait for LiteLLM to restart with new config
+  when: ocp4_workload_litemaas_monitoring_patch_litellm_config | bool
+  kubernetes.core.k8s_info:
+    api_version: apps/v1
+    kind: Deployment
+    name: "{{ ocp4_workload_litemaas_monitoring_litellm_deployment_name }}"
+    namespace: "{{ ocp4_workload_litemaas_monitoring_namespace }}"
+  register: r_litellm_deployment
+  until:
+    - r_litellm_deployment.resources | length > 0
+    - r_litellm_deployment.resources[0].status.updatedReplicas is defined
+    - r_litellm_deployment.resources[0].status.updatedReplicas == r_litellm_deployment.resources[0].spec.replicas
+    - r_litellm_deployment.resources[0].status.readyReplicas is defined
+    - r_litellm_deployment.resources[0].status.readyReplicas == r_litellm_deployment.resources[0].spec.replicas
+  retries: 60
+  delay: 10
+
+- name: Display LiteLLM config update info
+  when: ocp4_workload_litemaas_monitoring_patch_litellm_config | bool
+  ansible.builtin.debug:
+    msg:
+      - "✅ LiteLLM configured to use OpenTelemetry"
+      - "   ConfigMap: litellm-config"
+      - "   OTel Endpoint: http://otel-collector:4318"
+
+# =============================================================================
+# 4. Deploy ServiceMonitor for OpenTelemetry Collector
+# =============================================================================
+- name: Create ServiceMonitor for OpenTelemetry Collector
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ lookup('template', 'servicemonitor-otel.yml.j2') | from_yaml }}"
 
 - name: Display ServiceMonitor info
   ansible.builtin.debug:
     msg:
-      - "✅ ServiceMonitor created: litellm"
+      - "✅ ServiceMonitor created: otel-collector"
       - "   Namespace: {{ ocp4_workload_litemaas_monitoring_namespace }}"
       - "   Scrape Interval: {{ ocp4_workload_litemaas_monitoring_scrape_interval }}"
+      - "   Target: OTel Collector Prometheus exporter (port 8889)"
 
 # =============================================================================
 # 3. Deploy PrometheusRules for Alerts
