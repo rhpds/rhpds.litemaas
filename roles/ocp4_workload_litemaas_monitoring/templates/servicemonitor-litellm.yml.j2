@@ -1,0 +1,41 @@
+---
+# =============================================================================
+# ServiceMonitor for LiteLLM Prometheus Metrics
+# =============================================================================
+# Prometheus Operator CRD that configures metrics scraping
+# Assumes LiteLLM already has metrics enabled via:
+#   LITELLM_ENABLE_METRICS=true
+#   PROMETHEUS_MULTIPROC_DIR=/tmp/metrics
+# =============================================================================
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: litellm
+  namespace: {{ ocp4_workload_litemaas_monitoring_namespace }}
+  labels:
+    app: litellm
+    app.kubernetes.io/name: litellm
+    app.kubernetes.io/component: proxy
+    app.kubernetes.io/part-of: litemaas
+spec:
+  # Service selector - finds the LiteLLM service
+  selector:
+    matchLabels:
+      app: {{ ocp4_workload_litemaas_monitoring_litellm_app_label }}
+
+  # Scrape configuration
+  endpoints:
+    - port: metrics
+      path: {{ ocp4_workload_litemaas_monitoring_metrics_path }}
+      interval: {{ ocp4_workload_litemaas_monitoring_scrape_interval }}
+      scrapeTimeout: {{ ocp4_workload_litemaas_monitoring_scrape_timeout }}
+      scheme: http
+
+      # Metric relabeling (add namespace label)
+      relabelings:
+        - sourceLabels: [__meta_kubernetes_namespace]
+          targetLabel: namespace
+        - sourceLabels: [__meta_kubernetes_pod_name]
+          targetLabel: pod
+        - sourceLabels: [__meta_kubernetes_service_name]
+          targetLabel: service

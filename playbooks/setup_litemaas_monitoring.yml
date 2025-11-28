@@ -1,0 +1,32 @@
+---
+# =============================================================================
+# Playbook: Setup LiteMaaS Monitoring
+# =============================================================================
+# Standalone playbook to deploy monitoring for existing LiteMaaS deployment
+#
+# Usage:
+#   # Deploy monitoring
+#   ansible-playbook playbooks/setup_litemaas_monitoring.yml \
+#     -e ocp4_workload_litemaas_monitoring_namespace=litellm-rhpds
+#
+#   # Remove monitoring
+#   ansible-playbook playbooks/setup_litemaas_monitoring.yml \
+#     -e ocp4_workload_litemaas_monitoring_namespace=litellm-rhpds \
+#     -e ocp4_workload_litemaas_monitoring_remove=true
+#
+#   # With Icinga integration
+#   ansible-playbook playbooks/setup_litemaas_monitoring.yml \
+#     -e ocp4_workload_litemaas_monitoring_namespace=litellm-rhpds \
+#     -e ocp4_workload_litemaas_monitoring_icinga_enabled=true \
+#     -e ocp4_workload_litemaas_monitoring_icinga_api_url=https://icinga.example.com/v1/events \
+#     -e ocp4_workload_litemaas_monitoring_icinga_api_username=prometheus \
+#     -e ocp4_workload_litemaas_monitoring_icinga_api_password=secret
+# =============================================================================
+- name: Deploy LiteMaaS Monitoring
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  become: false
+
+  roles:
+    - ocp4_workload_litemaas_monitoring

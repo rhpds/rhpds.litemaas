@@ -8,6 +8,7 @@ Deploy an AI model gateway on OpenShift in 3 minutes. Give users controlled acce
 
 - **[Infrastructure Team Guide](docs/INFRA_TEAM_GUIDE.md)** - Managing models after deployment
 - **[Model Management Role](roles/ocp4_workload_litemaas_models/README.md)** - Dedicated role for model sync
+- **[Monitoring Role](roles/ocp4_workload_litemaas_monitoring/README.md)** - Prometheus, Grafana, and alerting setup
 - **[Examples](examples/)** - Configuration examples
 
 ---

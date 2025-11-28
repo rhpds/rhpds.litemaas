@@ -1,0 +1,24 @@
+---
+galaxy_info:
+  role_name: ocp4_workload_litemaas_monitoring
+  author: Prakhar Srivastava
+  description: Monitoring setup for LiteMaaS (LiteLLM) on OpenShift
+  company: Red Hat
+  license: Apache-2.0
+  min_ansible_version: "2.15"
+
+  platforms:
+    - name: EL
+      versions:
+        - "8"
+        - "9"
+
+  galaxy_tags:
+    - openshift
+    - monitoring
+    - prometheus
+    - grafana
+    - litellm
+    - litemaas
+
+dependencies: []

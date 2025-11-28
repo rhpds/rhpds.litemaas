@@ -1,0 +1,159 @@
+---
+# =============================================================================
+# GrafanaDashboard - LiteMaaS Infrastructure Metrics
+# =============================================================================
+# Infrastructure-level metrics: CPU, memory, PostgreSQL, network, storage
+# Ops/SRE focused dashboard for platform health monitoring
+# =============================================================================
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: {{ ocp4_workload_litemaas_monitoring_infra_dashboard_name }}
+  namespace: {{ ocp4_workload_litemaas_monitoring_namespace }}
+  labels:
+    app: grafana
+    dashboard: "litemaas-infra"
+spec:
+  instanceSelector:
+    matchLabels:
+      dashboards: "litemaas"
+  json: |
+    {
+      "title": "LiteMaaS - Infrastructure Metrics",
+      "timezone": "browser",
+      "schemaVersion": 30,
+      "version": 1,
+      "refresh": "30s",
+      "panels": [
+        {
+          "id": 1,
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+          "type": "graph",
+          "title": "Pod CPU Usage",
+          "targets": [
+            {
+              "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"{{ ocp4_workload_litemaas_monitoring_namespace }}\",container!=\"\"}[5m])) by (pod)",
+              "legendFormat": "{{ '{{' }}pod{{ '}}' }}",
+              "refId": "A"
+            }
+          ],
+          "yaxes": [
+            {"label": "cores", "show": true},
+            {"show": false}
+          ]
+        },
+        {
+          "id": 2,
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+          "type": "graph",
+          "title": "Pod Memory Usage",
+          "targets": [
+            {
+              "expr": "sum(container_memory_usage_bytes{namespace=\"{{ ocp4_workload_litemaas_monitoring_namespace }}\",container!=\"\"}) by (pod)",
+              "legendFormat": "{{ '{{' }}pod{{ '}}' }}",
+              "refId": "A"
+            }
+          ],
+          "yaxes": [
+            {"label": "bytes", "format": "bytes", "show": true},
+            {"show": false}
+          ]
+        },
+        {
+          "id": 3,
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+          "type": "graph",
+          "title": "PostgreSQL Connection Pool",
+          "targets": [
+            {
+              "expr": "litellm_db_connections_active{namespace=\"{{ ocp4_workload_litemaas_monitoring_namespace }}\"}",
+              "legendFormat": "Active Connections",
+              "refId": "A"
+            },
+            {
+              "expr": "litellm_db_connections_idle{namespace=\"{{ ocp4_workload_litemaas_monitoring_namespace }}\"}",
+              "legendFormat": "Idle Connections",
+              "refId": "B"
+            },
+            {
+              "expr": "litellm_db_connections_max{namespace=\"{{ ocp4_workload_litemaas_monitoring_namespace }}\"}",
+              "legendFormat": "Max Connections",
+              "refId": "C"
+            }
+          ],
+          "yaxes": [
+            {"label": "connections", "show": true},
+            {"show": false}
+          ]
+        },
+        {
+          "id": 4,
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+          "type": "graph",
+          "title": "Network I/O",
+          "targets": [
+            {
+              "expr": "sum(rate(container_network_receive_bytes_total{namespace=\"{{ ocp4_workload_litemaas_monitoring_namespace }}\"}[5m])) by (pod)",
+              "legendFormat": "RX - {{ '{{' }}pod{{ '}}' }}",
+              "refId": "A"
+            },
+            {
+              "expr": "sum(rate(container_network_transmit_bytes_total{namespace=\"{{ ocp4_workload_litemaas_monitoring_namespace }}\"}[5m])) by (pod)",
+              "legendFormat": "TX - {{ '{{' }}pod{{ '}}' }}",
+              "refId": "B"
+            }
+          ],
+          "yaxes": [
+            {"label": "bytes/sec", "format": "Bps", "show": true},
+            {"show": false}
+          ]
+        },
+        {
+          "id": 5,
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+          "type": "graph",
+          "title": "Pod Restarts",
+          "targets": [
+            {
+              "expr": "sum(kube_pod_container_status_restarts_total{namespace=\"{{ ocp4_workload_litemaas_monitoring_namespace }}\"}) by (pod)",
+              "legendFormat": "{{ '{{' }}pod{{ '}}' }}",
+              "refId": "A"
+            }
+          ],
+          "yaxes": [
+            {"label": "restarts", "show": true},
+            {"show": false}
+          ]
+        },
+        {
+          "id": 6,
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+          "type": "graph",
+          "title": "Storage Usage (PostgreSQL PVC)",
+          "targets": [
+            {
+              "expr": "kubelet_volume_stats_used_bytes{namespace=\"{{ ocp4_workload_litemaas_monitoring_namespace }}\"} / kubelet_volume_stats_capacity_bytes{namespace=\"{{ ocp4_workload_litemaas_monitoring_namespace }}\"}",
+              "legendFormat": "{{ '{{' }}persistentvolumeclaim{{ '}}' }}",
+              "refId": "A"
+            }
+          ],
+          "yaxes": [
+            {"label": "usage", "format": "percentunit", "show": true},
+            {"show": false}
+          ]
+        },
+        {
+          "id": 7,
+          "gridPos": {"h": 8, "w": 24, "x": 0, "y": 24},
+          "type": "table",
+          "title": "Pod Status",
+          "targets": [
+            {
+              "expr": "kube_pod_status_phase{namespace=\"{{ ocp4_workload_litemaas_monitoring_namespace }}\"}",
+              "refId": "A",
+              "instant": true
+            }
+          ]
+        }
+      ]
+    }

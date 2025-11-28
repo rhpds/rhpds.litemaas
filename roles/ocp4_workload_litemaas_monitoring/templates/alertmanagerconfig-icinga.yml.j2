@@ -1,0 +1,70 @@
+---
+# =============================================================================
+# AlertmanagerConfig for Icinga Integration
+# =============================================================================
+# Routes alerts from PrometheusRule to Icinga via webhook
+# Only created when ocp4_workload_litemaas_monitoring_icinga_enabled is true
+# =============================================================================
+{% if ocp4_workload_litemaas_monitoring_icinga_enabled %}
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: AlertmanagerConfig
+metadata:
+  name: litemaas-icinga
+  namespace: {{ ocp4_workload_litemaas_monitoring_namespace }}
+  labels:
+    app: litellm
+    alertmanagerConfig: litemaas
+spec:
+  # Route configuration
+  route:
+    receiver: {{ ocp4_workload_litemaas_monitoring_icinga_receiver_name }}
+    groupBy: ['alertname', 'severity']
+    groupWait: 30s
+    groupInterval: 5m
+    repeatInterval: 12h
+
+    # Match rules - route based on severity
+    matchers:
+{% if ocp4_workload_litemaas_monitoring_icinga_send_critical %}
+      - name: severity
+        value: critical
+        matchType: "="
+{% endif %}
+{% if ocp4_workload_litemaas_monitoring_icinga_send_warning %}
+      - name: severity
+        value: warning
+        matchType: "="
+{% endif %}
+      - name: namespace
+        value: {{ ocp4_workload_litemaas_monitoring_namespace }}
+        matchType: "="
+
+  # Receivers
+  receivers:
+    - name: {{ ocp4_workload_litemaas_monitoring_icinga_receiver_name }}
+      webhookConfigs:
+        - url: {{ ocp4_workload_litemaas_monitoring_icinga_api_url }}
+          httpConfig:
+            basicAuth:
+              username:
+                name: icinga-credentials
+                key: username
+              password:
+                name: icinga-credentials
+                key: password
+          sendResolved: true
+
+---
+# =============================================================================
+# Secret for Icinga API Credentials
+# =============================================================================
+apiVersion: v1
+kind: Secret
+metadata:
+  name: icinga-credentials
+  namespace: {{ ocp4_workload_litemaas_monitoring_namespace }}
+type: Opaque
+stringData:
+  username: {{ ocp4_workload_litemaas_monitoring_icinga_api_username }}
+  password: {{ ocp4_workload_litemaas_monitoring_icinga_api_password }}
+{% endif %}

@@ -1,0 +1,101 @@
+---
+# =============================================================================
+# LiteMaaS Monitoring Role - Default Variables
+# =============================================================================
+# This role is STANDALONE - it does not modify LiteLLM deployment
+# It assumes Prometheus metrics are already enabled in LiteLLM
+# Usage: ./setup-monitoring.sh <namespace>
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Required Variables (must be provided)
+# -----------------------------------------------------------------------------
+# ocp4_workload_litemaas_monitoring_namespace: "litellm-rhpds"  # Target namespace
+
+# -----------------------------------------------------------------------------
+# ServiceMonitor Configuration
+# -----------------------------------------------------------------------------
+ocp4_workload_litemaas_monitoring_scrape_interval: "30s"
+ocp4_workload_litemaas_monitoring_scrape_timeout: "10s"
+
+# LiteLLM metrics endpoint
+ocp4_workload_litemaas_monitoring_metrics_port: 4000
+ocp4_workload_litemaas_monitoring_metrics_path: "/metrics"
+
+# Service selector (to find LiteLLM service)
+ocp4_workload_litemaas_monitoring_litellm_service_name: "litellm"
+ocp4_workload_litemaas_monitoring_litellm_app_label: "litellm"
+
+# -----------------------------------------------------------------------------
+# Grafana Operator Configuration
+# -----------------------------------------------------------------------------
+ocp4_workload_litemaas_monitoring_deploy_grafana: true
+
+# Grafana Operator installation
+ocp4_workload_litemaas_monitoring_install_grafana_operator: true
+ocp4_workload_litemaas_monitoring_grafana_operator_namespace: "grafana-operator"
+ocp4_workload_litemaas_monitoring_grafana_operator_channel: "v5"
+
+# Grafana instance
+ocp4_workload_litemaas_monitoring_deploy_grafana_instance: true
+ocp4_workload_litemaas_monitoring_grafana_instance_name: "litemaas-grafana"
+
+# GrafanaDashboard CRDs (operator-based)
+ocp4_workload_litemaas_monitoring_app_dashboard_name: "litemaas-application-metrics"
+ocp4_workload_litemaas_monitoring_infra_dashboard_name: "litemaas-infrastructure-metrics"
+
+# -----------------------------------------------------------------------------
+# Alerting Configuration
+# -----------------------------------------------------------------------------
+ocp4_workload_litemaas_monitoring_deploy_alerts: true
+
+# Alert thresholds - Critical
+ocp4_workload_litemaas_monitoring_alert_error_rate_critical: 0.05  # 5%
+ocp4_workload_litemaas_monitoring_alert_error_duration_critical: "5m"
+ocp4_workload_litemaas_monitoring_alert_latency_p99_critical: 10  # seconds
+ocp4_workload_litemaas_monitoring_alert_latency_duration_critical: "5m"
+
+# Alert thresholds - Warning
+ocp4_workload_litemaas_monitoring_alert_error_rate_warning: 0.01  # 1%
+ocp4_workload_litemaas_monitoring_alert_error_duration_warning: "10m"
+ocp4_workload_litemaas_monitoring_alert_latency_p95_warning: 5  # seconds
+ocp4_workload_litemaas_monitoring_alert_latency_duration_warning: "10m"
+
+# Alert notification channels
+ocp4_workload_litemaas_monitoring_alert_email: ""
+ocp4_workload_litemaas_monitoring_alert_slack_webhook: ""
+
+# -----------------------------------------------------------------------------
+# Icinga Integration (Optional - via AlertmanagerConfig CRD)
+# -----------------------------------------------------------------------------
+ocp4_workload_litemaas_monitoring_icinga_enabled: false
+
+# Icinga API endpoint
+ocp4_workload_litemaas_monitoring_icinga_api_url: ""  # e.g., https://icinga.example.com/v1/events
+ocp4_workload_litemaas_monitoring_icinga_api_username: ""
+ocp4_workload_litemaas_monitoring_icinga_api_password: ""
+
+# AlertmanagerConfig routing (which severity levels to send)
+ocp4_workload_litemaas_monitoring_icinga_send_critical: true
+ocp4_workload_litemaas_monitoring_icinga_send_warning: false
+
+# Icinga receiver name in AlertmanagerConfig
+ocp4_workload_litemaas_monitoring_icinga_receiver_name: "litemaas-icinga"
+
+# -----------------------------------------------------------------------------
+# OpenShift User Workload Monitoring
+# -----------------------------------------------------------------------------
+ocp4_workload_litemaas_monitoring_enable_uwm: true
+ocp4_workload_litemaas_monitoring_uwm_retention: "7d"
+
+# -----------------------------------------------------------------------------
+# OpenShift AI Model Monitoring (Future - Phase 3)
+# -----------------------------------------------------------------------------
+ocp4_workload_litemaas_monitoring_enable_ocp_ai: false
+ocp4_workload_litemaas_monitoring_ocp_ai_namespace: "llm-hosting"
+ocp4_workload_litemaas_monitoring_ocp_ai_models: []
+
+# -----------------------------------------------------------------------------
+# Removal Configuration
+# -----------------------------------------------------------------------------
+ocp4_workload_litemaas_monitoring_remove: false

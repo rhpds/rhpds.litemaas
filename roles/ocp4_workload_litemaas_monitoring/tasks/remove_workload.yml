@@ -1,0 +1,153 @@
+---
+# =============================================================================
+# Remove Workload - Cleanup Monitoring Components
+# =============================================================================
+# Removes ServiceMonitor, PrometheusRules, Grafana instance, and dashboards
+# Does NOT remove Grafana Operator (may be shared across deployments)
+# =============================================================================
+
+- name: Display removal info
+  ansible.builtin.debug:
+    msg:
+      - "============================================"
+      - "Removing LiteMaaS Monitoring"
+      - "============================================"
+      - "Target Namespace: {{ ocp4_workload_litemaas_monitoring_namespace }}"
+      - "============================================"
+
+# =============================================================================
+# 1. Remove Grafana Dashboards
+# =============================================================================
+- name: Remove GrafanaDashboard - Application metrics
+  kubernetes.core.k8s:
+    state: absent
+    api_version: grafana.integreatly.org/v1beta1
+    kind: GrafanaDashboard
+    name: "{{ ocp4_workload_litemaas_monitoring_app_dashboard_name }}"
+    namespace: "{{ ocp4_workload_litemaas_monitoring_namespace }}"
+
+- name: Remove GrafanaDashboard - Infrastructure metrics
+  kubernetes.core.k8s:
+    state: absent
+    api_version: grafana.integreatly.org/v1beta1
+    kind: GrafanaDashboard
+    name: "{{ ocp4_workload_litemaas_monitoring_infra_dashboard_name }}"
+    namespace: "{{ ocp4_workload_litemaas_monitoring_namespace }}"
+
+- name: Display Grafana dashboards removal
+  ansible.builtin.debug:
+    msg: "✅ Grafana dashboards removed"
+
+# =============================================================================
+# 2. Remove Grafana Instance
+# =============================================================================
+- name: Remove Grafana instance
+  kubernetes.core.k8s:
+    state: absent
+    api_version: grafana.integreatly.org/v1beta1
+    kind: Grafana
+    name: "{{ ocp4_workload_litemaas_monitoring_grafana_instance_name }}"
+    namespace: "{{ ocp4_workload_litemaas_monitoring_namespace }}"
+
+- name: Remove Grafana route
+  kubernetes.core.k8s:
+    state: absent
+    api_version: route.openshift.io/v1
+    kind: Route
+    name: grafana
+    namespace: "{{ ocp4_workload_litemaas_monitoring_namespace }}"
+
+- name: Remove Grafana ServiceAccount
+  kubernetes.core.k8s:
+    state: absent
+    api_version: v1
+    kind: ServiceAccount
+    name: grafana-serviceaccount
+    namespace: "{{ ocp4_workload_litemaas_monitoring_namespace }}"
+
+- name: Remove Grafana ClusterRoleBinding
+  kubernetes.core.k8s:
+    state: absent
+    api_version: rbac.authorization.k8s.io/v1
+    kind: ClusterRoleBinding
+    name: "grafana-cluster-monitoring-view-{{ ocp4_workload_litemaas_monitoring_namespace }}"
+
+- name: Display Grafana instance removal
+  ansible.builtin.debug:
+    msg: "✅ Grafana instance removed"
+
+# =============================================================================
+# 3. Remove AlertmanagerConfig for Icinga
+# =============================================================================
+- name: Remove AlertmanagerConfig for Icinga
+  kubernetes.core.k8s:
+    state: absent
+    api_version: monitoring.coreos.com/v1alpha1
+    kind: AlertmanagerConfig
+    name: litemaas-icinga
+    namespace: "{{ ocp4_workload_litemaas_monitoring_namespace }}"
+
+- name: Remove Icinga credentials secret
+  kubernetes.core.k8s:
+    state: absent
+    api_version: v1
+    kind: Secret
+    name: icinga-credentials
+    namespace: "{{ ocp4_workload_litemaas_monitoring_namespace }}"
+
+- name: Display Icinga integration removal
+  ansible.builtin.debug:
+    msg: "✅ Icinga integration removed"
+
+# =============================================================================
+# 4. Remove PrometheusRules
+# =============================================================================
+- name: Remove PrometheusRule for alerts
+  kubernetes.core.k8s:
+    state: absent
+    api_version: monitoring.coreos.com/v1
+    kind: PrometheusRule
+    name: litellm-alerts
+    namespace: "{{ ocp4_workload_litemaas_monitoring_namespace }}"
+
+- name: Display PrometheusRule removal
+  ansible.builtin.debug:
+    msg: "✅ PrometheusRule removed"
+
+# =============================================================================
+# 5. Remove ServiceMonitor
+# =============================================================================
+- name: Remove ServiceMonitor for LiteLLM
+  kubernetes.core.k8s:
+    state: absent
+    api_version: monitoring.coreos.com/v1
+    kind: ServiceMonitor
+    name: litellm
+    namespace: "{{ ocp4_workload_litemaas_monitoring_namespace }}"
+
+- name: Display ServiceMonitor removal
+  ansible.builtin.debug:
+    msg: "✅ ServiceMonitor removed"
+
+# =============================================================================
+# Final Summary
+# =============================================================================
+- name: Display monitoring removal summary
+  ansible.builtin.debug:
+    msg:
+      - "============================================"
+      - "✅ LiteMaaS Monitoring Removal Complete!"
+      - "============================================"
+      - ""
+      - "Removed components:"
+      - "  - ServiceMonitor: litellm"
+      - "  - PrometheusRule: litellm-alerts"
+      - "  - AlertmanagerConfig: litemaas-icinga (if existed)"
+      - "  - Grafana instance and dashboards"
+      - ""
+      - "Note: Grafana Operator was NOT removed (may be shared)"
+      - "Note: User workload monitoring was NOT disabled (may be shared)"
+      - ""
+      - "If you want to completely remove Grafana Operator:"
+      - "  oc delete subscription grafana-operator -n {{ ocp4_workload_litemaas_monitoring_grafana_operator_namespace }}"
+      - "  oc delete csv -n {{ ocp4_workload_litemaas_monitoring_grafana_operator_namespace }} -l operators.coreos.com/grafana-operator.{{ ocp4_workload_litemaas_monitoring_grafana_operator_namespace }}"

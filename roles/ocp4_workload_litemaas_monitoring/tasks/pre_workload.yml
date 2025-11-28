@@ -1,0 +1,63 @@
+---
+# =============================================================================
+# Pre-workload Validation
+# =============================================================================
+# Validates that LiteLLM deployment exists and metrics are enabled
+# =============================================================================
+
+- name: Check if namespace exists
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Namespace
+    name: "{{ ocp4_workload_litemaas_monitoring_namespace }}"
+  register: r_namespace_check
+
+- name: Fail if namespace does not exist
+  ansible.builtin.fail:
+    msg: "Namespace {{ ocp4_workload_litemaas_monitoring_namespace }} does not exist. Please create it first."
+  when: r_namespace_check.resources | length == 0
+
+- name: Check if LiteLLM service exists
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Service
+    name: "{{ ocp4_workload_litemaas_monitoring_litellm_service_name }}"
+    namespace: "{{ ocp4_workload_litemaas_monitoring_namespace }}"
+  register: r_litellm_service_check
+
+- name: Fail if LiteLLM service does not exist
+  ansible.builtin.fail:
+    msg: |
+      LiteLLM service '{{ ocp4_workload_litemaas_monitoring_litellm_service_name }}' not found in namespace {{ ocp4_workload_litemaas_monitoring_namespace }}.
+      Please ensure LiteLLM is deployed first.
+  when: r_litellm_service_check.resources | length == 0
+
+- name: Get LiteLLM deployment
+  kubernetes.core.k8s_info:
+    api_version: apps/v1
+    kind: Deployment
+    namespace: "{{ ocp4_workload_litemaas_monitoring_namespace }}"
+    label_selectors:
+      - "app={{ ocp4_workload_litemaas_monitoring_litellm_app_label }}"
+  register: r_litellm_deployment
+
+- name: Warn if metrics may not be enabled
+  ansible.builtin.debug:
+    msg:
+      - "⚠️  WARNING: Could not verify if Prometheus metrics are enabled in LiteLLM."
+      - "Please ensure the following environment variables are set in LiteLLM deployment:"
+      - "  - LITELLM_ENABLE_METRICS=true"
+      - "  - PROMETHEUS_MULTIPROC_DIR=/tmp/metrics"
+      - ""
+      - "If metrics are not enabled, ServiceMonitor will not collect data."
+  when:
+    - r_litellm_deployment.resources | length > 0
+    - r_litellm_deployment.resources[0].spec.template.spec.containers[0].env is not defined or
+      (r_litellm_deployment.resources[0].spec.template.spec.containers[0].env | selectattr('name', 'equalto', 'LITELLM_ENABLE_METRICS') | list | length == 0)
+
+- name: Display validation summary
+  ansible.builtin.debug:
+    msg:
+      - "✅ Namespace exists: {{ ocp4_workload_litemaas_monitoring_namespace }}"
+      - "✅ LiteLLM service found: {{ ocp4_workload_litemaas_monitoring_litellm_service_name }}"
+      - "✅ Ready to configure monitoring"

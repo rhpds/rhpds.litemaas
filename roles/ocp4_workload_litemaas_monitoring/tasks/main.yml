@@ -1,0 +1,40 @@
+---
+# =============================================================================
+# LiteMaaS Monitoring Role - Main Task File
+# =============================================================================
+# Orchestrates monitoring setup workflow
+# This role is STANDALONE - does not modify LiteLLM deployment
+# =============================================================================
+
+- name: Validate namespace parameter
+  ansible.builtin.assert:
+    that:
+      - ocp4_workload_litemaas_monitoring_namespace is defined
+      - ocp4_workload_litemaas_monitoring_namespace | length > 0
+    fail_msg: "ocp4_workload_litemaas_monitoring_namespace is required"
+
+- name: Display monitoring configuration
+  ansible.builtin.debug:
+    msg:
+      - "============================================"
+      - "LiteMaaS Monitoring Setup"
+      - "============================================"
+      - "Target Namespace: {{ ocp4_workload_litemaas_monitoring_namespace }}"
+      - "Deploy Grafana: {{ ocp4_workload_litemaas_monitoring_deploy_grafana }}"
+      - "Deploy Alerts: {{ ocp4_workload_litemaas_monitoring_deploy_alerts }}"
+      - "Icinga Integration: {{ ocp4_workload_litemaas_monitoring_icinga_enabled }}"
+      - "============================================"
+
+- name: Run pre-workload validation
+  ansible.builtin.include_tasks:
+    file: ./pre_workload.yml
+
+- name: Run monitoring setup (workload)
+  when: not (ocp4_workload_litemaas_monitoring_remove | bool)
+  ansible.builtin.include_tasks:
+    file: ./workload.yml
+
+- name: Run monitoring removal
+  when: ocp4_workload_litemaas_monitoring_remove | bool
+  ansible.builtin.include_tasks:
+    file: ./remove_workload.yml

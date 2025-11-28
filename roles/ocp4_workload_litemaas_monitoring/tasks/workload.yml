@@ -1,0 +1,308 @@
+---
+# =============================================================================
+# Main Workload - Deploy Monitoring Components
+# =============================================================================
+# Deploys ServiceMonitor, PrometheusRules, Grafana Operator, and Dashboards
+# =============================================================================
+
+# =============================================================================
+# 1. Enable OpenShift User Workload Monitoring
+# =============================================================================
+- name: Check if user workload monitoring is enabled
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: ConfigMap
+    name: cluster-monitoring-config
+    namespace: openshift-monitoring
+  register: r_cluster_monitoring_config
+
+- name: Enable user workload monitoring
+  when:
+    - ocp4_workload_litemaas_monitoring_enable_uwm | bool
+    - r_cluster_monitoring_config.resources | length == 0 or
+      (r_cluster_monitoring_config.resources[0].data['config.yaml'] is not defined or
+       'enableUserWorkload: true' not in r_cluster_monitoring_config.resources[0].data['config.yaml'])
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: cluster-monitoring-config
+        namespace: openshift-monitoring
+      data:
+        config.yaml: |
+          enableUserWorkload: true
+
+- name: Wait for user workload monitoring to be ready
+  when: ocp4_workload_litemaas_monitoring_enable_uwm | bool
+  kubernetes.core.k8s_info:
+    api_version: apps/v1
+    kind: StatefulSet
+    name: prometheus-user-workload
+    namespace: openshift-user-workload-monitoring
+  register: r_prometheus_uwm
+  until:
+    - r_prometheus_uwm.resources | length > 0
+    - r_prometheus_uwm.resources[0].status.readyReplicas is defined
+    - r_prometheus_uwm.resources[0].status.readyReplicas > 0
+  retries: 30
+  delay: 10
+
+# =============================================================================
+# 2. Deploy ServiceMonitor for LiteLLM
+# =============================================================================
+- name: Create ServiceMonitor for LiteLLM
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ lookup('template', 'servicemonitor-litellm.yml.j2') | from_yaml }}"
+
+- name: Display ServiceMonitor info
+  ansible.builtin.debug:
+    msg:
+      - "✅ ServiceMonitor created: litellm"
+      - "   Namespace: {{ ocp4_workload_litemaas_monitoring_namespace }}"
+      - "   Scrape Interval: {{ ocp4_workload_litemaas_monitoring_scrape_interval }}"
+
+# =============================================================================
+# 3. Deploy PrometheusRules for Alerts
+# =============================================================================
+- name: Create PrometheusRule for alerts
+  when: ocp4_workload_litemaas_monitoring_deploy_alerts | bool
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ lookup('template', 'prometheusrule-litellm.yml.j2') | from_yaml }}"
+
+- name: Display PrometheusRule info
+  when: ocp4_workload_litemaas_monitoring_deploy_alerts | bool
+  ansible.builtin.debug:
+    msg:
+      - "✅ PrometheusRule created: litellm-alerts"
+      - "   Critical Alerts: High error rate, high latency, service down, DB pool exhausted"
+      - "   Warning Alerts: Elevated error rate, increased latency, high token consumption"
+
+# =============================================================================
+# 4. Deploy AlertmanagerConfig for Icinga (if enabled)
+# =============================================================================
+- name: Create AlertmanagerConfig for Icinga
+  when: ocp4_workload_litemaas_monitoring_icinga_enabled | bool
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ lookup('template', 'alertmanagerconfig-icinga.yml.j2') | from_yaml_all }}"
+
+- name: Display Icinga integration info
+  when: ocp4_workload_litemaas_monitoring_icinga_enabled | bool
+  ansible.builtin.debug:
+    msg:
+      - "✅ AlertmanagerConfig created: litemaas-icinga"
+      - "   Icinga API: {{ ocp4_workload_litemaas_monitoring_icinga_api_url }}"
+      - "   Send Critical: {{ ocp4_workload_litemaas_monitoring_icinga_send_critical }}"
+      - "   Send Warning: {{ ocp4_workload_litemaas_monitoring_icinga_send_warning }}"
+
+# =============================================================================
+# 5. Install Grafana Operator (if enabled)
+# =============================================================================
+- name: Check if Grafana Operator is installed
+  when: ocp4_workload_litemaas_monitoring_deploy_grafana | bool
+  kubernetes.core.k8s_info:
+    api_version: operators.coreos.com/v1alpha1
+    kind: Subscription
+    name: grafana-operator
+    namespace: "{{ ocp4_workload_litemaas_monitoring_grafana_operator_namespace }}"
+  register: r_grafana_operator_check
+
+- name: Install Grafana Operator
+  when:
+    - ocp4_workload_litemaas_monitoring_deploy_grafana | bool
+    - ocp4_workload_litemaas_monitoring_install_grafana_operator | bool
+    - r_grafana_operator_check.resources | length == 0
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ lookup('template', 'grafana-operator.yml.j2') | from_yaml_all }}"
+
+- name: Wait for Grafana Operator to be ready
+  when:
+    - ocp4_workload_litemaas_monitoring_deploy_grafana | bool
+    - ocp4_workload_litemaas_monitoring_install_grafana_operator | bool
+  kubernetes.core.k8s_info:
+    api_version: apps/v1
+    kind: Deployment
+    namespace: "{{ ocp4_workload_litemaas_monitoring_grafana_operator_namespace }}"
+    label_selectors:
+      - "operators.coreos.com/grafana-operator.{{ ocp4_workload_litemaas_monitoring_grafana_operator_namespace }}"
+  register: r_grafana_operator_deployment
+  until:
+    - r_grafana_operator_deployment.resources | length > 0
+    - r_grafana_operator_deployment.resources[0].status.readyReplicas is defined
+    - r_grafana_operator_deployment.resources[0].status.readyReplicas > 0
+  retries: 30
+  delay: 10
+
+- name: Display Grafana Operator info
+  when:
+    - ocp4_workload_litemaas_monitoring_deploy_grafana | bool
+    - ocp4_workload_litemaas_monitoring_install_grafana_operator | bool
+  ansible.builtin.debug:
+    msg:
+      - "✅ Grafana Operator installed"
+      - "   Namespace: {{ ocp4_workload_litemaas_monitoring_grafana_operator_namespace }}"
+      - "   Channel: {{ ocp4_workload_litemaas_monitoring_grafana_operator_channel }}"
+
+# =============================================================================
+# 6. Deploy Grafana Instance (if enabled)
+# =============================================================================
+- name: Get ServiceAccount token for Prometheus access
+  when:
+    - ocp4_workload_litemaas_monitoring_deploy_grafana | bool
+    - ocp4_workload_litemaas_monitoring_deploy_grafana_instance | bool
+  block:
+    - name: Create ServiceAccount
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: ServiceAccount
+          metadata:
+            name: grafana-serviceaccount
+            namespace: "{{ ocp4_workload_litemaas_monitoring_namespace }}"
+
+    - name: Create ClusterRoleBinding for Prometheus access
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: rbac.authorization.k8s.io/v1
+          kind: ClusterRoleBinding
+          metadata:
+            name: "grafana-cluster-monitoring-view-{{ ocp4_workload_litemaas_monitoring_namespace }}"
+          roleRef:
+            apiGroup: rbac.authorization.k8s.io
+            kind: ClusterRole
+            name: cluster-monitoring-view
+          subjects:
+            - kind: ServiceAccount
+              name: grafana-serviceaccount
+              namespace: "{{ ocp4_workload_litemaas_monitoring_namespace }}"
+
+    - name: Get ServiceAccount token secret
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Secret
+        namespace: "{{ ocp4_workload_litemaas_monitoring_namespace }}"
+        label_selectors:
+          - "kubernetes.io/service-account.name=grafana-serviceaccount"
+      register: r_sa_token_secret
+
+    - name: Create token secret if not exists (OpenShift 4.11+)
+      when: r_sa_token_secret.resources | length == 0
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: grafana-serviceaccount-token
+            namespace: "{{ ocp4_workload_litemaas_monitoring_namespace }}"
+            annotations:
+              kubernetes.io/service-account.name: grafana-serviceaccount
+          type: kubernetes.io/service-account-token
+
+    - name: Wait for token to be populated
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Secret
+        name: grafana-serviceaccount-token
+        namespace: "{{ ocp4_workload_litemaas_monitoring_namespace }}"
+      register: r_sa_token
+      until:
+        - r_sa_token.resources | length > 0
+        - r_sa_token.resources[0].data.token is defined
+      retries: 10
+      delay: 3
+
+    - name: Deploy Grafana instance
+      kubernetes.core.k8s:
+        state: present
+        definition: "{{ lookup('template', 'grafana-instance.yml.j2') | from_yaml_all }}"
+
+- name: Display Grafana instance info
+  when:
+    - ocp4_workload_litemaas_monitoring_deploy_grafana | bool
+    - ocp4_workload_litemaas_monitoring_deploy_grafana_instance | bool
+  ansible.builtin.debug:
+    msg:
+      - "✅ Grafana instance deployed"
+      - "   Instance name: {{ ocp4_workload_litemaas_monitoring_grafana_instance_name }}"
+      - "   Access via route: grafana (in namespace {{ ocp4_workload_litemaas_monitoring_namespace }})"
+
+# =============================================================================
+# 7. Deploy Grafana Dashboards (if enabled)
+# =============================================================================
+- name: Wait for Grafana instance to be ready
+  when:
+    - ocp4_workload_litemaas_monitoring_deploy_grafana | bool
+    - ocp4_workload_litemaas_monitoring_deploy_grafana_instance | bool
+  kubernetes.core.k8s_info:
+    api_version: grafana.integreatly.org/v1beta1
+    kind: Grafana
+    name: "{{ ocp4_workload_litemaas_monitoring_grafana_instance_name }}"
+    namespace: "{{ ocp4_workload_litemaas_monitoring_namespace }}"
+  register: r_grafana_instance
+  until:
+    - r_grafana_instance.resources | length > 0
+    - r_grafana_instance.resources[0].status is defined
+    - r_grafana_instance.resources[0].status.stage is defined
+    - r_grafana_instance.resources[0].status.stage == "complete"
+  retries: 30
+  delay: 10
+
+- name: Create GrafanaDashboard - Application metrics
+  when: ocp4_workload_litemaas_monitoring_deploy_grafana | bool
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ lookup('template', 'grafana-dashboard-app.yml.j2') | from_yaml }}"
+
+- name: Create GrafanaDashboard - Infrastructure metrics
+  when: ocp4_workload_litemaas_monitoring_deploy_grafana | bool
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ lookup('template', 'grafana-dashboard-infra.yml.j2') | from_yaml }}"
+
+- name: Display Grafana dashboards info
+  when: ocp4_workload_litemaas_monitoring_deploy_grafana | bool
+  ansible.builtin.debug:
+    msg:
+      - "✅ Grafana dashboards created"
+      - "   Application Metrics: {{ ocp4_workload_litemaas_monitoring_app_dashboard_name }}"
+      - "   Infrastructure Metrics: {{ ocp4_workload_litemaas_monitoring_infra_dashboard_name }}"
+
+# =============================================================================
+# Final Summary
+# =============================================================================
+- name: Get Grafana route
+  when: ocp4_workload_litemaas_monitoring_deploy_grafana | bool
+  kubernetes.core.k8s_info:
+    api_version: route.openshift.io/v1
+    kind: Route
+    name: grafana
+    namespace: "{{ ocp4_workload_litemaas_monitoring_namespace }}"
+  register: r_grafana_route
+
+- name: Display monitoring setup summary
+  ansible.builtin.debug:
+    msg:
+      - "============================================"
+      - "✅ LiteMaaS Monitoring Setup Complete!"
+      - "============================================"
+      - ""
+      - "ServiceMonitor: litellm (scraping every {{ ocp4_workload_litemaas_monitoring_scrape_interval }})"
+      - "PrometheusRules: litellm-alerts ({{ 'enabled' if ocp4_workload_litemaas_monitoring_deploy_alerts else 'disabled' }})"
+      - "Icinga Integration: {{ 'enabled' if ocp4_workload_litemaas_monitoring_icinga_enabled else 'disabled' }}"
+      - "Grafana: {{ 'enabled' if ocp4_workload_litemaas_monitoring_deploy_grafana else 'disabled' }}"
+      - "{% if ocp4_workload_litemaas_monitoring_deploy_grafana and r_grafana_route.resources | length > 0 %}Grafana URL: https://{{ r_grafana_route.resources[0].spec.host }}{% endif %}"
+      - ""
+      - "Next steps:"
+      - "1. Verify metrics endpoint: oc port-forward -n {{ ocp4_workload_litemaas_monitoring_namespace }} svc/litellm 4000:4000"
+      - "   curl http://localhost:4000/metrics"
+      - "2. Check ServiceMonitor targets: oc get servicemonitors -n {{ ocp4_workload_litemaas_monitoring_namespace }}"
+      - "3. View dashboards in Grafana (if enabled)"
+      - "4. Check PrometheusRules: oc get prometheusrules -n {{ ocp4_workload_litemaas_monitoring_namespace }}"

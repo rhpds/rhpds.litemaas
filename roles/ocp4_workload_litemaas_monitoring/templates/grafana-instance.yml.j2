@@ -1,0 +1,93 @@
+---
+# =============================================================================
+# Grafana Instance
+# =============================================================================
+# Deploys Grafana instance using Grafana Operator
+# Connects to OpenShift user workload Prometheus
+# =============================================================================
+apiVersion: grafana.integreatly.org/v1beta1
+kind: Grafana
+metadata:
+  name: {{ ocp4_workload_litemaas_monitoring_grafana_instance_name }}
+  namespace: {{ ocp4_workload_litemaas_monitoring_namespace }}
+  labels:
+    app: grafana
+    dashboards: "litemaas"
+spec:
+  # Deployment configuration
+  deployment:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: grafana
+              image: docker.io/grafana/grafana:latest
+
+  # Grafana configuration
+  config:
+    log:
+      mode: "console"
+    auth:
+      disable_login_form: false
+    auth.anonymous:
+      enabled: true
+
+  # Data sources - connect to Prometheus
+  dataSource:
+    - name: Prometheus
+      type: prometheus
+      access: proxy
+      url: https://thanos-querier.openshift-monitoring.svc.cluster.local:9091
+      isDefault: true
+      jsonData:
+        httpHeaderName1: "Authorization"
+        timeInterval: "5s"
+        tlsSkipVerify: true
+      secureJsonData:
+        httpHeaderValue1: "Bearer {{ '{{' }} .prometheus_token {{ '}}' }}"
+
+---
+# =============================================================================
+# ServiceAccount for Grafana Prometheus Access
+# =============================================================================
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: grafana-serviceaccount
+  namespace: {{ ocp4_workload_litemaas_monitoring_namespace }}
+
+---
+# =============================================================================
+# ClusterRoleBinding for Prometheus Access
+# =============================================================================
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: grafana-cluster-monitoring-view
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-monitoring-view
+subjects:
+  - kind: ServiceAccount
+    name: grafana-serviceaccount
+    namespace: {{ ocp4_workload_litemaas_monitoring_namespace }}
+
+---
+# =============================================================================
+# Route for Grafana Access
+# =============================================================================
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: grafana
+  namespace: {{ ocp4_workload_litemaas_monitoring_namespace }}
+spec:
+  to:
+    kind: Service
+    name: {{ ocp4_workload_litemaas_monitoring_grafana_instance_name }}-service
+  port:
+    targetPort: 3000
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect

@@ -1,0 +1,146 @@
+---
+# =============================================================================
+# GrafanaDashboard - LiteMaaS Application Metrics
+# =============================================================================
+# Application-level metrics: requests, latency, tokens, model usage
+# Complements the LiteLLM frontend built-in analytics
+# =============================================================================
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: {{ ocp4_workload_litemaas_monitoring_app_dashboard_name }}
+  namespace: {{ ocp4_workload_litemaas_monitoring_namespace }}
+  labels:
+    app: grafana
+    dashboard: "litemaas-app"
+spec:
+  instanceSelector:
+    matchLabels:
+      dashboards: "litemaas"
+  json: |
+    {
+      "title": "LiteMaaS - Application Metrics",
+      "timezone": "browser",
+      "schemaVersion": 30,
+      "version": 1,
+      "refresh": "30s",
+      "panels": [
+        {
+          "id": 1,
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+          "type": "graph",
+          "title": "Request Rate (by Model)",
+          "targets": [
+            {
+              "expr": "sum(rate(litellm_request_total{namespace=\"{{ ocp4_workload_litemaas_monitoring_namespace }}\"}[5m])) by (model)",
+              "legendFormat": "{{ '{{' }}model{{ '}}' }}",
+              "refId": "A"
+            }
+          ],
+          "yaxes": [
+            {"label": "requests/sec", "show": true},
+            {"show": false}
+          ]
+        },
+        {
+          "id": 2,
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+          "type": "graph",
+          "title": "Request Latency (p50, p95, p99)",
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.50, sum(rate(litellm_request_duration_seconds_bucket{namespace=\"{{ ocp4_workload_litemaas_monitoring_namespace }}\"}[5m])) by (le))",
+              "legendFormat": "p50",
+              "refId": "A"
+            },
+            {
+              "expr": "histogram_quantile(0.95, sum(rate(litellm_request_duration_seconds_bucket{namespace=\"{{ ocp4_workload_litemaas_monitoring_namespace }}\"}[5m])) by (le))",
+              "legendFormat": "p95",
+              "refId": "B"
+            },
+            {
+              "expr": "histogram_quantile(0.99, sum(rate(litellm_request_duration_seconds_bucket{namespace=\"{{ ocp4_workload_litemaas_monitoring_namespace }}\"}[5m])) by (le))",
+              "legendFormat": "p99",
+              "refId": "C"
+            }
+          ],
+          "yaxes": [
+            {"label": "seconds", "show": true},
+            {"show": false}
+          ]
+        },
+        {
+          "id": 3,
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+          "type": "graph",
+          "title": "Token Consumption (Input + Output)",
+          "targets": [
+            {
+              "expr": "sum(rate(litellm_tokens_total{namespace=\"{{ ocp4_workload_litemaas_monitoring_namespace }}\",type=\"input\"}[5m]))",
+              "legendFormat": "Input Tokens",
+              "refId": "A"
+            },
+            {
+              "expr": "sum(rate(litellm_tokens_total{namespace=\"{{ ocp4_workload_litemaas_monitoring_namespace }}\",type=\"output\"}[5m]))",
+              "legendFormat": "Output Tokens",
+              "refId": "B"
+            }
+          ],
+          "yaxes": [
+            {"label": "tokens/sec", "show": true},
+            {"show": false}
+          ]
+        },
+        {
+          "id": 4,
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+          "type": "graph",
+          "title": "Error Rate (by Status Code)",
+          "targets": [
+            {
+              "expr": "sum(rate(litellm_request_total{namespace=\"{{ ocp4_workload_litemaas_monitoring_namespace }}\",status=~\"4..\"}[5m])) by (status)",
+              "legendFormat": "4xx - {{ '{{' }}status{{ '}}' }}",
+              "refId": "A"
+            },
+            {
+              "expr": "sum(rate(litellm_request_total{namespace=\"{{ ocp4_workload_litemaas_monitoring_namespace }}\",status=~\"5..\"}[5m])) by (status)",
+              "legendFormat": "5xx - {{ '{{' }}status{{ '}}' }}",
+              "refId": "B"
+            }
+          ],
+          "yaxes": [
+            {"label": "errors/sec", "show": true},
+            {"show": false}
+          ]
+        },
+        {
+          "id": 5,
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+          "type": "stat",
+          "title": "Active Requests",
+          "targets": [
+            {
+              "expr": "sum(litellm_active_requests{namespace=\"{{ ocp4_workload_litemaas_monitoring_namespace }}\"})",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 6,
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+          "type": "stat",
+          "title": "Cache Hit Rate",
+          "targets": [
+            {
+              "expr": "sum(rate(litellm_cache_hits_total{namespace=\"{{ ocp4_workload_litemaas_monitoring_namespace }}\"}[5m])) / (sum(rate(litellm_cache_hits_total{namespace=\"{{ ocp4_workload_litemaas_monitoring_namespace }}\"}[5m])) + sum(rate(litellm_cache_misses_total{namespace=\"{{ ocp4_workload_litemaas_monitoring_namespace }}\"}[5m])))",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percentunit"
+            }
+          }
+        }
+      ]
+    }

@@ -1,0 +1,153 @@
+---
+# =============================================================================
+# PrometheusRule for LiteLLM Alerts
+# =============================================================================
+# Defines alerting rules for LiteLLM monitoring
+# Alerts are sent to AlertManager which can route to Icinga, email, Slack, etc.
+# =============================================================================
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: litellm-alerts
+  namespace: {{ ocp4_workload_litemaas_monitoring_namespace }}
+  labels:
+    app: litellm
+    prometheus: user-workload
+    role: alert-rules
+spec:
+  groups:
+    # =========================================================================
+    # Critical Alerts
+    # =========================================================================
+    - name: litellm.critical
+      interval: 30s
+      rules:
+        # High Error Rate - Critical
+        - alert: LiteLLMHighErrorRate
+          expr: |
+            (
+              sum(rate(litellm_request_total{status=~"5..|4.."}[5m]))
+              /
+              sum(rate(litellm_request_total[5m]))
+            ) > {{ ocp4_workload_litemaas_monitoring_alert_error_rate_critical }}
+          for: {{ ocp4_workload_litemaas_monitoring_alert_error_duration_critical }}
+          labels:
+            severity: critical
+            component: litellm
+            namespace: {{ ocp4_workload_litemaas_monitoring_namespace }}
+          annotations:
+            summary: "LiteLLM high error rate detected"
+            description: "Error rate is {{ "{{" }} $value | humanizePercentage {{ "}}" }} (threshold: {{ ocp4_workload_litemaas_monitoring_alert_error_rate_critical | float * 100 }}%)"
+
+        # High Latency P99 - Critical
+        - alert: LiteLLMHighLatencyP99
+          expr: |
+            histogram_quantile(0.99,
+              sum(rate(litellm_request_duration_seconds_bucket[5m])) by (le)
+            ) > {{ ocp4_workload_litemaas_monitoring_alert_latency_p99_critical }}
+          for: {{ ocp4_workload_litemaas_monitoring_alert_latency_duration_critical }}
+          labels:
+            severity: critical
+            component: litellm
+            namespace: {{ ocp4_workload_litemaas_monitoring_namespace }}
+          annotations:
+            summary: "LiteLLM high latency (p99) detected"
+            description: "P99 latency is {{ "{{" }} $value {{ "}}" }}s (threshold: {{ ocp4_workload_litemaas_monitoring_alert_latency_p99_critical }}s)"
+
+        # Service Down
+        - alert: LiteLLMServiceDown
+          expr: |
+            up{job="litellm", namespace="{{ ocp4_workload_litemaas_monitoring_namespace }}"} == 0
+          for: 2m
+          labels:
+            severity: critical
+            component: litellm
+            namespace: {{ ocp4_workload_litemaas_monitoring_namespace }}
+          annotations:
+            summary: "LiteLLM service is down"
+            description: "LiteLLM service has been unreachable for more than 2 minutes"
+
+        # Database Connection Pool Exhausted
+        - alert: LiteLLMDatabasePoolExhausted
+          expr: |
+            (
+              litellm_db_connections_active
+              /
+              litellm_db_connections_max
+            ) > 0.95
+          for: 5m
+          labels:
+            severity: critical
+            component: postgresql
+            namespace: {{ ocp4_workload_litemaas_monitoring_namespace }}
+          annotations:
+            summary: "LiteLLM database connection pool near exhaustion"
+            description: "Database connection pool is {{ "{{" }} $value | humanizePercentage {{ "}}" }} utilized (threshold: 95%)"
+
+    # =========================================================================
+    # Warning Alerts
+    # =========================================================================
+    - name: litellm.warning
+      interval: 30s
+      rules:
+        # Elevated Error Rate - Warning
+        - alert: LiteLLMElevatedErrorRate
+          expr: |
+            (
+              sum(rate(litellm_request_total{status=~"5..|4.."}[5m]))
+              /
+              sum(rate(litellm_request_total[5m]))
+            ) > {{ ocp4_workload_litemaas_monitoring_alert_error_rate_warning }}
+          for: {{ ocp4_workload_litemaas_monitoring_alert_error_duration_warning }}
+          labels:
+            severity: warning
+            component: litellm
+            namespace: {{ ocp4_workload_litemaas_monitoring_namespace }}
+          annotations:
+            summary: "LiteLLM elevated error rate detected"
+            description: "Error rate is {{ "{{" }} $value | humanizePercentage {{ "}}" }} (threshold: {{ ocp4_workload_litemaas_monitoring_alert_error_rate_warning | float * 100 }}%)"
+
+        # Increased Latency P95 - Warning
+        - alert: LiteLLMIncreasedLatencyP95
+          expr: |
+            histogram_quantile(0.95,
+              sum(rate(litellm_request_duration_seconds_bucket[5m])) by (le)
+            ) > {{ ocp4_workload_litemaas_monitoring_alert_latency_p95_warning }}
+          for: {{ ocp4_workload_litemaas_monitoring_alert_latency_duration_warning }}
+          labels:
+            severity: warning
+            component: litellm
+            namespace: {{ ocp4_workload_litemaas_monitoring_namespace }}
+          annotations:
+            summary: "LiteLLM increased latency (p95) detected"
+            description: "P95 latency is {{ "{{" }} $value {{ "}}" }}s (threshold: {{ ocp4_workload_litemaas_monitoring_alert_latency_p95_warning }}s)"
+
+        # High Token Consumption Rate
+        - alert: LiteLLMHighTokenConsumption
+          expr: |
+            sum(rate(litellm_tokens_total[5m])) > 10000
+          for: 10m
+          labels:
+            severity: warning
+            component: litellm
+            namespace: {{ ocp4_workload_litemaas_monitoring_namespace }}
+          annotations:
+            summary: "LiteLLM high token consumption rate"
+            description: "Token consumption is {{ "{{" }} $value {{ "}}" }} tokens/sec (threshold: 10000 tokens/sec)"
+
+        # Cache Hit Rate Drop (if Redis enabled)
+        - alert: LiteLLMCacheHitRateDrop
+          expr: |
+            (
+              rate(litellm_cache_hits_total[5m])
+              /
+              (rate(litellm_cache_hits_total[5m]) + rate(litellm_cache_misses_total[5m]))
+            ) < 0.5
+          for: 10m
+          labels:
+            severity: warning
+            component: litellm
+            namespace: {{ ocp4_workload_litemaas_monitoring_namespace }}
+          annotations:
+            summary: "LiteLLM cache hit rate dropped"
+            description: "Cache hit rate is {{ "{{" }} $value | humanizePercentage {{ "}}" }} (threshold: 50%)"
