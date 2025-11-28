@@ -16,6 +16,10 @@ metadata:
     app: otel-collector
 data:
   otel-collector-config.yaml: |
+    extensions:
+      health_check:
+        endpoint: 0.0.0.0:13133
+
     receivers:
       otlp:
         protocols:
@@ -39,6 +43,7 @@ data:
         loglevel: info
 
     service:
+      extensions: [health_check]
       pipelines:
         metrics:
           receivers: [otlp]
@@ -85,6 +90,9 @@ spec:
           protocol: TCP
         - containerPort: 8889
           name: prometheus
+          protocol: TCP
+        - containerPort: 13133
+          name: health-check
           protocol: TCP
         resources:
           requests:
