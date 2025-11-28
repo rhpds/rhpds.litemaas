@@ -21,7 +21,7 @@
     - ocp4_workload_litemaas_monitoring_enable_uwm | bool
     - r_cluster_monitoring_config.resources | length == 0 or
       (r_cluster_monitoring_config.resources[0].data['config.yaml'] is not defined or
-       'enableUserWorkload: true' not in r_cluster_monitoring_config.resources[0].data['config.yaml'])
+       "enableUserWorkload: true" not in r_cluster_monitoring_config.resources[0].data['config.yaml'])
   kubernetes.core.k8s:
     state: present
     definition:
