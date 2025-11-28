@@ -16,12 +16,20 @@
     namespace: openshift-monitoring
   register: r_cluster_monitoring_config
 
+- name: Parse cluster monitoring config
+  when:
+    - ocp4_workload_litemaas_monitoring_enable_uwm | bool
+    - r_cluster_monitoring_config.resources | length > 0
+    - r_cluster_monitoring_config.resources[0].data['config.yaml'] is defined
+  ansible.builtin.set_fact:
+    _cluster_monitoring_config: "{{ r_cluster_monitoring_config.resources[0].data['config.yaml'] | from_yaml }}"
+
 - name: Enable user workload monitoring
   when:
     - ocp4_workload_litemaas_monitoring_enable_uwm | bool
     - r_cluster_monitoring_config.resources | length == 0 or
-      (r_cluster_monitoring_config.resources[0].data['config.yaml'] is not defined or
-       "enableUserWorkload: true" not in r_cluster_monitoring_config.resources[0].data['config.yaml'])
+      (r_cluster_monitoring_config.resources[0].data['config.yaml'] is not defined) or
+      (_cluster_monitoring_config is defined and (_cluster_monitoring_config.enableUserWorkload is not defined or not _cluster_monitoring_config.enableUserWorkload))
   kubernetes.core.k8s:
     state: present
     definition:
