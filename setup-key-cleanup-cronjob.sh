@@ -204,12 +204,12 @@ KEYS_TO_DELETE=$(echo "$RESPONSE" | jq -r --arg now "$CURRENT_TIMESTAMP" --arg c
 '\'' 2>/dev/null)
 
 # Count keys by reason
-TOTAL_KEYS=$(echo "$RESPONSE" | jq -r '\''.keys | length'\'' 2>/dev/null)
+TOTAL_KEYS=$(echo "$RESPONSE" | jq -r '\''.keys | length | . // 0'\'' 2>/dev/null)
 EXPIRED_KEYS=$(echo "$RESPONSE" | jq -r --arg now "$CURRENT_TIMESTAMP" '\''
-  [.keys[] | select((.expires != null) and ((.expires | fromdateiso8601) < ($now | tonumber)))] | length
+  ([.keys[] | select((.expires != null) and ((.expires | fromdateiso8601) < ($now | tonumber)))] | length) // 0
 '\'' 2>/dev/null)
 OLD_KEYS=$(echo "$RESPONSE" | jq -r --arg cutoff "$CUTOFF_TIMESTAMP" '\''
-  [.keys[] |
+  ([.keys[] |
    select(
      (.expires != null) and
      (.metadata.duration != null) and
@@ -226,7 +226,7 @@ OLD_KEYS=$(echo "$RESPONSE" | jq -r --arg cutoff "$CUTOFF_TIMESTAMP" '\''
        ((.expires | fromdateiso8601) - $duration_seconds) < ($cutoff | tonumber)
      )
    )
-  ] | length
+  ] | length) // 0
 '\'' 2>/dev/null)
 TOTAL_TO_DELETE=$(echo "$KEYS_TO_DELETE" | grep -v '\''^$'\'' | wc -l | tr -d '\'' '\'')
 
