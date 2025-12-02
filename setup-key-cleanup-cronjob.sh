@@ -161,24 +161,25 @@ RESPONSE=$(jq -n --argjson keys "$ALL_KEYS" '\''{"keys": $keys}'\'')
 echo "  Total keys fetched: $(echo "$ALL_KEYS" | jq '\''length'\'')"
 echo ""
 
-# Get current time in ISO 8601 format
-CURRENT_DATE=$(date -u '\''+%Y-%m-%dT%H:%M:%S'\'')
+# Get current time as Unix timestamp
+CURRENT_TIMESTAMP=$(date -u +%s)
+CURRENT_DATE=$(date -u '\''+%Y-%m-%d %H:%M:%S'\'')
 
-# Calculate cutoff date (30 days ago) in ISO 8601 format
-CUTOFF_DATE=$(date -u -d "$DAYS_OLD days ago" '\''+%Y-%m-%dT%H:%M:%S'\'' 2>/dev/null || date -u -v-${DAYS_OLD}d '\''+%Y-%m-%dT%H:%M:%S'\'')
+# Calculate cutoff timestamp (30 days ago)
+CUTOFF_TIMESTAMP=$(date -u -d "$DAYS_OLD days ago" +%s 2>/dev/null || date -u -v-${DAYS_OLD}d +%s)
+CUTOFF_DATE=$(date -u -d "@$CUTOFF_TIMESTAMP" '\''+%Y-%m-%d %H:%M:%S'\'' 2>/dev/null || date -u -r "$CUTOFF_TIMESTAMP" '\''+%Y-%m-%d %H:%M:%S'\'')
 
-echo "  Current time: $CURRENT_DATE"
-echo "  Cutoff date (30d ago): $CUTOFF_DATE"
+echo "  Current time: $CURRENT_DATE (Unix: $CURRENT_TIMESTAMP)"
+echo "  Cutoff date (30d ago): $CUTOFF_DATE (Unix: $CUTOFF_TIMESTAMP)"
 echo ""
 
 # Extract keys to delete (expired OR older than 30 days)
-# Note: LiteLLM returns expires in ISO 8601 format
-# We calculate age from: current_time - (expires - duration_in_seconds)
-KEYS_TO_DELETE=$(echo "$RESPONSE" | jq -r --arg now "$CURRENT_DATE" --arg cutoff "$CUTOFF_DATE" '\''
+# Convert ISO 8601 to Unix timestamps for numeric comparison
+KEYS_TO_DELETE=$(echo "$RESPONSE" | jq -r --arg now "$CURRENT_TIMESTAMP" --arg cutoff "$CUTOFF_TIMESTAMP" '\''
   .keys[] |
   select(
-    # Check if expired (expires < current time)
-    ((.expires != null) and (.expires < $now)) or
+    # Check if expired (expires timestamp < current timestamp)
+    ((.expires != null) and ((.expires | fromdateiso8601) < ($now | tonumber))) or
     # Check if older than 30 days (calculate created_at from expires - duration)
     (
       (.expires != null) and
@@ -194,8 +195,8 @@ KEYS_TO_DELETE=$(echo "$RESPONSE" | jq -r --arg now "$CURRENT_DATE" --arg cutoff
             0
           end
         ) as $duration_seconds |
-        # created_at = expires - duration
-        ((.expires | fromdateiso8601) - $duration_seconds | todateiso8601) < $cutoff
+        # created_at = expires - duration (both as Unix timestamps)
+        ((.expires | fromdateiso8601) - $duration_seconds) < ($cutoff | tonumber)
       )
     )
   ) |
@@ -204,10 +205,10 @@ KEYS_TO_DELETE=$(echo "$RESPONSE" | jq -r --arg now "$CURRENT_DATE" --arg cutoff
 
 # Count keys by reason
 TOTAL_KEYS=$(echo "$RESPONSE" | jq -r '\''.keys | length'\'' 2>/dev/null)
-EXPIRED_KEYS=$(echo "$RESPONSE" | jq -r --arg now "$CURRENT_DATE" '\''
-  [.keys[] | select((.expires != null) and (.expires < $now))] | length
+EXPIRED_KEYS=$(echo "$RESPONSE" | jq -r --arg now "$CURRENT_TIMESTAMP" '\''
+  [.keys[] | select((.expires != null) and ((.expires | fromdateiso8601) < ($now | tonumber)))] | length
 '\'' 2>/dev/null)
-OLD_KEYS=$(echo "$RESPONSE" | jq -r --arg now "$CURRENT_DATE" --arg cutoff "$CUTOFF_DATE" '\''
+OLD_KEYS=$(echo "$RESPONSE" | jq -r --arg cutoff "$CUTOFF_TIMESTAMP" '\''
   [.keys[] |
    select(
      (.expires != null) and
@@ -222,7 +223,7 @@ OLD_KEYS=$(echo "$RESPONSE" | jq -r --arg now "$CURRENT_DATE" --arg cutoff "$CUT
            0
          end
        ) as $duration_seconds |
-       ((.expires | fromdateiso8601) - $duration_seconds | todateiso8601) < $cutoff
+       ((.expires | fromdateiso8601) - $duration_seconds) < ($cutoff | tonumber)
      )
    )
   ] | length
@@ -242,10 +243,10 @@ if [ "$TOTAL_TO_DELETE" -eq 0 ]; then
 fi
 
 echo "Keys to delete:"
-echo "$RESPONSE" | jq -r --arg now "$CURRENT_DATE" --arg cutoff "$CUTOFF_DATE" '\''
+echo "$RESPONSE" | jq -r --arg now "$CURRENT_TIMESTAMP" --arg cutoff "$CUTOFF_TIMESTAMP" '\''
   .keys[] |
   select(
-    ((.expires != null) and (.expires < $now)) or
+    ((.expires != null) and ((.expires | fromdateiso8601) < ($now | tonumber))) or
     (
       (.expires != null) and
       (.metadata.duration != null) and
@@ -259,11 +260,11 @@ echo "$RESPONSE" | jq -r --arg now "$CURRENT_DATE" --arg cutoff "$CUTOFF_DATE" '
             0
           end
         ) as $duration_seconds |
-        ((.expires | fromdateiso8601) - $duration_seconds | todateiso8601) < $cutoff
+        ((.expires | fromdateiso8601) - $duration_seconds) < ($cutoff | tonumber)
       )
     )
   ) |
-  if (.expires != null) and (.expires < $now) then
+  if (.expires != null) and ((.expires | fromdateiso8601) < ($now | tonumber)) then
     "  - Token: \(.token[:20])... | Alias: \(.key_alias // "N/A") | EXPIRED: \(.expires)"
   else
     (
