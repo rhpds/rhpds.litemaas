@@ -38,6 +38,16 @@ echo "========================================="
 echo "Namespace: $NAMESPACE"
 echo ""
 
+# Detect if we're running on bastion
+if [[ "$(hostname)" == *"bastion"* ]] || [[ "$(hostname)" == *"utility"* ]]; then
+    ON_BASTION=true
+    echo "Detected: Running on bastion/utility node"
+else
+    ON_BASTION=false
+    echo "Detected: Running from workstation (will use SSH)"
+fi
+echo ""
+
 # Check if oc is available
 if ! command -v oc &> /dev/null; then
     echo "ERROR: oc command not found. Please install OpenShift CLI."
@@ -224,11 +234,17 @@ echo ""
 '
 
 # Write the script to bastion
-echo "Installing script to /usr/local/bin/cleanup-litemaas-keys-${NAMESPACE}.sh on bastion..."
-echo "$CLEANUP_SCRIPT_CONTENT" | ssh bastion "sudo tee /usr/local/bin/cleanup-litemaas-keys-${NAMESPACE}.sh > /dev/null"
+echo "Installing script to /usr/local/bin/cleanup-litemaas-keys-${NAMESPACE}.sh..."
 
-# Make it executable
-ssh bastion "sudo chmod +x /usr/local/bin/cleanup-litemaas-keys-${NAMESPACE}.sh"
+if [ "$ON_BASTION" = true ]; then
+    # Running on bastion - write directly
+    echo "$CLEANUP_SCRIPT_CONTENT" | sudo tee /usr/local/bin/cleanup-litemaas-keys-${NAMESPACE}.sh > /dev/null
+    sudo chmod +x /usr/local/bin/cleanup-litemaas-keys-${NAMESPACE}.sh
+else
+    # Running from workstation - use SSH
+    echo "$CLEANUP_SCRIPT_CONTENT" | ssh bastion "sudo tee /usr/local/bin/cleanup-litemaas-keys-${NAMESPACE}.sh > /dev/null"
+    ssh bastion "sudo chmod +x /usr/local/bin/cleanup-litemaas-keys-${NAMESPACE}.sh"
+fi
 
 echo "✓ Script installed"
 echo ""
@@ -238,14 +254,21 @@ echo "Setting up cronjob (runs daily at 2 AM)..."
 
 CRON_ENTRY="0 2 * * * /usr/local/bin/cleanup-litemaas-keys-${NAMESPACE}.sh"
 
-# Check if cronjob already exists
-if ssh bastion "sudo crontab -l 2>/dev/null | grep -q 'cleanup-litemaas-keys-${NAMESPACE}.sh'"; then
-    echo "Cronjob already exists. Updating..."
-    ssh bastion "sudo crontab -l 2>/dev/null | grep -v 'cleanup-litemaas-keys-${NAMESPACE}.sh' | sudo crontab -"
+if [ "$ON_BASTION" = true ]; then
+    # Running on bastion - manage crontab directly
+    if sudo crontab -l 2>/dev/null | grep -q "cleanup-litemaas-keys-${NAMESPACE}.sh"; then
+        echo "Cronjob already exists. Updating..."
+        sudo crontab -l 2>/dev/null | grep -v "cleanup-litemaas-keys-${NAMESPACE}.sh" | sudo crontab -
+    fi
+    (sudo crontab -l 2>/dev/null; echo "$CRON_ENTRY") | sudo crontab -
+else
+    # Running from workstation - use SSH
+    if ssh bastion "sudo crontab -l 2>/dev/null | grep -q 'cleanup-litemaas-keys-${NAMESPACE}.sh'"; then
+        echo "Cronjob already exists. Updating..."
+        ssh bastion "sudo crontab -l 2>/dev/null | grep -v 'cleanup-litemaas-keys-${NAMESPACE}.sh' | sudo crontab -"
+    fi
+    ssh bastion "(sudo crontab -l 2>/dev/null; echo '$CRON_ENTRY') | sudo crontab -"
 fi
-
-# Add the cronjob
-ssh bastion "(sudo crontab -l 2>/dev/null; echo '$CRON_ENTRY') | sudo crontab -"
 
 echo "✓ Cronjob created"
 echo ""
@@ -255,7 +278,9 @@ echo "Setting up log rotation..."
 
 LOGROTATE_CONFIG="/etc/logrotate.d/litemaas-key-cleanup-${NAMESPACE}"
 
-ssh bastion "sudo tee $LOGROTATE_CONFIG > /dev/null" << 'EOF'
+if [ "$ON_BASTION" = true ]; then
+    # Running on bastion - write directly
+    sudo tee $LOGROTATE_CONFIG > /dev/null << 'EOF'
 /var/log/litemaas-key-cleanup.log {
     daily
     rotate 30
@@ -266,6 +291,20 @@ ssh bastion "sudo tee $LOGROTATE_CONFIG > /dev/null" << 'EOF'
     create 0644 root root
 }
 EOF
+else
+    # Running from workstation - use SSH
+    ssh bastion "sudo tee $LOGROTATE_CONFIG > /dev/null" << 'EOF'
+/var/log/litemaas-key-cleanup.log {
+    daily
+    rotate 30
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 0644 root root
+}
+EOF
+fi
 
 echo "✓ Log rotation configured"
 echo ""
@@ -283,16 +322,38 @@ echo "    - Expired keys (expires < current time)"
 echo "    - Keys older than 30 days (created_at > 30 days ago)"
 echo "  Log file: /var/log/litemaas-key-cleanup.log"
 echo ""
-echo "Test the script manually:"
-echo "  ssh bastion 'sudo /usr/local/bin/cleanup-litemaas-keys-${NAMESPACE}.sh'"
-echo ""
-echo "View logs:"
-echo "  ssh bastion 'sudo tail -f /var/log/litemaas-key-cleanup.log'"
-echo ""
-echo "List cronjobs:"
-echo "  ssh bastion 'sudo crontab -l'"
-echo ""
-echo "Remove cronjob:"
-echo "  ssh bastion 'sudo crontab -l | grep -v cleanup-litemaas-keys-${NAMESPACE}.sh | sudo crontab -'"
-echo "  ssh bastion 'sudo rm /usr/local/bin/cleanup-litemaas-keys-${NAMESPACE}.sh'"
+
+if [ "$ON_BASTION" = true ]; then
+    echo "Test the script manually:"
+    echo "  sudo /usr/local/bin/cleanup-litemaas-keys-${NAMESPACE}.sh"
+    echo ""
+    echo "Verify cronjob is scheduled:"
+    echo "  sudo crontab -l | grep cleanup-litemaas-keys"
+    echo ""
+    echo "View logs:"
+    echo "  sudo tail -f /var/log/litemaas-key-cleanup.log"
+    echo ""
+    echo "Test cronjob will run (dry-run):"
+    echo "  sudo run-parts --test /etc/cron.daily"
+    echo ""
+    echo "Remove cronjob:"
+    echo "  sudo crontab -l | grep -v cleanup-litemaas-keys-${NAMESPACE}.sh | sudo crontab -"
+    echo "  sudo rm /usr/local/bin/cleanup-litemaas-keys-${NAMESPACE}.sh"
+else
+    echo "Test the script manually:"
+    echo "  ssh bastion 'sudo /usr/local/bin/cleanup-litemaas-keys-${NAMESPACE}.sh'"
+    echo ""
+    echo "Verify cronjob is scheduled:"
+    echo "  ssh bastion 'sudo crontab -l | grep cleanup-litemaas-keys'"
+    echo ""
+    echo "View logs:"
+    echo "  ssh bastion 'sudo tail -f /var/log/litemaas-key-cleanup.log'"
+    echo ""
+    echo "Test cronjob will run (dry-run):"
+    echo "  ssh bastion 'sudo run-parts --test /etc/cron.daily'"
+    echo ""
+    echo "Remove cronjob:"
+    echo "  ssh bastion 'sudo crontab -l | grep -v cleanup-litemaas-keys-${NAMESPACE}.sh | sudo crontab -'"
+    echo "  ssh bastion 'sudo rm /usr/local/bin/cleanup-litemaas-keys-${NAMESPACE}.sh'"
+fi
 echo ""
