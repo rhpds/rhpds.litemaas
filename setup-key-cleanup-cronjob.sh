@@ -2,7 +2,7 @@
 # =============================================================================
 # LiteMaaS Key Cleanup Cronjob Setup
 # =============================================================================
-# Creates a cronjob on bastion that runs daily to delete expired virtual API keys
+# Creates a cronjob on bastion that runs daily to delete old virtual API keys
 #
 # Usage:
 #   ./setup-key-cleanup-cronjob.sh <namespace>
@@ -15,7 +15,9 @@
 #   1. Creates a script on bastion at /usr/local/bin/cleanup-litemaas-keys-<namespace>.sh
 #   2. Sets up a daily cronjob (runs at 2 AM) to execute the cleanup
 #   3. The cronjob auto-discovers LiteLLM URL and master key from OpenShift
-#   4. Deletes expired virtual keys (checks expires field from LiteLLM API)
+#   4. Deletes keys matching EITHER condition:
+#      - Expired keys (expires field < current time)
+#      - Old keys (created_at > 30 days ago)
 # =============================================================================
 
 set -e
@@ -62,6 +64,7 @@ CLEANUP_SCRIPT_CONTENT='#!/bin/bash
 # DO NOT EDIT MANUALLY - use setup script to regenerate
 
 NAMESPACE="'"$NAMESPACE"'"
+DAYS_OLD=30
 LOGFILE="/var/log/litemaas-key-cleanup.log"
 
 # Redirect all output to logfile
@@ -71,7 +74,9 @@ echo "========================================="
 echo "LiteMaaS Key Cleanup - $(date)"
 echo "========================================="
 echo "Namespace: $NAMESPACE"
-echo "Deleting expired virtual keys..."
+echo "Cleanup Policy:"
+echo "  - Delete expired keys (expires < current time)"
+echo "  - Delete keys older than $DAYS_OLD days"
 echo ""
 
 # Get LiteLLM URL - find route targeting litellm service
@@ -126,40 +131,62 @@ fi
 CURRENT_TIMESTAMP=$(date -u +%s)
 CURRENT_DATE=$(date -u '\''+%Y-%m-%d %H:%M:%S'\'')
 
-echo "  Current time: $CURRENT_DATE (Unix timestamp: $CURRENT_TIMESTAMP)"
+# Calculate cutoff timestamp for old keys (30 days ago)
+CUTOFF_TIMESTAMP=$(date -u -d "$DAYS_OLD days ago" +%s 2>/dev/null || date -u -v-${DAYS_OLD}d +%s)
+CUTOFF_DATE=$(date -u -d "@$CUTOFF_TIMESTAMP" '\''+%Y-%m-%d'\'' 2>/dev/null || date -u -r "$CUTOFF_TIMESTAMP" '\''+%Y-%m-%d'\'')
+
+echo "  Current time: $CURRENT_DATE (Unix: $CURRENT_TIMESTAMP)"
+echo "  Cutoff date (30d): $CUTOFF_DATE (Unix: $CUTOFF_TIMESTAMP)"
 echo ""
 
-# Extract expired keys (expires timestamp < current timestamp)
-KEYS_TO_DELETE=$(echo "$RESPONSE" | jq -r --arg now "$CURRENT_TIMESTAMP" '\''
+# Extract keys to delete (expired OR older than 30 days)
+KEYS_TO_DELETE=$(echo "$RESPONSE" | jq -r --arg now "$CURRENT_TIMESTAMP" --arg cutoff "$CUTOFF_TIMESTAMP" '\''
   .info[] |
-  select(.expires != null) |
-  select((.expires | tonumber) < ($now | tonumber)) |
+  select(
+    ((.expires != null) and ((.expires | tonumber) < ($now | tonumber))) or
+    ((.created_at != null) and ((.created_at | tonumber) < ($cutoff | tonumber)))
+  ) |
   .token
 '\'' 2>/dev/null)
 
-# Count keys
+# Count keys by reason
 TOTAL_KEYS=$(echo "$RESPONSE" | jq -r '\''.info | length'\'' 2>/dev/null)
-EXPIRED_KEYS_COUNT=$(echo "$KEYS_TO_DELETE" | grep -v '\''^$'\'' | wc -l | tr -d '\'' '\'')
+EXPIRED_KEYS=$(echo "$RESPONSE" | jq -r --arg now "$CURRENT_TIMESTAMP" '\''
+  [.info[] | select((.expires != null) and ((.expires | tonumber) < ($now | tonumber)))] | length
+'\'' 2>/dev/null)
+OLD_KEYS=$(echo "$RESPONSE" | jq -r --arg cutoff "$CUTOFF_TIMESTAMP" '\''
+  [.info[] | select((.created_at != null) and ((.created_at | tonumber) < ($cutoff | tonumber)))] | length
+'\'' 2>/dev/null)
+TOTAL_TO_DELETE=$(echo "$KEYS_TO_DELETE" | grep -v '\''^$'\'' | wc -l | tr -d '\'' '\'')
 
-echo "Total keys in system: $TOTAL_KEYS"
-echo "Expired keys: $EXPIRED_KEYS_COUNT"
+echo "Key Statistics:"
+echo "  Total keys in system: $TOTAL_KEYS"
+echo "  Expired keys: $EXPIRED_KEYS"
+echo "  Keys older than $DAYS_OLD days: $OLD_KEYS"
+echo "  Total to delete: $TOTAL_TO_DELETE"
 echo ""
 
-if [ "$EXPIRED_KEYS_COUNT" -eq 0 ]; then
-    echo "No expired keys to delete."
+if [ "$TOTAL_TO_DELETE" -eq 0 ]; then
+    echo "No keys to delete."
     exit 0
 fi
 
-echo "Expired keys to delete:"
-echo "$RESPONSE" | jq -r --arg now "$CURRENT_TIMESTAMP" '\''
+echo "Keys to delete:"
+echo "$RESPONSE" | jq -r --arg now "$CURRENT_TIMESTAMP" --arg cutoff "$CUTOFF_TIMESTAMP" '\''
   .info[] |
-  select(.expires != null) |
-  select((.expires | tonumber) < ($now | tonumber)) |
-  "  - Token: \(.token[:20])... | Alias: \(.key_alias // "N/A") | Expires: \(.expires | tonumber | todate)"
+  select(
+    ((.expires != null) and ((.expires | tonumber) < ($now | tonumber))) or
+    ((.created_at != null) and ((.created_at | tonumber) < ($cutoff | tonumber)))
+  ) |
+  if ((.expires != null) and ((.expires | tonumber) < ($now | tonumber))) then
+    "  - Token: \(.token[:20])... | Alias: \(.key_alias // "N/A") | EXPIRED: \(.expires | tonumber | todate)"
+  else
+    "  - Token: \(.token[:20])... | Alias: \(.key_alias // "N/A") | OLD: Created \(.created_at | tonumber | todate)"
+  end
 '\'' 2>/dev/null
 
 echo ""
-echo "Deleting expired keys..."
+echo "Deleting keys (expired and old)..."
 
 # Delete each key
 DELETED_COUNT=0
@@ -189,7 +216,7 @@ echo ""
 echo "========================================="
 echo "Cleanup Complete - $(date)"
 echo "========================================="
-echo "Successfully deleted: $DELETED_COUNT expired keys"
+echo "Successfully deleted: $DELETED_COUNT keys"
 if [ "$FAILED_COUNT" -gt 0 ]; then
     echo "Failed to delete: $FAILED_COUNT keys"
 fi
@@ -251,7 +278,9 @@ echo "Cronjob details:"
 echo "  Schedule: Daily at 2 AM"
 echo "  Script: /usr/local/bin/cleanup-litemaas-keys-${NAMESPACE}.sh"
 echo "  Namespace: $NAMESPACE"
-echo "  Action: Deletes expired virtual keys"
+echo "  Cleanup Policy:"
+echo "    - Expired keys (expires < current time)"
+echo "    - Keys older than 30 days (created_at > 30 days ago)"
 echo "  Log file: /var/log/litemaas-key-cleanup.log"
 echo ""
 echo "Test the script manually:"
