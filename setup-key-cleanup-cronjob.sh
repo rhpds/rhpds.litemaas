@@ -120,52 +120,112 @@ LITELLM_MASTER_KEY=$(oc get secret "$LITELLM_SECRET_NAME" -n "$NAMESPACE" -o jso
 echo "  Master Key: ${LITELLM_MASTER_KEY:0:10}..."
 echo ""
 
-# Get all keys from LiteLLM API
+# Get all keys from LiteLLM API (with pagination)
 echo "Fetching all virtual keys from LiteLLM..."
-RESPONSE=$(curl -s -X GET "$LITELLM_URL/key/info" \
-  -H "Authorization: Bearer $LITELLM_MASTER_KEY" \
-  -H "Content-Type: application/json")
 
-if [ $? -ne 0 ]; then
-    echo "ERROR: Failed to fetch keys from LiteLLM API"
-    exit 1
-fi
+ALL_KEYS="[]"
+PAGE=1
+PAGE_SIZE=100
 
-if ! echo "$RESPONSE" | jq -e '\''.info'\'' &> /dev/null; then
-    echo "ERROR: Invalid response from LiteLLM API"
-    echo "Response: $RESPONSE"
-    exit 1
-fi
+while true; do
+    echo "  Fetching page $PAGE..."
+    RESPONSE=$(curl -s -X GET "$LITELLM_URL/key/list?return_full_object=true&size=$PAGE_SIZE&page=$PAGE" \
+      -H "Authorization: Bearer $LITELLM_MASTER_KEY" \
+      -H "Content-Type: application/json")
 
-# Get current timestamp (Unix epoch)
-CURRENT_TIMESTAMP=$(date -u +%s)
-CURRENT_DATE=$(date -u '\''+%Y-%m-%d %H:%M:%S'\'')
+    if [ $? -ne 0 ]; then
+        echo "ERROR: Failed to fetch keys from LiteLLM API"
+        exit 1
+    fi
 
-# Calculate cutoff timestamp for old keys (30 days ago)
-CUTOFF_TIMESTAMP=$(date -u -d "$DAYS_OLD days ago" +%s 2>/dev/null || date -u -v-${DAYS_OLD}d +%s)
-CUTOFF_DATE=$(date -u -d "@$CUTOFF_TIMESTAMP" '\''+%Y-%m-%d'\'' 2>/dev/null || date -u -r "$CUTOFF_TIMESTAMP" '\''+%Y-%m-%d'\'')
+    # Check if response is valid
+    if ! echo "$RESPONSE" | jq -e '\''.keys'\'' &> /dev/null; then
+        echo "ERROR: Invalid response from LiteLLM API"
+        echo "Response: $RESPONSE"
+        exit 1
+    fi
 
-echo "  Current time: $CURRENT_DATE (Unix: $CURRENT_TIMESTAMP)"
-echo "  Cutoff date (30d): $CUTOFF_DATE (Unix: $CUTOFF_TIMESTAMP)"
+    # Append keys from this page
+    ALL_KEYS=$(echo "$ALL_KEYS" | jq --argjson page "$(echo "$RESPONSE" | jq '\''.keys'\'')" '\''. + $page'\'')
+
+    # Check if there are more pages
+    TOTAL_PAGES=$(echo "$RESPONSE" | jq -r '\''.total_pages'\'')
+    if [ "$PAGE" -ge "$TOTAL_PAGES" ]; then
+        break
+    fi
+    PAGE=$((PAGE + 1))
+done
+
+RESPONSE=$(jq -n --argjson keys "$ALL_KEYS" '\''{"keys": $keys}'\'')
+
+echo "  Total keys fetched: $(echo "$ALL_KEYS" | jq '\''length'\'')"
+echo ""
+
+# Get current time in ISO 8601 format
+CURRENT_DATE=$(date -u '\''+%Y-%m-%dT%H:%M:%S'\'')
+
+# Calculate cutoff date (30 days ago) in ISO 8601 format
+CUTOFF_DATE=$(date -u -d "$DAYS_OLD days ago" '\''+%Y-%m-%dT%H:%M:%S'\'' 2>/dev/null || date -u -v-${DAYS_OLD}d '\''+%Y-%m-%dT%H:%M:%S'\'')
+
+echo "  Current time: $CURRENT_DATE"
+echo "  Cutoff date (30d ago): $CUTOFF_DATE"
 echo ""
 
 # Extract keys to delete (expired OR older than 30 days)
-KEYS_TO_DELETE=$(echo "$RESPONSE" | jq -r --arg now "$CURRENT_TIMESTAMP" --arg cutoff "$CUTOFF_TIMESTAMP" '\''
-  .info[] |
+# Note: LiteLLM returns expires in ISO 8601 format
+# We calculate age from: current_time - (expires - duration_in_seconds)
+KEYS_TO_DELETE=$(echo "$RESPONSE" | jq -r --arg now "$CURRENT_DATE" --arg cutoff "$CUTOFF_DATE" '\''
+  .keys[] |
   select(
-    ((.expires != null) and ((.expires | tonumber) < ($now | tonumber))) or
-    ((.created_at != null) and ((.created_at | tonumber) < ($cutoff | tonumber)))
+    # Check if expired (expires < current time)
+    ((.expires != null) and (.expires < $now)) or
+    # Check if older than 30 days (calculate created_at from expires - duration)
+    (
+      (.expires != null) and
+      (.metadata.duration != null) and
+      (
+        # Parse duration (e.g., "7d", "30d") and calculate created_at
+        (.metadata.duration |
+          if endswith("d") then
+            (.[:-1] | tonumber) * 86400
+          elif endswith("h") then
+            (.[:-1] | tonumber) * 3600
+          else
+            0
+          end
+        ) as $duration_seconds |
+        # created_at = expires - duration
+        ((.expires | fromdateiso8601) - $duration_seconds | todateiso8601) < $cutoff
+      )
+    )
   ) |
   .token
 '\'' 2>/dev/null)
 
 # Count keys by reason
-TOTAL_KEYS=$(echo "$RESPONSE" | jq -r '\''.info | length'\'' 2>/dev/null)
-EXPIRED_KEYS=$(echo "$RESPONSE" | jq -r --arg now "$CURRENT_TIMESTAMP" '\''
-  [.info[] | select((.expires != null) and ((.expires | tonumber) < ($now | tonumber)))] | length
+TOTAL_KEYS=$(echo "$RESPONSE" | jq -r '\''.keys | length'\'' 2>/dev/null)
+EXPIRED_KEYS=$(echo "$RESPONSE" | jq -r --arg now "$CURRENT_DATE" '\''
+  [.keys[] | select((.expires != null) and (.expires < $now))] | length
 '\'' 2>/dev/null)
-OLD_KEYS=$(echo "$RESPONSE" | jq -r --arg cutoff "$CUTOFF_TIMESTAMP" '\''
-  [.info[] | select((.created_at != null) and ((.created_at | tonumber) < ($cutoff | tonumber)))] | length
+OLD_KEYS=$(echo "$RESPONSE" | jq -r --arg now "$CURRENT_DATE" --arg cutoff "$CUTOFF_DATE" '\''
+  [.keys[] |
+   select(
+     (.expires != null) and
+     (.metadata.duration != null) and
+     (
+       (.metadata.duration |
+         if endswith("d") then
+           (.[:-1] | tonumber) * 86400
+         elif endswith("h") then
+           (.[:-1] | tonumber) * 3600
+         else
+           0
+         end
+       ) as $duration_seconds |
+       ((.expires | fromdateiso8601) - $duration_seconds | todateiso8601) < $cutoff
+     )
+   )
+  ] | length
 '\'' 2>/dev/null)
 TOTAL_TO_DELETE=$(echo "$KEYS_TO_DELETE" | grep -v '\''^$'\'' | wc -l | tr -d '\'' '\'')
 
@@ -182,16 +242,42 @@ if [ "$TOTAL_TO_DELETE" -eq 0 ]; then
 fi
 
 echo "Keys to delete:"
-echo "$RESPONSE" | jq -r --arg now "$CURRENT_TIMESTAMP" --arg cutoff "$CUTOFF_TIMESTAMP" '\''
-  .info[] |
+echo "$RESPONSE" | jq -r --arg now "$CURRENT_DATE" --arg cutoff "$CUTOFF_DATE" '\''
+  .keys[] |
   select(
-    ((.expires != null) and ((.expires | tonumber) < ($now | tonumber))) or
-    ((.created_at != null) and ((.created_at | tonumber) < ($cutoff | tonumber)))
+    ((.expires != null) and (.expires < $now)) or
+    (
+      (.expires != null) and
+      (.metadata.duration != null) and
+      (
+        (.metadata.duration |
+          if endswith("d") then
+            (.[:-1] | tonumber) * 86400
+          elif endswith("h") then
+            (.[:-1] | tonumber) * 3600
+          else
+            0
+          end
+        ) as $duration_seconds |
+        ((.expires | fromdateiso8601) - $duration_seconds | todateiso8601) < $cutoff
+      )
+    )
   ) |
-  if ((.expires != null) and ((.expires | tonumber) < ($now | tonumber))) then
-    "  - Token: \(.token[:20])... | Alias: \(.key_alias // "N/A") | EXPIRED: \(.expires | tonumber | todate)"
+  if (.expires != null) and (.expires < $now) then
+    "  - Token: \(.token[:20])... | Alias: \(.key_alias // "N/A") | EXPIRED: \(.expires)"
   else
-    "  - Token: \(.token[:20])... | Alias: \(.key_alias // "N/A") | OLD: Created \(.created_at | tonumber | todate)"
+    (
+      (.metadata.duration |
+        if endswith("d") then
+          (.[:-1] | tonumber) * 86400
+        elif endswith("h") then
+          (.[:-1] | tonumber) * 3600
+        else
+          0
+        end
+      ) as $duration_seconds |
+      "  - Token: \(.token[:20])... | Alias: \(.key_alias // "N/A") | OLD: Created \(((.expires | fromdateiso8601) - $duration_seconds | todateiso8601))"
+    )
   end
 '\'' 2>/dev/null
 
