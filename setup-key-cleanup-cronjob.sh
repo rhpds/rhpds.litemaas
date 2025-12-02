@@ -175,11 +175,12 @@ echo ""
 
 # Extract keys to delete (expired OR older than 30 days)
 # Convert ISO 8601 to Unix timestamps for numeric comparison
+# Strip microseconds from ISO 8601 timestamps before parsing
 KEYS_TO_DELETE=$(echo "$RESPONSE" | jq -r --arg now "$CURRENT_TIMESTAMP" --arg cutoff "$CUTOFF_TIMESTAMP" '\''
   .keys[] |
   select(
     # Check if expired (expires timestamp < current timestamp)
-    ((.expires != null) and ((.expires | fromdateiso8601) < ($now | tonumber))) or
+    ((.expires != null) and ((.expires | sub("\\.[0-9]+Z$"; "Z") | fromdateiso8601) < ($now | tonumber))) or
     # Check if older than 30 days (calculate created_at from expires - duration)
     (
       (.expires != null) and
@@ -196,7 +197,7 @@ KEYS_TO_DELETE=$(echo "$RESPONSE" | jq -r --arg now "$CURRENT_TIMESTAMP" --arg c
           end
         ) as $duration_seconds |
         # created_at = expires - duration (both as Unix timestamps)
-        ((.expires | fromdateiso8601) - $duration_seconds) < ($cutoff | tonumber)
+        ((.expires | sub("\\.[0-9]+Z$"; "Z") | fromdateiso8601) - $duration_seconds) < ($cutoff | tonumber)
       )
     )
   ) |
@@ -206,7 +207,7 @@ KEYS_TO_DELETE=$(echo "$RESPONSE" | jq -r --arg now "$CURRENT_TIMESTAMP" --arg c
 # Count keys by reason
 TOTAL_KEYS=$(echo "$RESPONSE" | jq -r '\''.keys | length | . // 0'\'' 2>/dev/null)
 EXPIRED_KEYS=$(echo "$RESPONSE" | jq -r --arg now "$CURRENT_TIMESTAMP" '\''
-  ([.keys[] | select((.expires != null) and ((.expires | fromdateiso8601) < ($now | tonumber)))] | length) // 0
+  ([.keys[] | select((.expires != null) and ((.expires | sub("\\.[0-9]+Z$"; "Z") | fromdateiso8601) < ($now | tonumber)))] | length) // 0
 '\'' 2>/dev/null)
 OLD_KEYS=$(echo "$RESPONSE" | jq -r --arg cutoff "$CUTOFF_TIMESTAMP" '\''
   ([.keys[] |
@@ -223,7 +224,7 @@ OLD_KEYS=$(echo "$RESPONSE" | jq -r --arg cutoff "$CUTOFF_TIMESTAMP" '\''
            0
          end
        ) as $duration_seconds |
-       ((.expires | fromdateiso8601) - $duration_seconds) < ($cutoff | tonumber)
+       ((.expires | sub("\\.[0-9]+Z$"; "Z") | fromdateiso8601) - $duration_seconds) < ($cutoff | tonumber)
      )
    )
   ] | length) // 0
@@ -246,7 +247,7 @@ echo "Keys to delete:"
 echo "$RESPONSE" | jq -r --arg now "$CURRENT_TIMESTAMP" --arg cutoff "$CUTOFF_TIMESTAMP" '\''
   .keys[] |
   select(
-    ((.expires != null) and ((.expires | fromdateiso8601) < ($now | tonumber))) or
+    ((.expires != null) and ((.expires | sub("\\.[0-9]+Z$"; "Z") | fromdateiso8601) < ($now | tonumber))) or
     (
       (.expires != null) and
       (.metadata.duration != null) and
@@ -260,11 +261,11 @@ echo "$RESPONSE" | jq -r --arg now "$CURRENT_TIMESTAMP" --arg cutoff "$CUTOFF_TI
             0
           end
         ) as $duration_seconds |
-        ((.expires | fromdateiso8601) - $duration_seconds) < ($cutoff | tonumber)
+        ((.expires | sub("\\.[0-9]+Z$"; "Z") | fromdateiso8601) - $duration_seconds) < ($cutoff | tonumber)
       )
     )
   ) |
-  if (.expires != null) and ((.expires | fromdateiso8601) < ($now | tonumber)) then
+  if (.expires != null) and ((.expires | sub("\\.[0-9]+Z$"; "Z") | fromdateiso8601) < ($now | tonumber)) then
     "  - Token: \(.token[:20])... | Alias: \(.key_alias // "N/A") | EXPIRED: \(.expires)"
   else
     (
@@ -277,7 +278,7 @@ echo "$RESPONSE" | jq -r --arg now "$CURRENT_TIMESTAMP" --arg cutoff "$CUTOFF_TI
           0
         end
       ) as $duration_seconds |
-      "  - Token: \(.token[:20])... | Alias: \(.key_alias // "N/A") | OLD: Created \(((.expires | fromdateiso8601) - $duration_seconds | todateiso8601))"
+      "  - Token: \(.token[:20])... | Alias: \(.key_alias // "N/A") | OLD: Created \(((.expires | sub("\\.[0-9]+Z$"; "Z") | fromdateiso8601) - $duration_seconds | todateiso8601))"
     )
   end
 '\'' 2>/dev/null
