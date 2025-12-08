@@ -69,12 +69,6 @@
 # -----------------------------------------------------------------------------
 # Step 2: Clone RHOAI UWM Repository
 # -----------------------------------------------------------------------------
-- name: Ensure temp directory exists
-  ansible.builtin.file:
-    path: "{{ ocp4_workload_rhoai_metrics_uwm_path | dirname }}"
-    state: directory
-    mode: '0755'
-
 - name: Clone or update RHOAI UWM repository
   ansible.builtin.git:
     repo: "{{ ocp4_workload_rhoai_metrics_uwm_repo }}"
