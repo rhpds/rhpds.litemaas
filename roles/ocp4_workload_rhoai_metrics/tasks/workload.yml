@@ -87,15 +87,22 @@
   register: r_kustomization_check
   failed_when: not r_kustomization_check.stat.exists
 
-- name: Apply Grafana dashboards using kubectl
+- name: Build kustomize to temp file
   ansible.builtin.command:
-    cmd: kubectl apply -k {{ grafana_kustomize_path }} -n {{ ocp4_workload_rhoai_metrics_namespace }}
-  register: r_kubectl_apply
-  changed_when: "'created' in r_kubectl_apply.stdout or 'configured' in r_kubectl_apply.stdout"
+    cmd: kubectl kustomize {{ grafana_kustomize_path }}
+  register: r_kustomize_build
+  changed_when: false
+
+- name: Apply Grafana dashboards using k8s module
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ r_kustomize_build.stdout | from_yaml_all }}"
+    namespace: "{{ ocp4_workload_rhoai_metrics_namespace }}"
+  register: r_grafana_apply
 
 - name: Show Grafana deployment result
   ansible.builtin.debug:
-    var: r_kubectl_apply.stdout_lines
+    msg: "Grafana dashboards deployed successfully"
 
 # -----------------------------------------------------------------------------
 # Step 4: Configure GPU Monitoring (if enabled)
