@@ -19,6 +19,7 @@ SCRAPE_INTERVAL="${SCRAPE_INTERVAL:-30s}"
 # Virtual environment
 VENV_DIR="${VENV_DIR:-.venv-rhoai-metrics}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+FORCE_REINSTALL="${FORCE_REINSTALL:-false}"
 
 # Colors for output
 RED='\033[0;31m'
@@ -102,31 +103,58 @@ check_git() {
     print_info "✓ git found: $(git --version)"
 }
 
-create_venv() {
+create_or_activate_venv() {
     print_header "Setting Up Python Virtual Environment"
 
-    if [ -d "${VENV_DIR}" ]; then
-        print_warn "Virtual environment already exists at ${VENV_DIR}"
-        print_info "Removing and recreating..."
+    # Force reinstall if requested
+    if [ "${FORCE_REINSTALL}" = "true" ] && [ -d "${VENV_DIR}" ]; then
+        print_warn "Force reinstall requested"
+        print_step "Removing existing virtual environment..."
         rm -rf "${VENV_DIR}"
     fi
 
-    print_step "Creating virtual environment..."
-    ${PYTHON_CMD} -m venv "${VENV_DIR}"
-    print_info "✓ Virtual environment created"
+    if [ -d "${VENV_DIR}" ]; then
+        print_info "Virtual environment already exists at ${VENV_DIR}"
+        print_info "Reusing existing virtual environment (use --force-reinstall to recreate)"
 
-    # Activate venv
-    source "${VENV_DIR}/bin/activate"
-    print_info "✓ Virtual environment activated"
+        # Activate existing venv
+        source "${VENV_DIR}/bin/activate"
+        print_info "✓ Virtual environment activated"
 
-    # Upgrade pip
-    print_step "Upgrading pip..."
-    pip install --quiet --upgrade pip
-    print_info "✓ pip upgraded to $(pip --version | cut -d' ' -f2)"
+        # Check if ansible is installed
+        if command -v ansible-playbook &> /dev/null; then
+            print_info "✓ Ansible already installed: $(ansible --version | head -1 | cut -d' ' -f3)"
+            VENV_EXISTS_WITH_DEPS=true
+        else
+            print_warn "Ansible not found in venv, will reinstall dependencies"
+            VENV_EXISTS_WITH_DEPS=false
+        fi
+    else
+        print_step "Creating new virtual environment..."
+        ${PYTHON_CMD} -m venv "${VENV_DIR}"
+        print_info "✓ Virtual environment created"
+
+        # Activate venv
+        source "${VENV_DIR}/bin/activate"
+        print_info "✓ Virtual environment activated"
+
+        # Upgrade pip
+        print_step "Upgrading pip..."
+        pip install --quiet --upgrade pip
+        print_info "✓ pip upgraded to $(pip --version | cut -d' ' -f2)"
+
+        VENV_EXISTS_WITH_DEPS=false
+    fi
 }
 
 install_python_deps() {
     print_header "Installing Python Dependencies"
+
+    # Skip if dependencies already exist
+    if [ "${VENV_EXISTS_WITH_DEPS:-false}" = "true" ]; then
+        print_info "Dependencies already installed, skipping..."
+        return 0
+    fi
 
     print_step "Installing Ansible and required libraries..."
     pip install --quiet \
@@ -144,6 +172,12 @@ install_python_deps() {
 
 install_ansible_collections() {
     print_header "Installing Ansible Collections"
+
+    # Skip if dependencies already exist
+    if [ "${VENV_EXISTS_WITH_DEPS:-false}" = "true" ]; then
+        print_info "Ansible collections already installed, skipping..."
+        return 0
+    fi
 
     print_step "Installing kubernetes.core collection..."
     ansible-galaxy collection install kubernetes.core --force
@@ -290,6 +324,7 @@ Options:
   -g, --enable-gpu BOOL       Enable GPU metrics (default: true)
   -r, --retention DURATION    Metrics retention period (default: 7d)
   -s, --scrape-interval TIME  Prometheus scrape interval (default: 30s)
+  -f, --force-reinstall       Force reinstall venv and dependencies
   -c, --cleanup               Remove Python venv after deployment
   -h, --help                  Show this help message
 
@@ -302,7 +337,7 @@ Environment Variables:
   CLEANUP_VENV                Same as --cleanup
 
 Examples:
-  # Deploy with defaults (installs everything)
+  # Deploy with defaults (reuses existing venv if present)
   $0
 
   # Deploy to custom namespace
@@ -310,6 +345,9 @@ Examples:
 
   # Deploy without GPU metrics
   $0 --enable-gpu false
+
+  # Force reinstall venv (if dependencies are broken)
+  $0 --force-reinstall
 
   # Deploy and cleanup venv after
   $0 --cleanup
@@ -319,13 +357,17 @@ Examples:
 
 What This Script Does:
   1. ✓ Checks Python 3 and oc CLI
-  2. ✓ Creates Python virtual environment
-  3. ✓ Installs Ansible and dependencies (pip)
-  4. ✓ Installs kubernetes.core collection
+  2. ✓ Creates/reuses Python virtual environment
+  3. ✓ Installs Ansible and dependencies (pip) - only if needed
+  4. ✓ Installs kubernetes.core collection - only if needed
   5. ✓ Checks/creates target namespace
   6. ✓ Detects GPU Operator presence
   7. ✓ Deploys RHOAI metrics monitoring
   8. ✓ Retrieves Grafana access URL
+
+Performance:
+  • First run: ~2-3 minutes (installs dependencies)
+  • Subsequent runs: ~30 seconds (reuses venv)
 
 Prerequisites:
   • Python 3.8+ installed
@@ -360,6 +402,10 @@ main() {
                 SCRAPE_INTERVAL="$2"
                 shift 2
                 ;;
+            -f|--force-reinstall)
+                FORCE_REINSTALL="true"
+                shift
+                ;;
             -c|--cleanup)
                 CLEANUP_VENV="true"
                 shift
@@ -390,7 +436,7 @@ main() {
     check_python
     check_git
     check_oc_cli
-    create_venv
+    create_or_activate_venv
     install_python_deps
     install_ansible_collections
     check_namespace
