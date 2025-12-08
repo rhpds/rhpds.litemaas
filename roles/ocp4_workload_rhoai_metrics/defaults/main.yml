@@ -19,8 +19,8 @@ ocp4_workload_rhoai_metrics_uwm_repo: "https://github.com/rh-aiservices-bu/rhoai
 ocp4_workload_rhoai_metrics_uwm_version: "main"
 ocp4_workload_rhoai_metrics_uwm_path: "/tmp/rhoai-uwm"
 
-# Kustomize overlay to apply
-ocp4_workload_rhoai_metrics_uwm_overlay: "overlays/grafana-uwm-user-app"
+# Kustomize overlay to apply (updated to match new repo structure)
+ocp4_workload_rhoai_metrics_uwm_overlay: "rhoai-uwm-grafana"
 
 # -----------------------------------------------------------------------------
 # OpenShift User Workload Monitoring
