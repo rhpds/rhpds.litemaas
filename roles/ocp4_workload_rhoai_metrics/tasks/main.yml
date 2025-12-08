@@ -23,7 +23,7 @@
       - "Enable KServe: {{ ocp4_workload_rhoai_metrics_enable_kserve }}"
       - "Enable GPU: {{ ocp4_workload_rhoai_metrics_enable_gpu }}"
       - "Deploy Grafana: {{ ocp4_workload_rhoai_metrics_deploy_grafana }}"
-      - "UWM Repository: {{ ocp4_workload_rhoai_metrics_uwm_repo }}"
+      - "Grafana Overlay: {{ ocp4_workload_rhoai_metrics_grafana_overlay }}"
       - "============================================"
 
 - name: Run RHOAI metrics setup (workload)
