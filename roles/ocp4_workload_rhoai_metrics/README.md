@@ -17,10 +17,17 @@ This role enables comprehensive monitoring of AI model serving workloads by:
 - OpenShift AI 2.10+ with KServe installed
 - `oc` CLI configured with cluster-admin access
 - Ansible 2.9+ with `kubernetes.core` collection
+- `git` command-line tool
+- Python packages: `kubernetes`, `openshift`, `gitpython`
 
 **Optional:**
 - NVIDIA GPU Operator (for GPU metrics)
 - Grafana Operator (auto-installed if not present)
+
+**Install Python dependencies:**
+```bash
+pip install ansible kubernetes openshift gitpython
+```
 
 ## Role Variables
 

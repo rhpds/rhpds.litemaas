@@ -87,6 +87,21 @@ check_oc_cli() {
     print_info "✓ Logged into OpenShift as $(oc whoami)"
 }
 
+check_git() {
+    print_header "Checking Git"
+
+    if ! command -v git &> /dev/null; then
+        print_error "git command not found. Please install git."
+        echo ""
+        echo "Install git:"
+        echo "  RHEL/Fedora: sudo dnf install git"
+        echo "  Ubuntu/Debian: sudo apt-get install git"
+        echo "  macOS: brew install git"
+        exit 1
+    fi
+    print_info "✓ git found: $(git --version)"
+}
+
 create_venv() {
     print_header "Setting Up Python Virtual Environment"
 
@@ -113,15 +128,17 @@ create_venv() {
 install_python_deps() {
     print_header "Installing Python Dependencies"
 
-    print_step "Installing Ansible and Kubernetes libraries..."
+    print_step "Installing Ansible and required libraries..."
     pip install --quiet \
         ansible \
         kubernetes \
         openshift \
+        gitpython \
         jinja2 \
         pyyaml
 
     print_info "✓ Ansible $(ansible --version | head -1 | cut -d' ' -f3) installed"
+    print_info "✓ GitPython installed (for ansible.builtin.git module)"
     print_info "✓ Python dependencies installed"
 }
 
@@ -371,6 +388,7 @@ main() {
 
     # Run deployment steps
     check_python
+    check_git
     check_oc_cli
     create_venv
     install_python_deps

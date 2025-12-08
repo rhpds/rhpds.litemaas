@@ -69,17 +69,19 @@
 # -----------------------------------------------------------------------------
 # Step 2: Clone RHOAI UWM Repository
 # -----------------------------------------------------------------------------
-- name: Remove existing RHOAI UWM directory
-  ansible.builtin.file:
-    path: "{{ ocp4_workload_rhoai_metrics_uwm_path }}"
-    state: absent
-
-- name: Clone RHOAI UWM repository
+- name: Clone or update RHOAI UWM repository
   ansible.builtin.git:
     repo: "{{ ocp4_workload_rhoai_metrics_uwm_repo }}"
     dest: "{{ ocp4_workload_rhoai_metrics_uwm_path }}"
     version: "{{ ocp4_workload_rhoai_metrics_uwm_version }}"
     force: yes
+    update: yes
+
+- name: Verify RHOAI UWM overlay directory exists
+  ansible.builtin.stat:
+    path: "{{ ocp4_workload_rhoai_metrics_uwm_path }}/{{ ocp4_workload_rhoai_metrics_uwm_overlay }}"
+  register: r_uwm_overlay
+  failed_when: not r_uwm_overlay.stat.exists
 
 # -----------------------------------------------------------------------------
 # Step 3: Apply RHOAI UWM Kustomize Overlay
