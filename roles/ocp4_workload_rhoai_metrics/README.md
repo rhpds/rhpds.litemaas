@@ -394,14 +394,19 @@ EOF
 
 ### Adding New Admin Users to Grafana
 
+**Important**: Use OpenShift **usernames**, not email addresses. Check your username with: `oc whoami`
+
 **Option 1: Using the helper script**
 
 ```bash
 cd roles/ocp4_workload_rhoai_metrics
-./scripts/add-grafana-admin.sh <email> <namespace>
+./scripts/add-grafana-admin.sh <username> <namespace>
 
 # Example:
-./scripts/add-grafana-admin.sh newuser@redhat.com llm-hosting
+./scripts/add-grafana-admin.sh newuser llm-hosting
+
+# Check your username first
+oc whoami
 ```
 
 **Option 2: Manual update**
@@ -412,23 +417,27 @@ Edit the RoleBinding:
 oc edit rolebinding grafana-admin -n llm-hosting
 ```
 
-Add new user to the subjects list:
+Add new user to the subjects list (use username, not email):
 
 ```yaml
 subjects:
   - apiGroup: rbac.authorization.k8s.io
     kind: User
-    name: newuser@redhat.com
+    name: newuser
 ```
 
 **Option 3: Update role defaults**
 
-Edit `roles/ocp4_workload_rhoai_metrics/defaults/main.yml` and add:
+Edit the Ansible task in `tasks/workload.yml` subjects list:
 
 ```yaml
-ocp4_workload_rhoai_metrics_grafana_admins:
-  - psrivast@redhat.com
-  - newuser@redhat.com
+subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: User
+    name: psrivast
+  - apiGroup: rbac.authorization.k8s.io
+    kind: User
+    name: newuser
 ```
 
 Then redeploy the role.

@@ -180,19 +180,19 @@
       subjects:
         - apiGroup: rbac.authorization.k8s.io
           kind: User
-          name: psrivast@redhat.com
+          name: psrivast
         - apiGroup: rbac.authorization.k8s.io
           kind: User
-          name: ajammula@redhat.com
+          name: ajammula
         - apiGroup: rbac.authorization.k8s.io
           kind: User
-          name: brezhnev@redhat.com
+          name: brezhnev
         - apiGroup: rbac.authorization.k8s.io
           kind: User
-          name: rshah@redhat.com
+          name: rshah
         - apiGroup: rbac.authorization.k8s.io
           kind: User
-          name: oczernin@redhat.com
+          name: oczernin
 
 # -----------------------------------------------------------------------------
 # Step 4b: Deploy Grafana Dashboards

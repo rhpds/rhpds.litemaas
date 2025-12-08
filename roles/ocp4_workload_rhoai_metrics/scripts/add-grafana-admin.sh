@@ -27,12 +27,12 @@ print_warn() {
 
 show_usage() {
     cat <<EOF
-Usage: $0 <user-email> <namespace> [options]
+Usage: $0 <username> <namespace> [options]
 
 Add a user to the Grafana admin RoleBinding.
 
 Arguments:
-  user-email              Email address of the user to add
+  username                OpenShift username (e.g., psrivast, not psrivast@redhat.com)
   namespace               Namespace where Grafana is deployed
 
 Options:
@@ -42,13 +42,16 @@ Options:
 
 Examples:
   # Add user to Grafana admins
-  $0 newuser@redhat.com llm-hosting
+  $0 psrivast llm-hosting
 
   # Add user with custom role
-  $0 viewer@redhat.com llm-hosting --role view
+  $0 viewer llm-hosting --role view
 
   # Use custom RoleBinding name
-  $0 admin@redhat.com llm-hosting --rolebinding custom-grafana-admin
+  $0 admin llm-hosting --rolebinding custom-grafana-admin
+
+Note: Use OpenShift username, not email address.
+      Check your username with: oc whoami
 EOF
 }
 
@@ -62,7 +65,7 @@ if [ $# -lt 2 ]; then
     exit 1
 fi
 
-USER_EMAIL="$1"
+USERNAME="$1"
 NAMESPACE="$2"
 shift 2
 
@@ -88,9 +91,10 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# Validate email format
-if [[ ! "$USER_EMAIL" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; then
-    print_error "Invalid email format: $USER_EMAIL"
+# Validate username format (alphanumeric, underscore, hyphen, dot)
+if [[ ! "$USERNAME" =~ ^[a-zA-Z0-9._-]+$ ]]; then
+    print_error "Invalid username format: $USERNAME"
+    print_error "Username should contain only letters, numbers, dots, hyphens, or underscores"
     exit 1
 fi
 
@@ -113,7 +117,7 @@ if ! oc get namespace "$NAMESPACE" &> /dev/null; then
 fi
 
 print_info "Adding user to Grafana admins"
-print_info "  User: $USER_EMAIL"
+print_info "  User: $USERNAME"
 print_info "  Namespace: $NAMESPACE"
 print_info "  RoleBinding: $ROLEBINDING"
 print_info "  Role: $ROLE"
@@ -123,8 +127,8 @@ if oc get rolebinding "$ROLEBINDING" -n "$NAMESPACE" &> /dev/null; then
     print_info "RoleBinding $ROLEBINDING exists, checking for user..."
 
     # Check if user already exists
-    if oc get rolebinding "$ROLEBINDING" -n "$NAMESPACE" -o yaml | grep -q "name: $USER_EMAIL"; then
-        print_warn "User $USER_EMAIL is already in RoleBinding $ROLEBINDING"
+    if oc get rolebinding "$ROLEBINDING" -n "$NAMESPACE" -o yaml | grep -q "name: $USERNAME"; then
+        print_warn "User $USERNAME is already in RoleBinding $ROLEBINDING"
         exit 0
     fi
 
@@ -138,7 +142,7 @@ if oc get rolebinding "$ROLEBINDING" -n "$NAMESPACE" &> /dev/null; then
         \"value\": {
           \"apiGroup\": \"rbac.authorization.k8s.io\",
           \"kind\": \"User\",
-          \"name\": \"$USER_EMAIL\"
+          \"name\": \"$USERNAME\"
         }
       }
     ]"
@@ -159,7 +163,7 @@ roleRef:
 subjects:
   - apiGroup: rbac.authorization.k8s.io
     kind: User
-    name: ${USER_EMAIL}
+    name: ${USERNAME}
 EOF
 fi
 
