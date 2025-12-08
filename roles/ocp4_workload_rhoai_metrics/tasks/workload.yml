@@ -194,6 +194,32 @@
           kind: User
           name: oczernin
 
+- name: Create Grafana admin users
+  when: ocp4_workload_rhoai_metrics_deploy_grafana | bool
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: grafana.integreatly.org/v1beta1
+      kind: GrafanaUser
+      metadata:
+        name: "grafana-user-{{ item }}"
+        namespace: "{{ ocp4_workload_rhoai_metrics_namespace }}"
+      spec:
+        user:
+          login: "{{ item }}"
+          email: "{{ item }}@redhat.com"
+          name: "{{ item }}"
+          role: Admin
+        instanceSelector:
+          matchLabels:
+            dashboards: grafana
+  loop:
+    - psrivast
+    - ajammula
+    - brezhnev
+    - rshah
+    - oczernin
+
 # -----------------------------------------------------------------------------
 # Step 4b: Deploy Grafana Dashboards
 # -----------------------------------------------------------------------------

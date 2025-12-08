@@ -168,10 +168,40 @@ EOF
 fi
 
 if [ $? -eq 0 ]; then
-    print_info "✓ User added successfully"
+    print_info "✓ User added to RoleBinding successfully"
+
+    # Create GrafanaUser resource for admin access within Grafana
+    print_info "Creating GrafanaUser resource for Grafana Admin access..."
+
+    oc apply -f - <<EOF
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaUser
+metadata:
+  name: grafana-user-${USERNAME}
+  namespace: ${NAMESPACE}
+spec:
+  user:
+    login: ${USERNAME}
+    email: ${USERNAME}@redhat.com
+    name: ${USERNAME}
+    role: Admin
+  instanceSelector:
+    matchLabels:
+      dashboards: grafana
+EOF
+
+    if [ $? -eq 0 ]; then
+        print_info "✓ GrafanaUser created successfully"
+    else
+        print_warn "Failed to create GrafanaUser (user may still have access via OAuth)"
+    fi
+
     echo ""
     print_info "To verify RoleBinding:"
     echo "  oc get rolebinding ${ROLEBINDING} -n ${NAMESPACE} -o yaml"
+    echo ""
+    print_info "To verify GrafanaUser:"
+    echo "  oc get grafanauser grafana-user-${USERNAME} -n ${NAMESPACE}"
     echo ""
     print_info "To list all admin users:"
     echo "  oc get rolebinding ${ROLEBINDING} -n ${NAMESPACE} -o jsonpath='{.subjects[*].name}'"
