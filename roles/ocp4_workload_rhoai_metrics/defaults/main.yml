@@ -12,15 +12,11 @@
 # ocp4_workload_rhoai_metrics_namespace: "llm-hosting"  # Model serving namespace
 
 # -----------------------------------------------------------------------------
-# RHOAI UWM Repository Configuration
+# Grafana Dashboards Configuration
 # -----------------------------------------------------------------------------
-# Repository containing Grafana dashboards for vLLM and OpenVino
-ocp4_workload_rhoai_metrics_uwm_repo: "https://github.com/rh-aiservices-bu/rhoai-uwm.git"
-ocp4_workload_rhoai_metrics_uwm_version: "main"
-ocp4_workload_rhoai_metrics_uwm_path: "/tmp/rhoai-uwm"
-
-# Kustomize overlay to apply (updated to match new repo structure)
-ocp4_workload_rhoai_metrics_uwm_overlay: "rhoai-uwm-grafana"
+# Grafana dashboards are bundled in role files (no git clone needed)
+# Overlay path to apply (relative to role files/grafana/)
+ocp4_workload_rhoai_metrics_grafana_overlay: "overlays/grafana-uwm-user-app"
 
 # -----------------------------------------------------------------------------
 # OpenShift User Workload Monitoring

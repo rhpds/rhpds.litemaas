@@ -67,68 +67,33 @@
     - r_uwm_pods.resources | selectattr('status.phase', 'equalto', 'Running') | list | length > 0
 
 # -----------------------------------------------------------------------------
-# Step 2: Clone RHOAI UWM Repository
+# Step 2: Apply Grafana Dashboards (Bundled in Role)
 # -----------------------------------------------------------------------------
-- name: Clone or update RHOAI UWM repository
-  ansible.builtin.git:
-    repo: "{{ ocp4_workload_rhoai_metrics_uwm_repo }}"
-    dest: "{{ ocp4_workload_rhoai_metrics_uwm_path }}"
-    version: "{{ ocp4_workload_rhoai_metrics_uwm_version }}"
-    force: yes
-    update: yes
-  register: r_git_clone
+- name: Get role path
+  ansible.builtin.set_fact:
+    ocp4_workload_rhoai_metrics_role_path: "{{ role_path }}"
 
-- name: Debug - Show git clone result
+- name: Set Grafana kustomize path
+  ansible.builtin.set_fact:
+    grafana_kustomize_path: "{{ ocp4_workload_rhoai_metrics_role_path }}/files/grafana/{{ ocp4_workload_rhoai_metrics_grafana_overlay }}"
+
+- name: Debug - Show Grafana path
   ansible.builtin.debug:
-    var: r_git_clone
+    msg: "Grafana kustomize path: {{ grafana_kustomize_path }}"
 
-- name: Debug - List contents of cloned directory
-  ansible.builtin.command:
-    cmd: "ls -la {{ ocp4_workload_rhoai_metrics_uwm_path }}"
-  register: r_uwm_ls
-  changed_when: false
-
-- name: Debug - Show directory contents
-  ansible.builtin.debug:
-    var: r_uwm_ls.stdout_lines
-
-- name: Debug - Check if overlay path exists
+- name: Verify Grafana kustomization exists
   ansible.builtin.stat:
-    path: "{{ ocp4_workload_rhoai_metrics_uwm_path }}/{{ ocp4_workload_rhoai_metrics_uwm_overlay }}"
-  register: r_uwm_overlay
+    path: "{{ grafana_kustomize_path }}/kustomization.yaml"
+  register: r_kustomization_check
+  failed_when: not r_kustomization_check.stat.exists
 
-- name: Debug - Show overlay path check
-  ansible.builtin.debug:
-    msg:
-      - "Looking for: {{ ocp4_workload_rhoai_metrics_uwm_path }}/{{ ocp4_workload_rhoai_metrics_uwm_overlay }}"
-      - "Exists: {{ r_uwm_overlay.stat.exists }}"
-
-- name: Fail if overlay directory does not exist
-  ansible.builtin.fail:
-    msg: "RHOAI UWM overlay directory not found at {{ ocp4_workload_rhoai_metrics_uwm_path }}/{{ ocp4_workload_rhoai_metrics_uwm_overlay }}"
-  when: not r_uwm_overlay.stat.exists
-
-# -----------------------------------------------------------------------------
-# Step 3: Apply RHOAI UWM Kustomize Overlay
-# -----------------------------------------------------------------------------
-- name: Check if kustomization.yaml exists
-  ansible.builtin.stat:
-    path: "{{ ocp4_workload_rhoai_metrics_uwm_path }}/{{ ocp4_workload_rhoai_metrics_uwm_overlay }}/kustomization.yaml"
-  register: r_kustomization_file
-
-- name: Debug - Show kustomization check
-  ansible.builtin.debug:
-    msg: "Kustomization file exists: {{ r_kustomization_file.stat.exists }}"
-
-- name: Apply RHOAI UWM Grafana and dashboards using kubectl
+- name: Apply Grafana dashboards using kubectl
   ansible.builtin.command:
-    cmd: >
-      kubectl apply -k {{ ocp4_workload_rhoai_metrics_uwm_path }}/{{ ocp4_workload_rhoai_metrics_uwm_overlay }}
-      -n {{ ocp4_workload_rhoai_metrics_namespace }}
+    cmd: kubectl apply -k {{ grafana_kustomize_path }} -n {{ ocp4_workload_rhoai_metrics_namespace }}
   register: r_kubectl_apply
   changed_when: "'created' in r_kubectl_apply.stdout or 'configured' in r_kubectl_apply.stdout"
 
-- name: Debug - Show kubectl apply result
+- name: Show Grafana deployment result
   ansible.builtin.debug:
     var: r_kubectl_apply.stdout_lines
 

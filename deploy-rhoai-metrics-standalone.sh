@@ -88,21 +88,6 @@ check_oc_cli() {
     print_info "✓ Logged into OpenShift as $(oc whoami)"
 }
 
-check_git() {
-    print_header "Checking Git"
-
-    if ! command -v git &> /dev/null; then
-        print_error "git command not found. Please install git."
-        echo ""
-        echo "Install git:"
-        echo "  RHEL/Fedora: sudo dnf install git"
-        echo "  Ubuntu/Debian: sudo apt-get install git"
-        echo "  macOS: brew install git"
-        exit 1
-    fi
-    print_info "✓ git found: $(git --version)"
-}
-
 create_or_activate_venv() {
     print_header "Setting Up Python Virtual Environment"
 
@@ -161,12 +146,10 @@ install_python_deps() {
         ansible \
         kubernetes \
         openshift \
-        gitpython \
         jinja2 \
         pyyaml
 
     print_info "✓ Ansible $(ansible --version | head -1 | cut -d' ' -f3) installed"
-    print_info "✓ GitPython installed (for ansible.builtin.git module)"
     print_info "✓ Python dependencies installed"
 }
 
@@ -372,6 +355,7 @@ Performance:
 Prerequisites:
   • Python 3.8+ installed
   • oc CLI installed and logged into cluster
+  • kubectl command (usually bundled with oc)
   • Internet access (for pip packages)
 
 For more information:
@@ -434,7 +418,6 @@ main() {
 
     # Run deployment steps
     check_python
-    check_git
     check_oc_cli
     create_or_activate_venv
     install_python_deps
