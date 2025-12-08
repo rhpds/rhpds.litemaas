@@ -111,12 +111,26 @@
 # -----------------------------------------------------------------------------
 # Step 3: Apply RHOAI UWM Kustomize Overlay
 # -----------------------------------------------------------------------------
-- name: Apply RHOAI UWM Grafana and dashboards
-  kubernetes.core.k8s:
-    state: present
-    namespace: "{{ ocp4_workload_rhoai_metrics_namespace }}"
-    src: "{{ ocp4_workload_rhoai_metrics_uwm_path }}/{{ ocp4_workload_rhoai_metrics_uwm_overlay }}"
-    apply: yes
+- name: Check if kustomization.yaml exists
+  ansible.builtin.stat:
+    path: "{{ ocp4_workload_rhoai_metrics_uwm_path }}/{{ ocp4_workload_rhoai_metrics_uwm_overlay }}/kustomization.yaml"
+  register: r_kustomization_file
+
+- name: Debug - Show kustomization check
+  ansible.builtin.debug:
+    msg: "Kustomization file exists: {{ r_kustomization_file.stat.exists }}"
+
+- name: Apply RHOAI UWM Grafana and dashboards using kubectl
+  ansible.builtin.command:
+    cmd: >
+      kubectl apply -k {{ ocp4_workload_rhoai_metrics_uwm_path }}/{{ ocp4_workload_rhoai_metrics_uwm_overlay }}
+      -n {{ ocp4_workload_rhoai_metrics_namespace }}
+  register: r_kubectl_apply
+  changed_when: "'created' in r_kubectl_apply.stdout or 'configured' in r_kubectl_apply.stdout"
+
+- name: Debug - Show kubectl apply result
+  ansible.builtin.debug:
+    var: r_kubectl_apply.stdout_lines
 
 # -----------------------------------------------------------------------------
 # Step 4: Configure GPU Monitoring (if enabled)
