@@ -352,6 +352,98 @@ This role integrates seamlessly with LiteMaaS deployments:
 └─────────────────────────────────────────────────────────────┘
 ```
 
+## Managing ServiceMonitors and Admin Users
+
+### Adding New ServiceMonitors
+
+ServiceMonitors are automatically created for InferenceServices based on their `modelFormat.name` field. To manually add a ServiceMonitor for a new model:
+
+**Option 1: Using the helper script**
+
+```bash
+cd roles/ocp4_workload_rhoai_metrics
+./scripts/add-servicemonitor.sh <model-name> <namespace>
+
+# Example:
+./scripts/add-servicemonitor.sh my-new-model llm-hosting
+```
+
+**Option 2: Manual YAML**
+
+```bash
+oc apply -f - <<EOF
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: <model-name>-monitor
+  namespace: llm-hosting
+  labels:
+    app: vllm
+spec:
+  endpoints:
+    - interval: 30s
+      port: http
+      path: /metrics
+      scheme: http
+      timeout: 10s
+  selector:
+    matchLabels:
+      serving.kserve.io/inferenceservice: <model-name>
+EOF
+```
+
+### Adding New Admin Users to Grafana
+
+**Option 1: Using the helper script**
+
+```bash
+cd roles/ocp4_workload_rhoai_metrics
+./scripts/add-grafana-admin.sh <email> <namespace>
+
+# Example:
+./scripts/add-grafana-admin.sh newuser@redhat.com llm-hosting
+```
+
+**Option 2: Manual update**
+
+Edit the RoleBinding:
+
+```bash
+oc edit rolebinding grafana-admin -n llm-hosting
+```
+
+Add new user to the subjects list:
+
+```yaml
+subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: User
+    name: newuser@redhat.com
+```
+
+**Option 3: Update role defaults**
+
+Edit `roles/ocp4_workload_rhoai_metrics/defaults/main.yml` and add:
+
+```yaml
+ocp4_workload_rhoai_metrics_grafana_admins:
+  - psrivast@redhat.com
+  - newuser@redhat.com
+```
+
+Then redeploy the role.
+
+### Removing Admin Access
+
+```bash
+# Remove specific user
+oc patch rolebinding grafana-admin -n llm-hosting --type=json \
+  -p='[{"op": "remove", "path": "/subjects/0"}]'
+
+# Or edit manually
+oc edit rolebinding grafana-admin -n llm-hosting
+```
+
 ## References
 
 - [RHOAI UWM Repository](https://github.com/rh-aiservices-bu/rhoai-uwm)
