@@ -1,0 +1,24 @@
+---
+galaxy_info:
+  author: Prakhar Srivastava
+  description: Enable RHOAI User Workload Metrics for Single Serving Models and deploy Grafana dashboards
+  company: Red Hat
+  license: Apache-2.0
+  min_ansible_version: "2.9"
+  platforms:
+    - name: EL
+      versions:
+        - "8"
+        - "9"
+  galaxy_tags:
+    - openshift
+    - rhoai
+    - monitoring
+    - grafana
+    - kserve
+    - vllm
+    - openvino
+    - gpu
+    - metrics
+
+dependencies: []

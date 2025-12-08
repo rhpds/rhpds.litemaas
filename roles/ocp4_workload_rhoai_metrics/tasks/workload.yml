@@ -1,0 +1,232 @@
+---
+# =============================================================================
+# RHOAI Metrics - Workload Tasks
+# =============================================================================
+# Deploy RHOAI User Workload Metrics and Grafana dashboards
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Step 1: Enable OpenShift User Workload Monitoring
+# -----------------------------------------------------------------------------
+- name: Check if User Workload Monitoring is enabled
+  when: ocp4_workload_rhoai_metrics_enable_uwm | bool
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: ConfigMap
+    name: cluster-monitoring-config
+    namespace: openshift-monitoring
+  register: r_cluster_monitoring_config
+
+- name: Enable User Workload Monitoring
+  when:
+    - ocp4_workload_rhoai_metrics_enable_uwm | bool
+    - r_cluster_monitoring_config.resources | length == 0 or
+      'enableUserWorkload' not in (r_cluster_monitoring_config.resources[0].data['config.yaml'] | from_yaml).get('techPreviewUserWorkload', {})
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: cluster-monitoring-config
+        namespace: openshift-monitoring
+      data:
+        config.yaml: |
+          enableUserWorkload: true
+          prometheusK8s:
+            retention: {{ ocp4_workload_rhoai_metrics_uwm_retention }}
+
+- name: Configure User Workload Monitoring retention
+  when: ocp4_workload_rhoai_metrics_enable_uwm | bool
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: user-workload-monitoring-config
+        namespace: openshift-user-workload-monitoring
+      data:
+        config.yaml: |
+          prometheus:
+            retention: {{ ocp4_workload_rhoai_metrics_uwm_retention }}
+
+- name: Wait for User Workload Monitoring pods to be ready
+  when: ocp4_workload_rhoai_metrics_enable_uwm | bool
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Pod
+    namespace: openshift-user-workload-monitoring
+    label_selectors:
+      - app.kubernetes.io/name=prometheus
+  register: r_uwm_pods
+  retries: 30
+  delay: 10
+  until:
+    - r_uwm_pods.resources | length > 0
+    - r_uwm_pods.resources | selectattr('status.phase', 'equalto', 'Running') | list | length > 0
+
+# -----------------------------------------------------------------------------
+# Step 2: Clone RHOAI UWM Repository
+# -----------------------------------------------------------------------------
+- name: Remove existing RHOAI UWM directory
+  ansible.builtin.file:
+    path: "{{ ocp4_workload_rhoai_metrics_uwm_path }}"
+    state: absent
+
+- name: Clone RHOAI UWM repository
+  ansible.builtin.git:
+    repo: "{{ ocp4_workload_rhoai_metrics_uwm_repo }}"
+    dest: "{{ ocp4_workload_rhoai_metrics_uwm_path }}"
+    version: "{{ ocp4_workload_rhoai_metrics_uwm_version }}"
+    force: yes
+
+# -----------------------------------------------------------------------------
+# Step 3: Apply RHOAI UWM Kustomize Overlay
+# -----------------------------------------------------------------------------
+- name: Apply RHOAI UWM Grafana and dashboards
+  kubernetes.core.k8s:
+    state: present
+    namespace: "{{ ocp4_workload_rhoai_metrics_namespace }}"
+    src: "{{ ocp4_workload_rhoai_metrics_uwm_path }}/{{ ocp4_workload_rhoai_metrics_uwm_overlay }}"
+    apply: yes
+
+# -----------------------------------------------------------------------------
+# Step 4: Configure GPU Monitoring (if enabled)
+# -----------------------------------------------------------------------------
+- name: Check if NVIDIA GPU Operator is installed
+  when: ocp4_workload_rhoai_metrics_enable_gpu | bool
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Namespace
+    name: "{{ ocp4_workload_rhoai_metrics_gpu_operator_namespace }}"
+  register: r_gpu_operator_ns
+
+- name: Enable DCGM Exporter metrics
+  when:
+    - ocp4_workload_rhoai_metrics_enable_gpu | bool
+    - r_gpu_operator_ns.resources | length > 0
+    - ocp4_workload_rhoai_metrics_dcgm_enabled | bool
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: monitoring.coreos.com/v1
+      kind: ServiceMonitor
+      metadata:
+        name: nvidia-dcgm-exporter
+        namespace: "{{ ocp4_workload_rhoai_metrics_gpu_operator_namespace }}"
+        labels:
+          app: nvidia-dcgm-exporter
+      spec:
+        endpoints:
+          - interval: "{{ ocp4_workload_rhoai_metrics_scrape_interval }}"
+            port: metrics
+            path: /metrics
+            scheme: http
+            timeout: "{{ ocp4_workload_rhoai_metrics_scrape_timeout }}"
+        selector:
+          matchLabels:
+            app: nvidia-dcgm-exporter
+
+# -----------------------------------------------------------------------------
+# Step 5: Create ServiceMonitors for Model Serving (if enabled)
+# -----------------------------------------------------------------------------
+- name: Discover InferenceServices in namespace
+  when: ocp4_workload_rhoai_metrics_enable_kserve | bool
+  kubernetes.core.k8s_info:
+    api_version: serving.kserve.io/v1beta1
+    kind: InferenceService
+    namespace: "{{ ocp4_workload_rhoai_metrics_namespace }}"
+  register: r_inference_services
+
+- name: Create ServiceMonitor for vLLM models
+  when:
+    - ocp4_workload_rhoai_metrics_enable_kserve | bool
+    - "'vllm' in ocp4_workload_rhoai_metrics_runtimes"
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: monitoring.coreos.com/v1
+      kind: ServiceMonitor
+      metadata:
+        name: vllm-models
+        namespace: "{{ ocp4_workload_rhoai_metrics_namespace }}"
+        labels:
+          app: vllm
+      spec:
+        endpoints:
+          - interval: "{{ ocp4_workload_rhoai_metrics_scrape_interval }}"
+            port: http
+            path: "{{ ocp4_workload_rhoai_metrics_vllm_path }}"
+            scheme: http
+            timeout: "{{ ocp4_workload_rhoai_metrics_scrape_timeout }}"
+        selector:
+          matchLabels:
+            serving.kserve.io/inferenceservice: "{{ item.metadata.name }}"
+  loop: "{{ r_inference_services.resources }}"
+  when: item.spec.predictor.model.runtimeVersion is defined and 'vllm' in item.spec.predictor.model.runtimeVersion | lower
+
+- name: Create ServiceMonitor for OpenVino models
+  when:
+    - ocp4_workload_rhoai_metrics_enable_kserve | bool
+    - "'openvino' in ocp4_workload_rhoai_metrics_runtimes"
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: monitoring.coreos.com/v1
+      kind: ServiceMonitor
+      metadata:
+        name: openvino-models
+        namespace: "{{ ocp4_workload_rhoai_metrics_namespace }}"
+        labels:
+          app: openvino
+      spec:
+        endpoints:
+          - interval: "{{ ocp4_workload_rhoai_metrics_scrape_interval }}"
+            port: http
+            path: "{{ ocp4_workload_rhoai_metrics_openvino_path }}"
+            scheme: http
+            timeout: "{{ ocp4_workload_rhoai_metrics_scrape_timeout }}"
+        selector:
+          matchLabels:
+            serving.kserve.io/inferenceservice: "{{ item.metadata.name }}"
+  loop: "{{ r_inference_services.resources }}"
+  when: item.spec.predictor.model.runtimeVersion is defined and 'openvino' in item.spec.predictor.model.runtimeVersion | lower
+
+# -----------------------------------------------------------------------------
+# Step 6: Get Grafana Route
+# -----------------------------------------------------------------------------
+- name: Wait for Grafana route to be created
+  when: ocp4_workload_rhoai_metrics_deploy_grafana | bool
+  kubernetes.core.k8s_info:
+    api_version: route.openshift.io/v1
+    kind: Route
+    name: "{{ ocp4_workload_rhoai_metrics_grafana_instance_name }}-route"
+    namespace: "{{ ocp4_workload_rhoai_metrics_namespace }}"
+  register: r_grafana_route
+  retries: 30
+  delay: 10
+  until:
+    - r_grafana_route.resources | length > 0
+    - r_grafana_route.resources[0].spec.host is defined
+
+- name: Display Grafana access information
+  when:
+    - ocp4_workload_rhoai_metrics_deploy_grafana | bool
+    - r_grafana_route.resources | length > 0
+  ansible.builtin.debug:
+    msg:
+      - "============================================"
+      - "RHOAI Metrics Setup Complete!"
+      - "============================================"
+      - "Grafana URL: https://{{ r_grafana_route.resources[0].spec.host }}"
+      - "Namespace: {{ ocp4_workload_rhoai_metrics_namespace }}"
+      - "InferenceServices discovered: {{ r_inference_services.resources | length }}"
+      - "============================================"
+
+- name: Display completion message
+  ansible.builtin.debug:
+    msg:
+      - "RHOAI User Workload Metrics enabled successfully"
+      - "Grafana dashboards deployed for vLLM and OpenVino models"
+      - "GPU monitoring: {{ 'enabled' if ocp4_workload_rhoai_metrics_enable_gpu else 'disabled' }}"

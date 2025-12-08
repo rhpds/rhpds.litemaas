@@ -1,0 +1,37 @@
+---
+# =============================================================================
+# RHOAI Metrics Role - Main Task File
+# =============================================================================
+# Orchestrates RHOAI metrics setup workflow
+# Deploys monitoring for vLLM, OpenVino, and other KServe models
+# =============================================================================
+
+- name: Validate namespace parameter
+  ansible.builtin.assert:
+    that:
+      - ocp4_workload_rhoai_metrics_namespace is defined
+      - ocp4_workload_rhoai_metrics_namespace | length > 0
+    fail_msg: "ocp4_workload_rhoai_metrics_namespace is required"
+
+- name: Display RHOAI metrics configuration
+  ansible.builtin.debug:
+    msg:
+      - "============================================"
+      - "RHOAI Metrics Setup"
+      - "============================================"
+      - "Target Namespace: {{ ocp4_workload_rhoai_metrics_namespace }}"
+      - "Enable KServe: {{ ocp4_workload_rhoai_metrics_enable_kserve }}"
+      - "Enable GPU: {{ ocp4_workload_rhoai_metrics_enable_gpu }}"
+      - "Deploy Grafana: {{ ocp4_workload_rhoai_metrics_deploy_grafana }}"
+      - "UWM Repository: {{ ocp4_workload_rhoai_metrics_uwm_repo }}"
+      - "============================================"
+
+- name: Run RHOAI metrics setup (workload)
+  when: not (ocp4_workload_rhoai_metrics_remove | bool)
+  ansible.builtin.include_tasks:
+    file: ./workload.yml
+
+- name: Run RHOAI metrics removal
+  when: ocp4_workload_rhoai_metrics_remove | bool
+  ansible.builtin.include_tasks:
+    file: ./remove_workload.yml

@@ -1,0 +1,30 @@
+---
+# =============================================================================
+# Playbook: Setup RHOAI Metrics
+# =============================================================================
+# Enable RHOAI User Workload Metrics for Single Serving Models and deploy
+# Grafana dashboards to monitor vLLM, OpenVino, and other model runtimes
+#
+# Usage:
+#   # Deploy RHOAI metrics
+#   ansible-playbook playbooks/setup_rhoai_metrics.yml \
+#     -e ocp4_workload_rhoai_metrics_namespace=llm-hosting
+#
+#   # Deploy with GPU monitoring
+#   ansible-playbook playbooks/setup_rhoai_metrics.yml \
+#     -e ocp4_workload_rhoai_metrics_namespace=llm-hosting \
+#     -e ocp4_workload_rhoai_metrics_enable_gpu=true
+#
+#   # Remove RHOAI metrics
+#   ansible-playbook playbooks/setup_rhoai_metrics.yml \
+#     -e ocp4_workload_rhoai_metrics_namespace=llm-hosting \
+#     -e ocp4_workload_rhoai_metrics_remove=true
+# =============================================================================
+- name: Setup RHOAI Metrics
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  become: false
+
+  roles:
+    - rhpds.litemaas.ocp4_workload_rhoai_metrics

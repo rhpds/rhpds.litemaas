@@ -1,0 +1,96 @@
+---
+# =============================================================================
+# RHOAI Metrics - Removal Tasks
+# =============================================================================
+# Remove RHOAI User Workload Metrics and Grafana dashboards
+# =============================================================================
+
+- name: Display removal configuration
+  ansible.builtin.debug:
+    msg:
+      - "============================================"
+      - "RHOAI Metrics Removal"
+      - "============================================"
+      - "Target Namespace: {{ ocp4_workload_rhoai_metrics_namespace }}"
+      - "============================================"
+
+# -----------------------------------------------------------------------------
+# Step 1: Remove RHOAI UWM Grafana and Dashboards
+# -----------------------------------------------------------------------------
+- name: Check if RHOAI UWM directory exists
+  ansible.builtin.stat:
+    path: "{{ ocp4_workload_rhoai_metrics_uwm_path }}"
+  register: r_uwm_dir
+
+- name: Remove RHOAI UWM resources
+  when: r_uwm_dir.stat.exists
+  kubernetes.core.k8s:
+    state: absent
+    namespace: "{{ ocp4_workload_rhoai_metrics_namespace }}"
+    src: "{{ ocp4_workload_rhoai_metrics_uwm_path }}/{{ ocp4_workload_rhoai_metrics_uwm_overlay }}"
+  ignore_errors: yes
+
+# -----------------------------------------------------------------------------
+# Step 2: Remove ServiceMonitors
+# -----------------------------------------------------------------------------
+- name: Remove vLLM ServiceMonitor
+  kubernetes.core.k8s:
+    state: absent
+    api_version: monitoring.coreos.com/v1
+    kind: ServiceMonitor
+    name: vllm-models
+    namespace: "{{ ocp4_workload_rhoai_metrics_namespace }}"
+  ignore_errors: yes
+
+- name: Remove OpenVino ServiceMonitor
+  kubernetes.core.k8s:
+    state: absent
+    api_version: monitoring.coreos.com/v1
+    kind: ServiceMonitor
+    name: openvino-models
+    namespace: "{{ ocp4_workload_rhoai_metrics_namespace }}"
+  ignore_errors: yes
+
+# -----------------------------------------------------------------------------
+# Step 3: Remove GPU Monitoring
+# -----------------------------------------------------------------------------
+- name: Remove DCGM Exporter ServiceMonitor
+  when: ocp4_workload_rhoai_metrics_enable_gpu | bool
+  kubernetes.core.k8s:
+    state: absent
+    api_version: monitoring.coreos.com/v1
+    kind: ServiceMonitor
+    name: nvidia-dcgm-exporter
+    namespace: "{{ ocp4_workload_rhoai_metrics_gpu_operator_namespace }}"
+  ignore_errors: yes
+
+# -----------------------------------------------------------------------------
+# Step 4: Remove Grafana Instance
+# -----------------------------------------------------------------------------
+- name: Remove Grafana instance
+  when: ocp4_workload_rhoai_metrics_deploy_grafana | bool
+  kubernetes.core.k8s:
+    state: absent
+    api_version: grafana.integreatly.org/v1beta1
+    kind: Grafana
+    name: "{{ ocp4_workload_rhoai_metrics_grafana_instance_name }}"
+    namespace: "{{ ocp4_workload_rhoai_metrics_namespace }}"
+  ignore_errors: yes
+
+# -----------------------------------------------------------------------------
+# Step 5: Clean up temporary files
+# -----------------------------------------------------------------------------
+- name: Remove RHOAI UWM directory
+  ansible.builtin.file:
+    path: "{{ ocp4_workload_rhoai_metrics_uwm_path }}"
+    state: absent
+
+- name: Display removal completion
+  ansible.builtin.debug:
+    msg:
+      - "============================================"
+      - "RHOAI Metrics Removal Complete!"
+      - "============================================"
+      - "All monitoring resources removed from: {{ ocp4_workload_rhoai_metrics_namespace }}"
+      - "User Workload Monitoring remains enabled (manually disable if needed)"
+      - "============================================"

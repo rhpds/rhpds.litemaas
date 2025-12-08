@@ -1,0 +1,105 @@
+---
+# =============================================================================
+# RHOAI Metrics Role - Default Variables
+# =============================================================================
+# Enable RHOAI User Workload Metrics for Single Serving Models and deploy
+# Grafana dashboards to monitor vLLM, OpenVino, and other model runtimes
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Required Variables (must be provided)
+# -----------------------------------------------------------------------------
+# ocp4_workload_rhoai_metrics_namespace: "llm-hosting"  # Model serving namespace
+
+# -----------------------------------------------------------------------------
+# RHOAI UWM Repository Configuration
+# -----------------------------------------------------------------------------
+# Repository containing Grafana dashboards for vLLM and OpenVino
+ocp4_workload_rhoai_metrics_uwm_repo: "https://github.com/rh-aiservices-bu/rhoai-uwm.git"
+ocp4_workload_rhoai_metrics_uwm_version: "main"
+ocp4_workload_rhoai_metrics_uwm_path: "/tmp/rhoai-uwm"
+
+# Kustomize overlay to apply
+ocp4_workload_rhoai_metrics_uwm_overlay: "overlays/grafana-uwm-user-app"
+
+# -----------------------------------------------------------------------------
+# OpenShift User Workload Monitoring
+# -----------------------------------------------------------------------------
+# Enable user workload monitoring if not already enabled
+ocp4_workload_rhoai_metrics_enable_uwm: true
+ocp4_workload_rhoai_metrics_uwm_retention: "7d"
+
+# -----------------------------------------------------------------------------
+# KServe / Single Model Serving Configuration
+# -----------------------------------------------------------------------------
+# Enable monitoring for KServe InferenceServices
+ocp4_workload_rhoai_metrics_enable_kserve: true
+
+# KServe control plane namespace
+ocp4_workload_rhoai_metrics_kserve_namespace: "redhat-ods-applications"
+
+# ServiceMonitor configuration for model serving
+ocp4_workload_rhoai_metrics_scrape_interval: "30s"
+ocp4_workload_rhoai_metrics_scrape_timeout: "10s"
+
+# vLLM metrics port
+ocp4_workload_rhoai_metrics_vllm_port: 8080
+ocp4_workload_rhoai_metrics_vllm_path: "/metrics"
+
+# OpenVino metrics port
+ocp4_workload_rhoai_metrics_openvino_port: 8080
+ocp4_workload_rhoai_metrics_openvino_path: "/metrics"
+
+# -----------------------------------------------------------------------------
+# GPU Monitoring Configuration
+# -----------------------------------------------------------------------------
+# Enable NVIDIA DCGM Exporter metrics (requires GPU Operator)
+ocp4_workload_rhoai_metrics_enable_gpu: true
+
+# GPU operator namespace
+ocp4_workload_rhoai_metrics_gpu_operator_namespace: "nvidia-gpu-operator"
+
+# DCGM Exporter configuration
+ocp4_workload_rhoai_metrics_dcgm_enabled: true
+ocp4_workload_rhoai_metrics_dcgm_service_name: "nvidia-dcgm-exporter"
+ocp4_workload_rhoai_metrics_dcgm_port: 9400
+
+# -----------------------------------------------------------------------------
+# Service Mesh Monitoring (Optional)
+# -----------------------------------------------------------------------------
+# Enable OpenShift Service Mesh monitoring
+ocp4_workload_rhoai_metrics_enable_service_mesh: false
+ocp4_workload_rhoai_metrics_service_mesh_namespace: "istio-system"
+
+# -----------------------------------------------------------------------------
+# Grafana Operator Configuration
+# -----------------------------------------------------------------------------
+# Install Grafana Operator if not already installed
+ocp4_workload_rhoai_metrics_install_grafana_operator: true
+ocp4_workload_rhoai_metrics_grafana_operator_namespace: "grafana-operator"
+ocp4_workload_rhoai_metrics_grafana_operator_channel: "v5"
+
+# Deploy Grafana instance
+ocp4_workload_rhoai_metrics_deploy_grafana: true
+ocp4_workload_rhoai_metrics_grafana_instance_name: "rhoai-grafana"
+
+# -----------------------------------------------------------------------------
+# Model Discovery
+# -----------------------------------------------------------------------------
+# Auto-discover InferenceServices in namespace (if empty, monitors all)
+ocp4_workload_rhoai_metrics_models: []
+# Example:
+# ocp4_workload_rhoai_metrics_models:
+#   - llama-scout-17b
+#   - granite-4-0-h-tiny
+#   - codellama-7b
+
+# Model runtime types to monitor
+ocp4_workload_rhoai_metrics_runtimes:
+  - vllm
+  - openvino
+
+# -----------------------------------------------------------------------------
+# Removal Configuration
+# -----------------------------------------------------------------------------
+ocp4_workload_rhoai_metrics_remove: false
