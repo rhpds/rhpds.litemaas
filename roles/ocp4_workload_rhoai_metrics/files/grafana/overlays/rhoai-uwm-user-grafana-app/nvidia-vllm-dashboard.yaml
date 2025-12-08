@@ -2199,7 +2199,7 @@ spec:
       "timepicker": {},
       "timezone": "",
       "title": "vLLM / GPU Metrics - NVIDIA",
-      "uid": "${datasource}",
+      "uid": "nvidia-vllm-gpu-metrics",
       "version": 1,
       "weekStart": ""
     }
