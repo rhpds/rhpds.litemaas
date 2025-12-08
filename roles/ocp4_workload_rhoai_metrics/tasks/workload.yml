@@ -153,6 +153,35 @@
     namespace: "{{ ocp4_workload_rhoai_metrics_namespace }}"
     definition: "{{ lookup('file', role_path + '/files/grafana/overlays/grafana-uwm-user-app/grafana-auth-secret.yaml') | from_yaml }}"
 
+- name: Wait for auth secret to get token
+  when: ocp4_workload_rhoai_metrics_deploy_grafana | bool
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Secret
+    name: grafana-auth-secret
+    namespace: "{{ ocp4_workload_rhoai_metrics_namespace }}"
+  register: r_auth_secret
+  retries: 30
+  delay: 2
+  until:
+    - r_auth_secret.resources | length > 0
+    - r_auth_secret.resources[0].data.token is defined
+    - r_auth_secret.resources[0].data.token | length > 0
+
+- name: Create bearer token secret for datasource
+  when: ocp4_workload_rhoai_metrics_deploy_grafana | bool
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: grafana-bearer-token
+        namespace: "{{ ocp4_workload_rhoai_metrics_namespace }}"
+      type: Opaque
+      stringData:
+        bearer-token: "Bearer {{ r_auth_secret.resources[0].data.token | b64decode }}"
+
 - name: Create cluster monitoring view ClusterRoleBinding
   when: ocp4_workload_rhoai_metrics_deploy_grafana | bool
   kubernetes.core.k8s:
