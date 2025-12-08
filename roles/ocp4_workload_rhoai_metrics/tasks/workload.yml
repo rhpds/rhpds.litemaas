@@ -129,12 +129,12 @@
     namespace: "{{ ocp4_workload_rhoai_metrics_namespace }}"
     definition: "{{ lookup('file', role_path + '/files/grafana/base/instance/grafana-proxy-rbac.yaml') | from_yaml_all }}"
 
-- name: Create Grafana instance
+- name: Create Grafana instance with admin config
   when: ocp4_workload_rhoai_metrics_deploy_grafana | bool
   kubernetes.core.k8s:
     state: present
     namespace: "{{ ocp4_workload_rhoai_metrics_namespace }}"
-    definition: "{{ lookup('file', role_path + '/files/grafana/base/instance/grafana.yaml') | from_yaml }}"
+    definition: "{{ lookup('file', role_path + '/files/grafana/base/instance/grafana.yaml') | from_yaml | combine({'spec': {'config': {'users': {'auto_assign_org': 'true', 'auto_assign_org_id': '1', 'auto_assign_org_role': 'Admin'}}}}, recursive=True) }}"
 
 # -----------------------------------------------------------------------------
 # Step 4: Configure Grafana Datasources and Dashboards
@@ -193,32 +193,6 @@
         - apiGroup: rbac.authorization.k8s.io
           kind: User
           name: oczernin
-
-- name: Create Grafana admin users
-  when: ocp4_workload_rhoai_metrics_deploy_grafana | bool
-  kubernetes.core.k8s:
-    state: present
-    definition:
-      apiVersion: grafana.integreatly.org/v1beta1
-      kind: GrafanaUser
-      metadata:
-        name: "grafana-user-{{ item }}"
-        namespace: "{{ ocp4_workload_rhoai_metrics_namespace }}"
-      spec:
-        user:
-          login: "{{ item }}"
-          email: "{{ item }}@redhat.com"
-          name: "{{ item }}"
-          role: Admin
-        instanceSelector:
-          matchLabels:
-            dashboards: grafana
-  loop:
-    - psrivast
-    - ajammula
-    - brezhnev
-    - rshah
-    - oczernin
 
 # -----------------------------------------------------------------------------
 # Step 4b: Deploy Grafana Dashboards
