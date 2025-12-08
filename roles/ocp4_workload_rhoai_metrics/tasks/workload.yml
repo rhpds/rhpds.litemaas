@@ -67,35 +67,84 @@
     - r_uwm_pods.resources | selectattr('status.phase', 'equalto', 'Running') | list | length > 0
 
 # -----------------------------------------------------------------------------
-# Step 2: Apply Grafana Dashboards (Bundled in Role)
+# Step 2: Install Grafana Operator
 # -----------------------------------------------------------------------------
-- name: Get role path
-  ansible.builtin.set_fact:
-    ocp4_workload_rhoai_metrics_role_path: "{{ role_path }}"
+- name: Install Grafana Operator subscription
+  when: ocp4_workload_rhoai_metrics_install_grafana_operator | bool
+  kubernetes.core.k8s:
+    state: present
+    namespace: "{{ ocp4_workload_rhoai_metrics_namespace }}"
+    definition: "{{ lookup('file', role_path + '/files/grafana/base/operator/subscription.yaml') | from_yaml }}"
 
-- name: Set Grafana kustomize path
-  ansible.builtin.set_fact:
-    grafana_kustomize_path: "{{ ocp4_workload_rhoai_metrics_role_path }}/files/grafana/{{ ocp4_workload_rhoai_metrics_grafana_overlay }}"
+- name: Wait for Grafana Operator to be ready
+  when: ocp4_workload_rhoai_metrics_install_grafana_operator | bool
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Pod
+    namespace: "{{ ocp4_workload_rhoai_metrics_namespace }}"
+    label_selectors:
+      - control-plane=controller-manager
+  register: r_grafana_operator_pods
+  retries: 30
+  delay: 10
+  until:
+    - r_grafana_operator_pods.resources | length > 0
+    - r_grafana_operator_pods.resources | selectattr('status.phase', 'equalto', 'Running') | list | length > 0
 
-- name: Debug - Show Grafana path
-  ansible.builtin.debug:
-    msg: "Grafana kustomize path: {{ grafana_kustomize_path }}"
+# -----------------------------------------------------------------------------
+# Step 3: Deploy Grafana Instance
+# -----------------------------------------------------------------------------
+- name: Create Grafana session secret
+  when: ocp4_workload_rhoai_metrics_deploy_grafana | bool
+  kubernetes.core.k8s:
+    state: present
+    namespace: "{{ ocp4_workload_rhoai_metrics_namespace }}"
+    definition: "{{ lookup('file', role_path + '/files/grafana/base/instance/session-secret.yaml') | from_yaml }}"
 
-- name: Verify Grafana kustomization exists
-  ansible.builtin.stat:
-    path: "{{ grafana_kustomize_path }}/kustomization.yaml"
-  register: r_kustomization_check
-  failed_when: not r_kustomization_check.stat.exists
+- name: Create Grafana injected certs ConfigMap
+  when: ocp4_workload_rhoai_metrics_deploy_grafana | bool
+  kubernetes.core.k8s:
+    state: present
+    namespace: "{{ ocp4_workload_rhoai_metrics_namespace }}"
+    definition: "{{ lookup('file', role_path + '/files/grafana/base/instance/injected-certs-cm.yaml') | from_yaml }}"
 
-- name: Apply Grafana dashboards with namespace override
-  ansible.builtin.command:
-    cmd: kubectl apply -k {{ grafana_kustomize_path }} -n {{ ocp4_workload_rhoai_metrics_namespace }}
-  register: r_grafana_apply
-  changed_when: "'created' in r_grafana_apply.stdout or 'configured' in r_grafana_apply.stdout"
+- name: Create Grafana proxy RBAC
+  when: ocp4_workload_rhoai_metrics_deploy_grafana | bool
+  kubernetes.core.k8s:
+    state: present
+    namespace: "{{ ocp4_workload_rhoai_metrics_namespace }}"
+    definition: "{{ lookup('file', role_path + '/files/grafana/base/instance/grafana-proxy-rbac.yaml') | from_yaml }}"
 
-- name: Show Grafana deployment result
-  ansible.builtin.debug:
-    var: r_grafana_apply.stdout_lines
+- name: Create Grafana instance
+  when: ocp4_workload_rhoai_metrics_deploy_grafana | bool
+  kubernetes.core.k8s:
+    state: present
+    namespace: "{{ ocp4_workload_rhoai_metrics_namespace }}"
+    definition: "{{ lookup('file', role_path + '/files/grafana/base/instance/grafana.yaml') | from_yaml }}"
+
+# -----------------------------------------------------------------------------
+# Step 4: Configure Grafana Datasources and Dashboards
+# -----------------------------------------------------------------------------
+- name: Create Grafana auth secret
+  when: ocp4_workload_rhoai_metrics_deploy_grafana | bool
+  kubernetes.core.k8s:
+    state: present
+    namespace: "{{ ocp4_workload_rhoai_metrics_namespace }}"
+    definition: "{{ lookup('file', role_path + '/files/grafana/overlays/grafana-uwm-user-app/grafana-auth-secret.yaml') | from_yaml }}"
+
+- name: Create cluster monitoring view RoleBinding
+  when: ocp4_workload_rhoai_metrics_deploy_grafana | bool
+  kubernetes.core.k8s:
+    state: present
+    namespace: "{{ ocp4_workload_rhoai_metrics_namespace }}"
+    definition: "{{ lookup('file', role_path + '/files/grafana/overlays/grafana-uwm-user-app/cluster-monitor-view-rb.yaml') | from_yaml }}"
+
+- name: Create Grafana datasource
+  when: ocp4_workload_rhoai_metrics_deploy_grafana | bool
+  kubernetes.core.k8s:
+    state: present
+    namespace: "{{ ocp4_workload_rhoai_metrics_namespace }}"
+    definition: "{{ lookup('file', role_path + '/files/grafana/overlays/grafana-uwm-user-app/grafana-ds.yaml') | from_yaml }}"
 
 # -----------------------------------------------------------------------------
 # Step 4: Configure GPU Monitoring (if enabled)
