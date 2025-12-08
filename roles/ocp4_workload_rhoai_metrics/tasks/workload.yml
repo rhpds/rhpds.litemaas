@@ -91,20 +91,19 @@
     namespace: "{{ ocp4_workload_rhoai_metrics_namespace }}"
     definition: "{{ lookup('file', role_path + '/files/grafana/base/operator/subscription.yaml') | from_yaml }}"
 
-- name: Wait for Grafana Operator to be ready
+- name: Wait for Grafana Operator CSV to be Succeeded
   when: ocp4_workload_rhoai_metrics_install_grafana_operator | bool
   kubernetes.core.k8s_info:
-    api_version: v1
-    kind: Pod
+    api_version: operators.coreos.com/v1alpha1
+    kind: ClusterServiceVersion
     namespace: "{{ ocp4_workload_rhoai_metrics_namespace }}"
-    label_selectors:
-      - control-plane=controller-manager
-  register: r_grafana_operator_pods
+  register: r_grafana_csv
   retries: 30
   delay: 10
   until:
-    - r_grafana_operator_pods.resources | length > 0
-    - r_grafana_operator_pods.resources | selectattr('status.phase', 'equalto', 'Running') | list | length > 0
+    - r_grafana_csv.resources | length > 0
+    - r_grafana_csv.resources | selectattr('metadata.name', 'match', 'grafana-operator.*') | list | length > 0
+    - r_grafana_csv.resources | selectattr('metadata.name', 'match', 'grafana-operator.*') | map(attribute='status.phase') | select('equalto', 'Succeeded') | list | length > 0
 
 # -----------------------------------------------------------------------------
 # Step 3: Deploy Grafana Instance
