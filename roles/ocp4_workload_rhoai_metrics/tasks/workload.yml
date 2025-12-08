@@ -233,7 +233,9 @@
           matchLabels:
             serving.kserve.io/inferenceservice: "{{ item.metadata.name }}"
   loop: "{{ r_inference_services.resources }}"
-  when: item.spec.predictor.model.runtimeVersion is defined and 'vllm' in item.spec.predictor.model.runtimeVersion | lower
+  when: >
+    (item.spec.predictor.model.runtimeVersion is defined and 'vllm' in item.spec.predictor.model.runtimeVersion | lower) or
+    (item.spec.predictor.model.runtime is defined and 'vllm' in item.spec.predictor.model.runtime | lower)
 
 - name: Create ServiceMonitor for OpenVino models
   when:
@@ -260,7 +262,9 @@
           matchLabels:
             serving.kserve.io/inferenceservice: "{{ item.metadata.name }}"
   loop: "{{ r_inference_services.resources }}"
-  when: item.spec.predictor.model.runtimeVersion is defined and 'openvino' in item.spec.predictor.model.runtimeVersion | lower
+  when: >
+    (item.spec.predictor.model.runtimeVersion is defined and 'openvino' in item.spec.predictor.model.runtimeVersion | lower) or
+    (item.spec.predictor.model.runtime is defined and 'openvino' in item.spec.predictor.model.runtime | lower)
 
 # -----------------------------------------------------------------------------
 # Step 6: Get Grafana Route
