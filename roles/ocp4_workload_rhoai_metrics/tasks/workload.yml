@@ -179,8 +179,20 @@
         name: admin
       subjects:
         - apiGroup: rbac.authorization.k8s.io
-          kind: Group
-          name: system:authenticated
+          kind: User
+          name: psrivast@redhat.com
+        - apiGroup: rbac.authorization.k8s.io
+          kind: User
+          name: ajammula@redhat.com
+        - apiGroup: rbac.authorization.k8s.io
+          kind: User
+          name: brezhnev@redhat.com
+        - apiGroup: rbac.authorization.k8s.io
+          kind: User
+          name: rshah@redhat.com
+        - apiGroup: rbac.authorization.k8s.io
+          kind: User
+          name: oczernin@redhat.com
 
 # -----------------------------------------------------------------------------
 # Step 4b: Deploy Grafana Dashboards
