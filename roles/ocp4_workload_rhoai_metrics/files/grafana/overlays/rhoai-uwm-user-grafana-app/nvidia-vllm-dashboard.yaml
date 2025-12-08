@@ -50,7 +50,7 @@ spec:
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "682a2344-305f-4039-b45a-303051728943"
+            "uid": "${DS_PROMETHEUS}"
           },
           "description": "GPU Current Temperature",
           "fieldConfig": {
@@ -337,7 +337,7 @@ spec:
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "682a2344-305f-4039-b45a-303051728943"
+            "uid": "${DS_PROMETHEUS}"
           },
           "description": "GPU Current Power Usage",
           "fieldConfig": {
@@ -624,7 +624,7 @@ spec:
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "682a2344-305f-4039-b45a-303051728943"
+            "uid": "${DS_PROMETHEUS}"
           },
           "description": "If CPU throttling is low and GPU utilization is high, it indicates that the system is well-balanced, with the GPU being fully utilized without CPU constraints. \n  If CPU throttling is high and GPU utilization is low, it indicates a CPU bottleneck. The CPU is unable to keep up with the GPU's processing demands, causing the GPU to remain underutilized. If both metrics are high, it may indicate that the workload is demanding for both CPU and GPU, and you may need to scale up resources.",
           "fieldConfig": {
@@ -715,7 +715,7 @@ spec:
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "682a2344-305f-4039-b45a-303051728943"
+                "uid": "${DS_PROMETHEUS}"
               },
               "editorMode": "code",
               "expr": "sum(rate(container_cpu_cfs_throttled_seconds_total{namespace=\"$namespace\", pod=~\"$model_name.*\"}[5m])) by (namespace)",
@@ -729,7 +729,7 @@ spec:
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "682a2344-305f-4039-b45a-303051728943"
+                "uid": "${DS_PROMETHEUS}"
               },
               "editorMode": "code",
               "expr": "avg(DCGM_FI_DEV_GPU_UTIL{instance=~\"$instance\", gpu=~\"$gpu\"})",
@@ -871,7 +871,7 @@ spec:
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "682a2344-305f-4039-b45a-303051728943"
+            "uid": "${DS_PROMETHEUS}"
           },
           "description": "Tracks the percentage of GPU memory used by the vLLM model, providing insights into memory efficiency.\n\n24 Hours sum over time.",
           "fieldConfig": {
@@ -955,7 +955,7 @@ spec:
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "682a2344-305f-4039-b45a-303051728943"
+                "uid": "${DS_PROMETHEUS}"
               },
               "editorMode": "code",
               "expr": "sum_over_time(vllm:gpu_cache_usage_perc{namespace=\"${namespace}\",pod=~\"$model_name.*\"}[24h])",
@@ -967,7 +967,7 @@ spec:
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "682a2344-305f-4039-b45a-303051728943"
+                "uid": "${DS_PROMETHEUS}"
               },
               "editorMode": "code",
               "expr": "sum_over_time(vllm:cpu_cache_usage_perc{namespace=\"${namespace}\",pod=~\"$model_name.*\"}[24h])",
@@ -1151,7 +1151,7 @@ spec:
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "682a2344-305f-4039-b45a-303051728943"
+            "uid": "${DS_PROMETHEUS}"
           },
           "description": "Running Requests: The number of requests actively being processed; helps monitor workload concurrency.\n\nX \n\nWaiting Requests: Tracks requests in the queue, indicating system saturation.\n",
           "fieldConfig": {
@@ -1234,7 +1234,7 @@ spec:
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "682a2344-305f-4039-b45a-303051728943"
+                "uid": "${DS_PROMETHEUS}"
               },
               "editorMode": "code",
               "expr": "vllm:num_requests_running{namespace='${namespace}',  pod=~\"$model_name.*\"}",
@@ -1247,7 +1247,7 @@ spec:
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "682a2344-305f-4039-b45a-303051728943"
+                "uid": "${DS_PROMETHEUS}"
               },
               "editorMode": "code",
               "expr": "vllm:num_requests_waiting{namespace='${namespace}',  pod=~\"$model_name.*\"}",
@@ -2110,7 +2110,7 @@ spec:
           {
             "current": {
               "text": "Prometheus",
-              "value": "682a2344-305f-4039-b45a-303051728943"
+              "value": "${DS_PROMETHEUS}"
             },
             "name": "datasource",
             "options": [],

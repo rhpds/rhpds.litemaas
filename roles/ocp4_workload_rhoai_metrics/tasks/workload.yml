@@ -188,12 +188,37 @@
     state: present
     definition: "{{ lookup('file', role_path + '/files/grafana/overlays/grafana-uwm-user-app/cluster-monitor-view-rb.yaml') | from_yaml | combine({'subjects': [{'kind': 'ServiceAccount', 'name': 'grafana-sa', 'namespace': ocp4_workload_rhoai_metrics_namespace}]}, recursive=True) }}"
 
-- name: Create Grafana datasource
+- name: Create Grafana datasource with bearer token
   when: ocp4_workload_rhoai_metrics_deploy_grafana | bool
   kubernetes.core.k8s:
     state: present
     namespace: "{{ ocp4_workload_rhoai_metrics_namespace }}"
-    definition: "{{ lookup('file', role_path + '/files/grafana/overlays/grafana-uwm-user-app/grafana-ds.yaml') | from_yaml }}"
+    definition:
+      apiVersion: grafana.integreatly.org/v1beta1
+      kind: GrafanaDatasource
+      metadata:
+        name: prometheus-grafanadatasource
+        namespace: "{{ ocp4_workload_rhoai_metrics_namespace }}"
+        annotations:
+          argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+          argocd.argoproj.io/sync-wave: "1"
+      spec:
+        datasource:
+          access: proxy
+          editable: true
+          isDefault: true
+          jsonData:
+            httpHeaderName1: 'Authorization'
+            timeInterval: 5s
+            tlsSkipVerify: true
+          name: Prometheus
+          secureJsonData:
+            httpHeaderValue1: "Bearer {{ r_auth_secret.resources[0].data.token | b64decode }}"
+          type: prometheus
+          url: 'https://thanos-querier.openshift-monitoring.svc.cluster.local:9091'
+        instanceSelector:
+          matchLabels:
+            dashboards: "grafana"
 
 # -----------------------------------------------------------------------------
 # Step 4a: Grant Grafana admin permissions
