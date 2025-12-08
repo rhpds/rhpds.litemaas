@@ -139,6 +139,13 @@
 # -----------------------------------------------------------------------------
 # Step 4: Configure Grafana Datasources and Dashboards
 # -----------------------------------------------------------------------------
+- name: Create Grafana service account
+  when: ocp4_workload_rhoai_metrics_deploy_grafana | bool
+  kubernetes.core.k8s:
+    state: present
+    namespace: "{{ ocp4_workload_rhoai_metrics_namespace }}"
+    definition: "{{ lookup('file', role_path + '/files/grafana/base/instance/grafana-sa.yaml') | from_yaml }}"
+
 - name: Create Grafana auth secret
   when: ocp4_workload_rhoai_metrics_deploy_grafana | bool
   kubernetes.core.k8s:
@@ -146,12 +153,11 @@
     namespace: "{{ ocp4_workload_rhoai_metrics_namespace }}"
     definition: "{{ lookup('file', role_path + '/files/grafana/overlays/grafana-uwm-user-app/grafana-auth-secret.yaml') | from_yaml }}"
 
-- name: Create cluster monitoring view RoleBinding
+- name: Create cluster monitoring view ClusterRoleBinding
   when: ocp4_workload_rhoai_metrics_deploy_grafana | bool
   kubernetes.core.k8s:
     state: present
-    namespace: "{{ ocp4_workload_rhoai_metrics_namespace }}"
-    definition: "{{ lookup('file', role_path + '/files/grafana/overlays/grafana-uwm-user-app/cluster-monitor-view-rb.yaml') | from_yaml }}"
+    definition: "{{ lookup('file', role_path + '/files/grafana/overlays/grafana-uwm-user-app/cluster-monitor-view-rb.yaml') | from_yaml | combine({'subjects': [{'kind': 'ServiceAccount', 'name': 'grafana-sa', 'namespace': ocp4_workload_rhoai_metrics_namespace}]}, recursive=True) }}"
 
 - name: Create Grafana datasource
   when: ocp4_workload_rhoai_metrics_deploy_grafana | bool
