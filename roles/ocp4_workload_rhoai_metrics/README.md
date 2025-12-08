@@ -394,6 +394,8 @@ EOF
 
 ### Adding New Admin Users to Grafana
 
+**How it works**: Grafana is configured with `auto_assign_org_role: Admin`. This means **anyone with namespace access automatically becomes a Grafana Admin**. You only need to add users to the RoleBinding.
+
 **Important**: Use OpenShift **usernames**, not email addresses. Check your username with: `oc whoami`
 
 **Option 1: Using the helper script**
@@ -409,9 +411,20 @@ cd roles/ocp4_workload_rhoai_metrics
 oc whoami
 ```
 
-**Option 2: Manual update**
+**Option 2: Quick manual command**
 
-Edit the RoleBinding:
+```bash
+# Add user to RoleBinding (they become Grafana Admin automatically)
+oc patch rolebinding grafana-admin -n llm-hosting --type=json -p='[
+  {"op": "add", "path": "/subjects/-", "value": {
+    "apiGroup": "rbac.authorization.k8s.io",
+    "kind": "User",
+    "name": "newuser"
+  }}
+]'
+```
+
+**Option 3: Edit RoleBinding directly**
 
 ```bash
 oc edit rolebinding grafana-admin -n llm-hosting
@@ -426,7 +439,7 @@ subjects:
     name: newuser
 ```
 
-**Option 3: Update role defaults**
+**Option 4: Update Ansible task and redeploy**
 
 Edit the Ansible task in `tasks/workload.yml` subjects list:
 
@@ -440,7 +453,12 @@ subjects:
     name: newuser
 ```
 
-Then redeploy the role.
+Then redeploy:
+```bash
+./deploy-rhoai-metrics-standalone.sh
+```
+
+**No additional Grafana configuration needed!** Users automatically get Admin role when they log in via OpenShift OAuth.
 
 ### Removing Admin Access
 
