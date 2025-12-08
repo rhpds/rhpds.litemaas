@@ -69,6 +69,12 @@
 # -----------------------------------------------------------------------------
 # Step 2: Clone RHOAI UWM Repository
 # -----------------------------------------------------------------------------
+- name: Ensure temp directory exists
+  ansible.builtin.file:
+    path: "{{ ocp4_workload_rhoai_metrics_uwm_path | dirname }}"
+    state: directory
+    mode: '0755'
+
 - name: Clone or update RHOAI UWM repository
   ansible.builtin.git:
     repo: "{{ ocp4_workload_rhoai_metrics_uwm_repo }}"
@@ -76,12 +82,37 @@
     version: "{{ ocp4_workload_rhoai_metrics_uwm_version }}"
     force: yes
     update: yes
+  register: r_git_clone
 
-- name: Verify RHOAI UWM overlay directory exists
+- name: Debug - Show git clone result
+  ansible.builtin.debug:
+    var: r_git_clone
+
+- name: Debug - List contents of cloned directory
+  ansible.builtin.command:
+    cmd: "ls -la {{ ocp4_workload_rhoai_metrics_uwm_path }}"
+  register: r_uwm_ls
+  changed_when: false
+
+- name: Debug - Show directory contents
+  ansible.builtin.debug:
+    var: r_uwm_ls.stdout_lines
+
+- name: Debug - Check if overlay path exists
   ansible.builtin.stat:
     path: "{{ ocp4_workload_rhoai_metrics_uwm_path }}/{{ ocp4_workload_rhoai_metrics_uwm_overlay }}"
   register: r_uwm_overlay
-  failed_when: not r_uwm_overlay.stat.exists
+
+- name: Debug - Show overlay path check
+  ansible.builtin.debug:
+    msg:
+      - "Looking for: {{ ocp4_workload_rhoai_metrics_uwm_path }}/{{ ocp4_workload_rhoai_metrics_uwm_overlay }}"
+      - "Exists: {{ r_uwm_overlay.stat.exists }}"
+
+- name: Fail if overlay directory does not exist
+  ansible.builtin.fail:
+    msg: "RHOAI UWM overlay directory not found at {{ ocp4_workload_rhoai_metrics_uwm_path }}/{{ ocp4_workload_rhoai_metrics_uwm_overlay }}"
+  when: not r_uwm_overlay.stat.exists
 
 # -----------------------------------------------------------------------------
 # Step 3: Apply RHOAI UWM Kustomize Overlay
