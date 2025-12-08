@@ -127,7 +127,7 @@
   kubernetes.core.k8s:
     state: present
     namespace: "{{ ocp4_workload_rhoai_metrics_namespace }}"
-    definition: "{{ lookup('file', role_path + '/files/grafana/base/instance/grafana-proxy-rbac.yaml') | from_yaml }}"
+    definition: "{{ lookup('file', role_path + '/files/grafana/base/instance/grafana-proxy-rbac.yaml') | from_yaml_all }}"
 
 - name: Create Grafana instance
   when: ocp4_workload_rhoai_metrics_deploy_grafana | bool
