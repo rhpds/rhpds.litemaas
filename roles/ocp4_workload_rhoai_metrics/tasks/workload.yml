@@ -161,7 +161,40 @@
     definition: "{{ lookup('file', role_path + '/files/grafana/overlays/grafana-uwm-user-app/grafana-ds.yaml') | from_yaml }}"
 
 # -----------------------------------------------------------------------------
-# Step 4: Configure GPU Monitoring (if enabled)
+# Step 4a: Deploy Grafana Dashboards
+# -----------------------------------------------------------------------------
+- name: Create Grafana folder for dashboards
+  when: ocp4_workload_rhoai_metrics_deploy_grafana | bool
+  kubernetes.core.k8s:
+    state: present
+    namespace: "{{ ocp4_workload_rhoai_metrics_namespace }}"
+    definition: "{{ lookup('file', role_path + '/files/grafana/overlays/rhoai-uwm-user-grafana-app/grafana-folder.yaml') | from_yaml }}"
+
+- name: Deploy vLLM dashboard
+  when: ocp4_workload_rhoai_metrics_deploy_grafana | bool
+  kubernetes.core.k8s:
+    state: present
+    namespace: "{{ ocp4_workload_rhoai_metrics_namespace }}"
+    definition: "{{ lookup('file', role_path + '/files/grafana/overlays/rhoai-uwm-user-grafana-app/grafana-vllm-dashboard.yaml') | from_yaml }}"
+
+- name: Deploy NVIDIA vLLM dashboard
+  when:
+    - ocp4_workload_rhoai_metrics_deploy_grafana | bool
+    - ocp4_workload_rhoai_metrics_enable_gpu | bool
+  kubernetes.core.k8s:
+    state: present
+    namespace: "{{ ocp4_workload_rhoai_metrics_namespace }}"
+    definition: "{{ lookup('file', role_path + '/files/grafana/overlays/rhoai-uwm-user-grafana-app/nvidia-vllm-dashboard.yaml') | from_yaml }}"
+
+- name: Deploy OpenVino dashboard
+  when: ocp4_workload_rhoai_metrics_deploy_grafana | bool
+  kubernetes.core.k8s:
+    state: present
+    namespace: "{{ ocp4_workload_rhoai_metrics_namespace }}"
+    definition: "{{ lookup('file', role_path + '/files/grafana/overlays/rhoai-uwm-user-grafana-app/grafana-ovms-dashboard.yaml') | from_yaml }}"
+
+# -----------------------------------------------------------------------------
+# Step 5: Configure GPU Monitoring (if enabled)
 # -----------------------------------------------------------------------------
 - name: Check if NVIDIA GPU Operator is installed
   when: ocp4_workload_rhoai_metrics_enable_gpu | bool
@@ -198,7 +231,7 @@
             app: nvidia-dcgm-exporter
 
 # -----------------------------------------------------------------------------
-# Step 5: Create ServiceMonitors for Model Serving (if enabled)
+# Step 6: Create ServiceMonitors for Model Serving (if enabled)
 # -----------------------------------------------------------------------------
 - name: Discover InferenceServices in namespace
   when: ocp4_workload_rhoai_metrics_enable_kserve | bool
@@ -269,7 +302,7 @@
     (item.spec.predictor.model.runtime is defined and 'openvino' in item.spec.predictor.model.runtime | lower)
 
 # -----------------------------------------------------------------------------
-# Step 6: Get Grafana Route
+# Step 7: Get Grafana Route
 # -----------------------------------------------------------------------------
 - name: Wait for Grafana route to be created
   when: ocp4_workload_rhoai_metrics_deploy_grafana | bool
