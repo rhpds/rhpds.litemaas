@@ -316,7 +316,7 @@
       spec:
         endpoints:
           - interval: "{{ ocp4_workload_rhoai_metrics_scrape_interval }}"
-            port: metrics
+            port: gpu-metrics
             path: /metrics
             scheme: http
             timeout: "{{ ocp4_workload_rhoai_metrics_scrape_timeout }}"
