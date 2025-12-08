@@ -69,6 +69,21 @@
 # -----------------------------------------------------------------------------
 # Step 2: Install Grafana Operator
 # -----------------------------------------------------------------------------
+- name: Create OperatorGroup for Grafana Operator
+  when: ocp4_workload_rhoai_metrics_install_grafana_operator | bool
+  kubernetes.core.k8s:
+    state: present
+    namespace: "{{ ocp4_workload_rhoai_metrics_namespace }}"
+    definition:
+      apiVersion: operators.coreos.com/v1
+      kind: OperatorGroup
+      metadata:
+        name: grafana-operator-group
+        namespace: "{{ ocp4_workload_rhoai_metrics_namespace }}"
+      spec:
+        targetNamespaces:
+          - "{{ ocp4_workload_rhoai_metrics_namespace }}"
+
 - name: Install Grafana Operator subscription
   when: ocp4_workload_rhoai_metrics_install_grafana_operator | bool
   kubernetes.core.k8s:
