@@ -246,7 +246,7 @@ get_grafana_url() {
 
     print_step "Waiting for Grafana route..."
     for i in {1..30}; do
-        if GRAFANA_URL=$(oc get route rhoai-grafana-route -n "${NAMESPACE}" -o jsonpath='{.spec.host}' 2>/dev/null); then
+        if GRAFANA_URL=$(oc get route grafana-route -n "${NAMESPACE}" -o jsonpath='{.spec.host}' 2>/dev/null); then
             if [ -n "${GRAFANA_URL}" ]; then
                 echo ""
                 print_header "🎉 Deployment Successful!"
@@ -279,7 +279,7 @@ get_grafana_url() {
 
     print_warn "Grafana route not found yet"
     print_info "Check manually with:"
-    echo "  oc get route rhoai-grafana-route -n ${NAMESPACE}"
+    echo "  oc get route grafana-route -n ${NAMESPACE}"
 }
 
 cleanup_venv() {

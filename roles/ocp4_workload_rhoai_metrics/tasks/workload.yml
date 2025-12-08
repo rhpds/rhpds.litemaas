@@ -276,7 +276,7 @@
   kubernetes.core.k8s_info:
     api_version: route.openshift.io/v1
     kind: Route
-    name: "{{ ocp4_workload_rhoai_metrics_grafana_instance_name }}-route"
+    name: grafana-route
     namespace: "{{ ocp4_workload_rhoai_metrics_namespace }}"
   register: r_grafana_route
   retries: 30
