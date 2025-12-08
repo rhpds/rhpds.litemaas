@@ -161,7 +161,29 @@
     definition: "{{ lookup('file', role_path + '/files/grafana/overlays/grafana-uwm-user-app/grafana-ds.yaml') | from_yaml }}"
 
 # -----------------------------------------------------------------------------
-# Step 4a: Deploy Grafana Dashboards
+# Step 4a: Grant Grafana admin permissions
+# -----------------------------------------------------------------------------
+- name: Create Grafana admin RoleBinding
+  when: ocp4_workload_rhoai_metrics_deploy_grafana | bool
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: rbac.authorization.k8s.io/v1
+      kind: RoleBinding
+      metadata:
+        name: grafana-admin
+        namespace: "{{ ocp4_workload_rhoai_metrics_namespace }}"
+      roleRef:
+        apiGroup: rbac.authorization.k8s.io
+        kind: ClusterRole
+        name: admin
+      subjects:
+        - apiGroup: rbac.authorization.k8s.io
+          kind: Group
+          name: system:authenticated
+
+# -----------------------------------------------------------------------------
+# Step 4b: Deploy Grafana Dashboards
 # -----------------------------------------------------------------------------
 - name: Create Grafana folder for dashboards
   when: ocp4_workload_rhoai_metrics_deploy_grafana | bool
