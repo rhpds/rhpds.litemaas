@@ -79,6 +79,22 @@
           openshift.io/user-monitoring: "true"
           openshift.io/cluster-monitoring: null
 
+- name: Configure nvidia-gpu-operator namespace for User Workload Monitoring
+  when:
+    - ocp4_workload_rhoai_metrics_enable_uwm | bool
+    - ocp4_workload_rhoai_metrics_enable_gpu_metrics | default(true) | bool
+  kubernetes.core.k8s:
+    api_version: v1
+    kind: Namespace
+    name: nvidia-gpu-operator
+    state: patched
+    definition:
+      metadata:
+        labels:
+          openshift.io/user-monitoring: "true"
+          openshift.io/cluster-monitoring: null
+  ignore_errors: true
+
 # -----------------------------------------------------------------------------
 # Step 2: Install Grafana Operator
 # -----------------------------------------------------------------------------

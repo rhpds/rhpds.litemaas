@@ -1496,14 +1496,14 @@ spec:
           {
             "current": {
               "selected": false,
-              "text": "granite-3b",
-              "value": "granite-3b"
+              "text": "llama-scout-17b",
+              "value": "llama-scout-17b"
             },
             "datasource": {
               "type": "prometheus",
               "uid": "${DS_PROMETHEUS}"
             },
-            "definition": "label_values(model_name)",
+            "definition": "label_values(vllm:num_requests_running, model_name)",
             "hide": 0,
             "includeAll": false,
             "label": "model_name",
@@ -1511,7 +1511,7 @@ spec:
             "name": "model_name",
             "options": [],
             "query": {
-              "query": "label_values(model_name)",
+              "query": "label_values(vllm:num_requests_running, model_name)",
               "refId": "StandardVariableQuery"
             },
             "refresh": 1,
