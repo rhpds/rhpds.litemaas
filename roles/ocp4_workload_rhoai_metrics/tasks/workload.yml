@@ -66,6 +66,19 @@
     - r_uwm_pods.resources | length > 0
     - r_uwm_pods.resources | selectattr('status.phase', 'equalto', 'Running') | list | length > 0
 
+- name: Configure namespace labels for User Workload Monitoring
+  when: ocp4_workload_rhoai_metrics_enable_uwm | bool
+  kubernetes.core.k8s:
+    api_version: v1
+    kind: Namespace
+    name: "{{ ocp4_workload_rhoai_metrics_namespace }}"
+    state: patched
+    definition:
+      metadata:
+        labels:
+          openshift.io/user-monitoring: "true"
+          openshift.io/cluster-monitoring: null
+
 # -----------------------------------------------------------------------------
 # Step 2: Install Grafana Operator
 # -----------------------------------------------------------------------------

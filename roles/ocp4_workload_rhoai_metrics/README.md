@@ -257,6 +257,53 @@ oc logs -n llm-hosting deployment/rhoai-grafana
 
 ### No Metrics Showing
 
+**Symptom:** Grafana dashboards show "No data" even though ServiceMonitors exist and pods are running.
+
+**Most Common Cause:** Namespace has conflicting monitoring labels.
+
+**Check if targets are being scraped:**
+```bash
+# Check User Workload Prometheus targets
+oc exec -n openshift-user-workload-monitoring prometheus-user-workload-0 -c prometheus -- \
+  curl -s 'http://localhost:9090/api/v1/targets' | \
+  jq '.data.activeTargets[] | select(.labels.namespace == "llm-hosting") | {job: .labels.job, health: .health}'
+
+# If no targets appear, check namespace labels
+oc get namespace llm-hosting --show-labels
+```
+
+**Fix:** Namespace must have `openshift.io/user-monitoring=true` but NOT `openshift.io/cluster-monitoring=true`:
+
+```bash
+# Remove conflicting cluster-monitoring label
+oc label namespace llm-hosting openshift.io/cluster-monitoring-
+
+# Ensure user-monitoring label exists
+oc label namespace llm-hosting openshift.io/user-monitoring=true
+
+# Restart Prometheus Operator to pick up changes
+oc delete pod -n openshift-user-workload-monitoring -l app.kubernetes.io/name=prometheus-operator
+
+# Wait 1-2 minutes, then verify targets appear
+oc exec -n openshift-user-workload-monitoring prometheus-user-workload-0 -c prometheus -- \
+  curl -s 'http://localhost:9090/api/v1/targets' | \
+  jq '.data.activeTargets[] | select(.labels.namespace == "llm-hosting") | {job: .labels.job, health: .health}'
+```
+
+**Why this happens:**
+
+User Workload Prometheus has this namespace selector:
+```yaml
+serviceMonitorNamespaceSelector:
+  matchExpressions:
+  - key: openshift.io/cluster-monitoring
+    operator: NotIn
+    values: ["true"]
+```
+
+This means it **skips** any namespace with `cluster-monitoring=true`, even if it also has `user-monitoring=true`.
+
+**Other checks:**
 ```bash
 # Check ServiceMonitors
 oc get servicemonitor -n llm-hosting
