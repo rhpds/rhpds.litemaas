@@ -303,11 +303,11 @@
 - name: Deploy NVIDIA vLLM dashboard
   when:
     - ocp4_workload_rhoai_metrics_deploy_grafana | bool
-    - ocp4_workload_rhoai_metrics_enable_gpu | bool
+    - ocp4_workload_rhoai_metrics_enable_gpu | default(true) | bool
   kubernetes.core.k8s:
     state: present
     namespace: "{{ ocp4_workload_rhoai_metrics_namespace }}"
-    definition: "{{ lookup('template', role_path + '/files/grafana/overlays/rhoai-uwm-user-grafana-app/nvidia-vllm-dashboard.yaml.j2') | from_yaml }}"
+    definition: "{{ lookup('file', role_path + '/files/grafana/overlays/rhoai-uwm-user-grafana-app/nvidia-vllm-dashboard.yaml.j2') | replace('{{ ocp4_workload_rhoai_metrics_namespace }}', ocp4_workload_rhoai_metrics_namespace) | from_yaml }}"
 
 - name: Deploy OpenVino dashboard
   when: ocp4_workload_rhoai_metrics_deploy_grafana | bool
