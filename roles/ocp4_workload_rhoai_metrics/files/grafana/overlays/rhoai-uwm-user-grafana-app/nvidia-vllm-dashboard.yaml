@@ -2163,32 +2163,42 @@ spec:
           },
           {
             "current": {
-              "text": "${NAMESPACE}",
-              "value": "${NAMESPACE}"
+              "text": "llm-hosting",
+              "value": "llm-hosting"
             },
             "description": "",
-            "hide": 1,
+            "hide": 0,
             "name": "namespace",
             "options": [
               {
                 "selected": true,
-                "text": "${NAMESPACE}",
-                "value": "${NAMESPACE}"
+                "text": "llm-hosting",
+                "value": "llm-hosting"
               }
             ],
-            "query": "${NAMESPACE}",
+            "query": "llm-hosting",
             "type": "textbox"
           },
           {
             "current": {
-              "text": "${MODEL_NAME}",
-              "value": "${MODEL_NAME}"
+              "selected": false,
+              "text": "llama-scout-17b",
+              "value": "llama-scout-17b"
             },
-            "hide": 2,
+            "datasource": "$datasource",
+            "definition": "label_values(vllm:num_requests_running{namespace=\"$namespace\"}, model_name)",
+            "hide": 0,
+            "includeAll": false,
+            "label": "model_name",
+            "multi": false,
             "name": "model_name",
-            "query": "${MODEL_NAME}",
-            "skipUrlSync": true,
-            "type": "constant"
+            "options": [],
+            "query": "label_values(vllm:num_requests_running{namespace=\"$namespace\"}, model_name)",
+            "refresh": 1,
+            "regex": "",
+            "skipUrlSync": false,
+            "sort": 0,
+            "type": "query"
           }
         ]
       },
