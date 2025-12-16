@@ -14,10 +14,11 @@
 #   1. Creates a backup script on bastion at /usr/local/bin/backup-litemaas-<namespace>.sh
 #   2. Sets up a monthly cronjob (runs on 1st at 2 AM)
 #   3. The cronjob:
-#      - Takes PostgreSQL pg_dump via oc exec
-#      - Creates PVC snapshot using oc
-#      - Uploads both to S3
-#      - Maintains retention (keeps last 12 backups)
+#      - Takes PostgreSQL pg_dump via oc exec → uploads to S3
+#      - Creates VolumeSnapshot of PVC → stays in OpenShift
+#      - Maintains retention:
+#        * S3 database dumps: keeps last 12 (1 year)
+#        * VolumeSnapshots: keeps last 3 (recent restore points)
 #
 # Prerequisites:
 #   - AWS CLI installed on bastion
@@ -95,7 +96,11 @@ BACKUP_SCRIPT_CONTENT='#!/bin/bash
 NAMESPACE="'"$NAMESPACE"'"
 S3_BUCKET="'"$S3_BUCKET"'"
 S3_PREFIX="litemaas-backups"
-RETENTION_COUNT=12
+
+# Retention policy
+S3_RETENTION=12        # Keep last 12 database dumps in S3 (1 year of monthly backups)
+SNAPSHOT_RETENTION=3   # Keep last 3 VolumeSnapshots in OpenShift (recent restore points)
+
 LOGFILE="/var/log/litemaas-backup.log"
 BACKUP_DIR="/tmp/litemaas-backup-$(date +%Y%m%d-%H%M%S)"
 
@@ -150,82 +155,86 @@ DB_BACKUP_SIZE=$(du -h "$DB_BACKUP_FILE" | cut -f1)
 echo "✓ Database backup created: $(basename $DB_BACKUP_FILE) ($DB_BACKUP_SIZE)"
 
 # ============================================
-# 2. PVC Backup (copy data via oc rsync)
+# 2. PVC Snapshot (using VolumeSnapshot in OpenShift)
 # ============================================
 echo ""
-echo ">>> PVC backup starting..."
+echo ">>> Creating PVC snapshot..."
 
 # Get PVC name
 PVC_NAME=$(oc get pvc -n "$NAMESPACE" -l app=litellm-postgres -o jsonpath='\''{.items[0].metadata.name}'\'')
 
 echo "PVC: $PVC_NAME"
-echo "Copying PVC data via oc rsync..."
 
-# Create temp directory for PVC data
-PVC_BACKUP_DIR="$BACKUP_DIR/pvc-data"
-mkdir -p "$PVC_BACKUP_DIR"
+# Generate snapshot name with timestamp
+SNAPSHOT_NAME="litemaas-snapshot-$(date +%Y%m%d-%H%M%S)"
 
-# Use oc rsync to copy data from PostgreSQL pod'\''s PVC
-oc rsync "$DB_POD:/var/lib/postgresql/data/" "$PVC_BACKUP_DIR/" -n "$NAMESPACE"
+# Create VolumeSnapshot
+cat <<EOF | oc apply -f -
+apiVersion: snapshot.storage.k8s.io/v1
+kind: VolumeSnapshot
+metadata:
+  name: $SNAPSHOT_NAME
+  namespace: $NAMESPACE
+  labels:
+    app: litemaas-backup
+    backup-type: monthly
+spec:
+  source:
+    persistentVolumeClaimName: $PVC_NAME
+EOF
 
-# Tar and compress the PVC data
-tar czf "$BACKUP_DIR/pvc-$(date +%Y%m%d-%H%M%S).tar.gz" -C "$PVC_BACKUP_DIR" .
-
-# Remove the temp PVC directory
-rm -rf "$PVC_BACKUP_DIR"
-
-PVC_BACKUP_FILE=$(ls "$BACKUP_DIR"/pvc-*.tar.gz)
-PVC_BACKUP_SIZE=$(du -h "$PVC_BACKUP_FILE" | cut -f1)
-
-echo "✓ PVC backup created: $(basename $PVC_BACKUP_FILE) ($PVC_BACKUP_SIZE)"
+echo "✓ VolumeSnapshot created: $SNAPSHOT_NAME"
+echo "  Snapshot is stored in OpenShift storage backend"
 
 # ============================================
-# 3. Upload to S3
+# 3. Upload Database Backup to S3
 # ============================================
 echo ""
-echo ">>> Uploading backups to S3..."
+echo ">>> Uploading database backup to S3..."
 
 # Upload database backup
 aws s3 cp "$DB_BACKUP_FILE" "s3://${S3_BUCKET}/${S3_PREFIX}/$(basename $DB_BACKUP_FILE)"
-echo "✓ Uploaded: $(basename $DB_BACKUP_FILE)"
-
-# Upload PVC backup
-aws s3 cp "$PVC_BACKUP_FILE" "s3://${S3_BUCKET}/${S3_PREFIX}/$(basename $PVC_BACKUP_FILE)"
-echo "✓ Uploaded: $(basename $PVC_BACKUP_FILE)"
+echo "✓ Uploaded to S3: $(basename $DB_BACKUP_FILE)"
 
 # ============================================
 # 4. Cleanup Old Backups (retention policy)
 # ============================================
 echo ""
 echo ">>> Cleaning up old backups..."
-echo "Retention: Keep last $RETENTION_COUNT backups"
+echo "Retention: S3=$S3_RETENTION, Snapshots=$SNAPSHOT_RETENTION"
 
-# Cleanup old database backups
+# Cleanup old database backups in S3
+echo "Cleaning up S3 database backups..."
 DB_BACKUPS=$(aws s3 ls "s3://${S3_BUCKET}/${S3_PREFIX}/" | grep "database-" | sort -r | awk '\''{print $4}'\'')
 DB_COUNT=$(echo "$DB_BACKUPS" | wc -l)
 
-if [ "$DB_COUNT" -gt "$RETENTION_COUNT" ]; then
-    OLD_DB_BACKUPS=$(echo "$DB_BACKUPS" | tail -n +$((RETENTION_COUNT + 1)))
+if [ "$DB_COUNT" -gt "$S3_RETENTION" ]; then
+    OLD_DB_BACKUPS=$(echo "$DB_BACKUPS" | tail -n +$((S3_RETENTION + 1)))
     for backup in $OLD_DB_BACKUPS; do
-        echo "Deleting old database backup: $backup"
+        echo "  Deleting old S3 backup: $backup"
         aws s3 rm "s3://${S3_BUCKET}/${S3_PREFIX}/$backup"
     done
 else
-    echo "Database backups: $DB_COUNT (within retention limit)"
+    echo "  S3 database backups: $DB_COUNT (within retention limit of $S3_RETENTION)"
 fi
 
-# Cleanup old PVC backups
-PVC_BACKUPS=$(aws s3 ls "s3://${S3_BUCKET}/${S3_PREFIX}/" | grep "pvc-" | sort -r | awk '\''{print $4}'\'')
-PVC_COUNT=$(echo "$PVC_BACKUPS" | wc -l)
+# Cleanup old VolumeSnapshots in OpenShift
+echo ""
+echo "Cleaning up old VolumeSnapshots..."
+SNAPSHOTS=$(oc get volumesnapshot -n "$NAMESPACE" -l app=litemaas-backup --sort-by=.metadata.creationTimestamp -o jsonpath='\''{.items[*].metadata.name}'\'')
+SNAPSHOT_COUNT=$(echo "$SNAPSHOTS" | wc -w)
 
-if [ "$PVC_COUNT" -gt "$RETENTION_COUNT" ]; then
-    OLD_PVC_BACKUPS=$(echo "$PVC_BACKUPS" | tail -n +$((RETENTION_COUNT + 1)))
-    for backup in $OLD_PVC_BACKUPS; do
-        echo "Deleting old PVC backup: $backup"
-        aws s3 rm "s3://${S3_BUCKET}/${S3_PREFIX}/$backup"
+if [ "$SNAPSHOT_COUNT" -gt "$SNAPSHOT_RETENTION" ]; then
+    # Get snapshots to delete (all except last SNAPSHOT_RETENTION)
+    SNAPSHOTS_ARRAY=($SNAPSHOTS)
+    DELETE_COUNT=$((SNAPSHOT_COUNT - SNAPSHOT_RETENTION))
+
+    for ((i=0; i<DELETE_COUNT; i++)); do
+        echo "  Deleting old snapshot: ${SNAPSHOTS_ARRAY[$i]}"
+        oc delete volumesnapshot "${SNAPSHOTS_ARRAY[$i]}" -n "$NAMESPACE"
     done
 else
-    echo "PVC backups: $PVC_COUNT (within retention limit)"
+    echo "  VolumeSnapshots: $SNAPSHOT_COUNT (within retention limit of $SNAPSHOT_RETENTION)"
 fi
 
 # ============================================
@@ -242,9 +251,12 @@ echo ""
 echo "========================================="
 echo "Backup Complete - $(date)"
 echo "========================================="
-echo "Database backup: $DB_BACKUP_SIZE"
-echo "PVC backup: $PVC_BACKUP_SIZE"
-echo "S3 location: s3://${S3_BUCKET}/${S3_PREFIX}/"
+echo "Database dump (S3): $DB_BACKUP_SIZE → s3://${S3_BUCKET}/${S3_PREFIX}/"
+echo "PVC snapshot (OpenShift): $SNAPSHOT_NAME"
+echo ""
+echo "Retention policy:"
+echo "  - S3 database dumps: Last $S3_RETENTION backups (12 months)"
+echo "  - VolumeSnapshots: Last $SNAPSHOT_RETENTION snapshots (recent restore points)"
 echo ""
 '
 
