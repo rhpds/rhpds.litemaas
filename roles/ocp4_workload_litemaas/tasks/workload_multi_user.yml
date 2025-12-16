@@ -322,6 +322,8 @@
         name: litellm
         labels:
           app: litellm
+        annotations:
+          haproxy.router.openshift.io/timeout: 600s
       spec:
         host: "{{ ocp4_workload_litemaas_api_route_prefix }}-{{ ocp4_workload_litemaas_user_prefix }}{{ item }}.{{ ocp4_workload_litemaas_cluster_domain }}"
         to:

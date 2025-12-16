@@ -145,6 +145,8 @@ metadata:
   labels:
     app: litellm-frontend
     component: web-ui
+  annotations:
+    haproxy.router.openshift.io/timeout: 600s
 spec:
   host: "{{ ocp4_workload_litemaas_frontend_route_prefix }}-{{ _user_suffix }}.{{ ocp4_workload_litemaas_cluster_domain }}"
   to:

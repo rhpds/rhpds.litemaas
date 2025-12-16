@@ -170,6 +170,8 @@ metadata:
   labels:
     app: litellm-backend
     component: api
+  annotations:
+    haproxy.router.openshift.io/timeout: 600s
 spec:
   host: "litellm-admin-{{ _user_suffix }}.{{ ocp4_workload_litemaas_cluster_domain }}"
   path: /api

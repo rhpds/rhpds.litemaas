@@ -296,6 +296,8 @@
             name: litellm-backend
             labels:
               app: litellm-backend
+            annotations:
+              haproxy.router.openshift.io/timeout: 600s
           spec:
             host: "{{ ocp4_workload_litemaas_admin_route_prefix }}.{{ ocp4_workload_litemaas_cluster_domain }}"
             path: /api
@@ -446,6 +448,8 @@
             name: litellm
             labels:
               app: litellm
+            annotations:
+              haproxy.router.openshift.io/timeout: 600s
           spec:
             host: "{{ ocp4_workload_litemaas_api_route_prefix }}.{{ ocp4_workload_litemaas_cluster_domain }}"
             to:
@@ -620,6 +624,8 @@
             name: litellm-frontend
             labels:
               app: litellm-frontend
+            annotations:
+              haproxy.router.openshift.io/timeout: 600s
           spec:
             host: "litellm-frontend.{{ ocp4_workload_litemaas_cluster_domain }}"
             to:

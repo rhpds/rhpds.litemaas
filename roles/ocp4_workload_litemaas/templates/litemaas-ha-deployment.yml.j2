@@ -209,6 +209,8 @@ metadata:
   labels:
     app: litellm
     component: ai-proxy
+  annotations:
+    haproxy.router.openshift.io/timeout: 600s
 spec:
   host: "{{ ocp4_workload_litemaas_api_route_prefix }}.{{ ocp4_workload_litemaas_cluster_domain }}"
   to:
