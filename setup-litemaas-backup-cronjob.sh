@@ -22,7 +22,7 @@
 #
 # Prerequisites:
 #   - AWS CLI installed on bastion
-#   - AWS credentials configured (~/.aws/credentials or environment variables)
+#   - IAM instance profile with S3 write permissions attached to bastion
 #   - oc CLI authenticated to cluster
 # =============================================================================
 
