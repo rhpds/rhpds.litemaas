@@ -1,0 +1,134 @@
+---
+# =============================================================================
+# LiteMaaS Benchmark Workload - Removal Tasks
+# =============================================================================
+# Removes benchmark Job, pods, and optionally the namespace
+# Runs during catalog item destroy
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Step 1: Validate Required Variables
+# -----------------------------------------------------------------------------
+- name: Validate required variables
+  ansible.builtin.assert:
+    that:
+      - ocp4_workload_litemaas_benchmark_namespace is defined
+      - ocp4_workload_litemaas_benchmark_namespace | length > 0
+      - guid is defined
+      - guid | length > 0
+    fail_msg: "Required variables missing: ocp4_workload_litemaas_benchmark_namespace, guid"
+    quiet: true
+
+# -----------------------------------------------------------------------------
+# Step 2: Display Cleanup Details
+# -----------------------------------------------------------------------------
+- name: Display cleanup start message
+  ansible.builtin.debug:
+    msg:
+      - "========================================="
+      - "LiteMaaS Benchmark Cleanup"
+      - "========================================="
+      - "Namespace: {{ ocp4_workload_litemaas_benchmark_namespace }}"
+      - "Enabled: {{ ocp4_workload_litemaas_benchmark_enabled | default(false) }}"
+      - "========================================="
+
+# -----------------------------------------------------------------------------
+# Step 3: Determine Cleanup Strategy
+# -----------------------------------------------------------------------------
+- name: Check if namespace should be deleted
+  ansible.builtin.set_fact:
+    _benchmark_should_delete_namespace: "{{ ocp4_workload_litemaas_benchmark_namespace != guid }}"
+
+- name: Display cleanup strategy
+  ansible.builtin.debug:
+    msg:
+      - "Cleanup strategy:"
+      - "  Delete Job: yes"
+      - "  Delete Pods: yes"
+      - "  Delete Namespace: {{ 'yes (' + ocp4_workload_litemaas_benchmark_namespace + ')' if _benchmark_should_delete_namespace else 'no (shared with GUID)' }}"
+
+# -----------------------------------------------------------------------------
+# Step 4: Delete Benchmark Resources
+# -----------------------------------------------------------------------------
+- name: Remove benchmark workload
+  when: ocp4_workload_litemaas_benchmark_enabled | default(false) | bool
+  block:
+    - name: Delete benchmark Job
+      kubernetes.core.k8s:
+        state: absent
+        api_version: batch/v1
+        kind: Job
+        name: litemaas-benchmark
+        namespace: "{{ ocp4_workload_litemaas_benchmark_namespace }}"
+      register: _benchmark_job_delete
+      failed_when: false
+
+    - name: Display Job deletion result
+      ansible.builtin.debug:
+        msg: "Job deletion: {{ 'success' if _benchmark_job_delete is succeeded else 'skipped (not found)' }}"
+
+    - name: Delete benchmark pods (if Job deletion didn't clean them)
+      kubernetes.core.k8s:
+        state: absent
+        api_version: v1
+        kind: Pod
+        namespace: "{{ ocp4_workload_litemaas_benchmark_namespace }}"
+        label_selectors:
+          - app=litemaas-benchmark
+      register: _benchmark_pods_delete
+      failed_when: false
+
+    - name: Display Pods deletion result
+      ansible.builtin.debug:
+        msg: "Pods deletion: {{ 'success' if _benchmark_pods_delete is succeeded else 'skipped (not found)' }}"
+
+    - name: Wait for resources to be removed
+      ansible.builtin.pause:
+        seconds: 2
+
+# -----------------------------------------------------------------------------
+# Step 5: Delete Namespace (if dedicated)
+# -----------------------------------------------------------------------------
+- name: Delete benchmark namespace
+  when:
+    - ocp4_workload_litemaas_benchmark_enabled | default(false) | bool
+    - _benchmark_should_delete_namespace | bool
+    - ocp4_workload_litemaas_benchmark_namespace is defined
+    - ocp4_workload_litemaas_benchmark_namespace | length > 0
+  block:
+    - name: Delete namespace
+      kubernetes.core.k8s:
+        state: absent
+        api_version: v1
+        kind: Namespace
+        name: "{{ ocp4_workload_litemaas_benchmark_namespace }}"
+      register: _benchmark_namespace_delete
+      failed_when: false
+
+    - name: Display namespace deletion result
+      ansible.builtin.debug:
+        msg: "Namespace deletion: {{ 'success' if _benchmark_namespace_delete is succeeded else 'skipped (not found)' }}"
+
+# -----------------------------------------------------------------------------
+# Step 6: Display Cleanup Completion
+# -----------------------------------------------------------------------------
+- name: Display cleanup completion message
+  when: ocp4_workload_litemaas_benchmark_enabled | default(false) | bool
+  agnosticd.core.agnosticd_user_info:
+    msg: |
+
+      ════════════════════════════════════════════════════════════════
+      LiteMaaS Benchmark Cleanup Complete
+      ════════════════════════════════════════════════════════════════
+
+      Removed:
+        • Benchmark Job
+        • Benchmark Pods
+        {{ '• Namespace: ' + ocp4_workload_litemaas_benchmark_namespace if _benchmark_should_delete_namespace else '• (Namespace preserved - shared with other resources)' }}
+
+      ════════════════════════════════════════════════════════════════
+
+- name: Skip cleanup if benchmark was disabled
+  when: not ocp4_workload_litemaas_benchmark_enabled | default(false) | bool
+  ansible.builtin.debug:
+    msg: "LiteMaaS benchmark was disabled, no cleanup needed"
