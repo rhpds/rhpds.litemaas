@@ -1,0 +1,254 @@
+---
+# ============================================================================
+# LiteMaaS Benchmark Workload Tasks
+# ============================================================================
+# Runs multi-turn conversation benchmarks to validate LiteMaaS performance
+# ============================================================================
+
+- name: Validate benchmark configuration
+  ansible.builtin.assert:
+    that:
+      - ocp4_workload_litemaas_benchmark_url | length > 0
+      - ocp4_workload_litemaas_benchmark_key | length > 0
+    fail_msg: |
+      LiteMaaS URL or API key not configured.
+      Ensure rhpds.litellm_virtual_keys workload ran successfully first.
+
+- name: Display benchmark start message
+  agnosticd.core.agnosticd_user_info:
+    msg: |
+
+      ════════════════════════════════════════════════════════════════
+      LiteMaaS Benchmark Starting
+      ════════════════════════════════════════════════════════════════
+
+      Configuration:
+        • Conversations:  {{ ocp4_workload_litemaas_benchmark_conversations }}
+        • Turns:          {{ ocp4_workload_litemaas_benchmark_turns }}
+        • Parallel:       {{ ocp4_workload_litemaas_benchmark_parallel_workers }}
+        • Max Tokens:     {{ ocp4_workload_litemaas_benchmark_max_tokens }}
+        • Request Delay:  {{ ocp4_workload_litemaas_benchmark_min_delay }}-{{ ocp4_workload_litemaas_benchmark_max_delay }}s
+
+      Endpoint: {{ ocp4_workload_litemaas_benchmark_url }}
+
+      Estimated Duration:
+        {{ (ocp4_workload_litemaas_benchmark_conversations * ocp4_workload_litemaas_benchmark_turns * 10 / 60) | int }} minutes
+
+      ════════════════════════════════════════════════════════════════
+
+- name: Create benchmark Job
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: batch/v1
+      kind: Job
+      metadata:
+        name: litemaas-benchmark
+        namespace: "{{ ocp4_workload_litemaas_benchmark_namespace }}"
+        labels:
+          app: litemaas-benchmark
+          guid: "{{ guid }}"
+          workload: ocp4_workload_litemaas_benchmark
+      spec:
+        backoffLimit: 1
+        ttlSecondsAfterFinished: 86400  # Keep for 24 hours
+        template:
+          metadata:
+            labels:
+              app: litemaas-benchmark
+              guid: "{{ guid }}"
+          spec:
+            restartPolicy: Never
+            containers:
+              - name: benchmark
+                image: "{{ ocp4_workload_litemaas_benchmark_image }}"
+                args:
+                  - "{{ ocp4_workload_litemaas_benchmark_url }}"
+                  - "--conversations"
+                  - "{{ ocp4_workload_litemaas_benchmark_conversations | string }}"
+                  - "--turns"
+                  - "{{ ocp4_workload_litemaas_benchmark_turns | string }}"
+                  - "--parallel"
+                  - "{{ ocp4_workload_litemaas_benchmark_parallel_workers | string }}"
+                  - "--max-tokens"
+                  - "{{ ocp4_workload_litemaas_benchmark_max_tokens | string }}"
+                  - "--min-delay"
+                  - "{{ ocp4_workload_litemaas_benchmark_min_delay | string }}"
+                  - "--max-delay"
+                  - "{{ ocp4_workload_litemaas_benchmark_max_delay | string }}"
+                env:
+                  - name: OPENAI_API_KEY
+                    value: "{{ ocp4_workload_litemaas_benchmark_key }}"
+                resources:
+                  requests:
+                    cpu: "500m"
+                    memory: "512Mi"
+                  limits:
+                    cpu: "2"
+                    memory: "2Gi"
+
+- name: Save benchmark job info
+  when: ocp4_workload_litemaas_benchmark_save_results | bool
+  agnosticd.core.agnosticd_user_info:
+    data:
+      litemaas_benchmark_namespace: "{{ ocp4_workload_litemaas_benchmark_namespace }}"
+      litemaas_benchmark_job_name: "litemaas-benchmark"
+      litemaas_benchmark_conversations: "{{ ocp4_workload_litemaas_benchmark_conversations }}"
+      litemaas_benchmark_turns: "{{ ocp4_workload_litemaas_benchmark_turns }}"
+
+- name: Wait for benchmark to complete
+  kubernetes.core.k8s_info:
+    api_version: batch/v1
+    kind: Job
+    name: litemaas-benchmark
+    namespace: "{{ ocp4_workload_litemaas_benchmark_namespace }}"
+  register: benchmark_job
+  until:
+    - benchmark_job.resources | length > 0
+    - benchmark_job.resources[0].status.succeeded is defined or benchmark_job.resources[0].status.failed is defined
+  retries: 120
+  delay: 30
+  ignore_errors: true
+
+- name: Check if benchmark succeeded
+  ansible.builtin.set_fact:
+    benchmark_succeeded: "{{ benchmark_job.resources[0].status.succeeded | default(0) == 1 }}"
+    benchmark_failed: "{{ benchmark_job.resources[0].status.failed | default(0) == 1 }}"
+
+- name: Get benchmark pod name
+  when: benchmark_succeeded or benchmark_failed
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Pod
+    namespace: "{{ ocp4_workload_litemaas_benchmark_namespace }}"
+    label_selectors:
+      - app=litemaas-benchmark
+  register: benchmark_pods
+
+- name: Fetch benchmark results
+  when:
+    - benchmark_pods.resources | length > 0
+    - benchmark_succeeded or benchmark_failed
+  kubernetes.core.k8s_log:
+    api_version: v1
+    kind: Pod
+    name: "{{ benchmark_pods.resources[0].metadata.name }}"
+    namespace: "{{ ocp4_workload_litemaas_benchmark_namespace }}"
+  register: benchmark_output
+  ignore_errors: true
+
+- name: Parse benchmark metrics
+  when: benchmark_succeeded and benchmark_output is defined
+  block:
+    - name: Extract metrics from output
+      ansible.builtin.set_fact:
+        benchmark_p95: "{{ benchmark_output.log | regex_search('P95:\\s+(\\d+\\.\\d+)', '\\1') | first | default('N/A') }}"
+        benchmark_p99: "{{ benchmark_output.log | regex_search('P99:\\s+(\\d+\\.\\d+)', '\\1') | first | default('N/A') }}"
+        benchmark_mean: "{{ benchmark_output.log | regex_search('Mean:\\s+(\\d+\\.\\d+)', '\\1') | first | default('N/A') }}"
+        benchmark_p50: "{{ benchmark_output.log | regex_search('P50:\\s+(\\d+\\.\\d+)', '\\1') | first | default('N/A') }}"
+        benchmark_speedup: "{{ benchmark_output.log | regex_search('Speedup ratio:\\s+(\\d+\\.\\d+)', '\\1') | first | default('N/A') }}"
+        benchmark_total_time: "{{ benchmark_output.log | regex_search('Total time:\\s+(\\d+\\.\\d+)s', '\\1') | first | default('N/A') }}"
+        benchmark_total_requests: "{{ benchmark_output.log | regex_search('Total requests:\\s+(\\d+)', '\\1') | first | default('N/A') }}"
+        benchmark_rps: "{{ benchmark_output.log | regex_search('Requests per second:\\s+(\\d+\\.\\d+)', '\\1') | first | default('N/A') }}"
+
+    - name: Determine benchmark status
+      ansible.builtin.set_fact:
+        benchmark_status: >-
+          {{ 'PASS ✓' if (benchmark_p95 != 'N/A' and benchmark_p95 | float < ocp4_workload_litemaas_benchmark_ttft_p95_threshold_ms)
+             else 'WARN ⚠' if (benchmark_p95 != 'N/A' and benchmark_p95 | float < (ocp4_workload_litemaas_benchmark_ttft_p95_threshold_ms * 2))
+             else 'FAIL ✗' }}
+        benchmark_cache_status: >-
+          {{ 'EXCELLENT ✓' if (benchmark_speedup != 'N/A' and benchmark_speedup | float > (ocp4_workload_litemaas_benchmark_speedup_threshold * 1.5))
+             else 'GOOD ✓' if (benchmark_speedup != 'N/A' and benchmark_speedup | float > ocp4_workload_litemaas_benchmark_speedup_threshold)
+             else 'POOR ✗' }}
+
+    - name: Save benchmark results to user.info data
+      when: ocp4_workload_litemaas_benchmark_save_results | bool
+      agnosticd.core.agnosticd_user_info:
+        data:
+          litemaas_benchmark_p50_ms: "{{ benchmark_p50 }}"
+          litemaas_benchmark_p95_ms: "{{ benchmark_p95 }}"
+          litemaas_benchmark_p99_ms: "{{ benchmark_p99 }}"
+          litemaas_benchmark_mean_ms: "{{ benchmark_mean }}"
+          litemaas_benchmark_speedup_ratio: "{{ benchmark_speedup }}"
+          litemaas_benchmark_status: "{{ benchmark_status }}"
+          litemaas_benchmark_cache_status: "{{ benchmark_cache_status }}"
+          litemaas_benchmark_total_time_seconds: "{{ benchmark_total_time }}"
+          litemaas_benchmark_total_requests: "{{ benchmark_total_requests }}"
+          litemaas_benchmark_requests_per_second: "{{ benchmark_rps }}"
+
+- name: Display benchmark results (Success)
+  when: benchmark_succeeded and benchmark_output is defined
+  agnosticd.core.agnosticd_user_info:
+    msg: |
+
+      ════════════════════════════════════════════════════════════════
+      LiteMaaS Benchmark Results
+      ════════════════════════════════════════════════════════════════
+
+      Time to First Token (TTFT):
+        • Mean:           {{ benchmark_mean }} ms
+        • P50 (Median):   {{ benchmark_p50 }} ms
+        • P95:            {{ benchmark_p95 }} ms
+        • P99:            {{ benchmark_p99 }} ms
+
+      Cache Performance:
+        • Speedup Ratio:  {{ benchmark_speedup }}x
+        • Status:         {{ benchmark_cache_status }}
+
+      Load Testing Results:
+        • Total Time:     {{ benchmark_total_time }} seconds
+        • Total Requests: {{ benchmark_total_requests }}
+        • Requests/sec:   {{ benchmark_rps }}
+
+      Test Configuration:
+        • Conversations:  {{ ocp4_workload_litemaas_benchmark_conversations }}
+        • Turns:          {{ ocp4_workload_litemaas_benchmark_turns }}
+        • Parallel:       {{ ocp4_workload_litemaas_benchmark_parallel_workers }}
+        • Max Tokens:     {{ ocp4_workload_litemaas_benchmark_max_tokens }}
+
+      Overall Status: {{ benchmark_status }}
+
+      Performance Interpretation:
+        TTFT P95 < {{ ocp4_workload_litemaas_benchmark_ttft_p95_threshold_ms }}ms:   Excellent user experience
+        TTFT P95 < {{ ocp4_workload_litemaas_benchmark_ttft_p95_threshold_ms * 2 }}ms:  Good user experience
+        TTFT P95 > {{ ocp4_workload_litemaas_benchmark_ttft_p95_threshold_ms * 2 }}ms:  May need optimization
+
+        Speedup > {{ ocp4_workload_litemaas_benchmark_speedup_threshold * 1.5 }}x:  Excellent prefix caching
+        Speedup > {{ ocp4_workload_litemaas_benchmark_speedup_threshold }}x:    Good prefix caching
+        Speedup < {{ ocp4_workload_litemaas_benchmark_speedup_threshold }}x:    Poor cache effectiveness
+
+      Full Results:
+        oc logs -n {{ ocp4_workload_litemaas_benchmark_namespace }} -l app=litemaas-benchmark
+
+      ════════════════════════════════════════════════════════════════
+
+- name: Display benchmark failure
+  when: benchmark_failed
+  agnosticd.core.agnosticd_user_info:
+    msg: |
+
+      ════════════════════════════════════════════════════════════════
+      LiteMaaS Benchmark Failed
+      ════════════════════════════════════════════════════════════════
+
+      The benchmark job failed to complete.
+
+      Troubleshooting:
+        # Check job status
+        oc get job litemaas-benchmark -n {{ ocp4_workload_litemaas_benchmark_namespace }}
+
+        # View error logs
+        oc logs -n {{ ocp4_workload_litemaas_benchmark_namespace }} -l app=litemaas-benchmark
+
+        # Describe pod for events
+        oc describe pod -n {{ ocp4_workload_litemaas_benchmark_namespace }} -l app=litemaas-benchmark
+
+      Common Issues:
+        - LiteMaaS endpoint unreachable
+        - Invalid API key
+        - Model not available
+        - Context length exceeded (reduce max_tokens)
+        - Network connectivity issues
+
+      ════════════════════════════════════════════════════════════════

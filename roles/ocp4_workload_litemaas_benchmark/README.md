@@ -184,6 +184,50 @@ Overall Status: PASS ✓
 
 The speedup ratio compares first turn TTFT (full document processing) vs later turns (cached prefix).
 
+## Cleanup on Destroy
+
+The role automatically cleans up resources when the catalog item is destroyed.
+
+### What Gets Removed
+
+- Benchmark Job (`litemaas-benchmark`)
+- Benchmark Pods (with label `app=litemaas-benchmark`)
+- Namespace (only if different from guid namespace)
+
+### Remove Workload Configuration
+
+```yaml
+# In AgnosticV catalog common.yaml
+remove_workloads:
+  - rhpds.litemaas.ocp4_workload_litemaas_benchmark
+  - rhpds.litellm_virtual_keys.ocp4_workload_litellm_virtual_keys
+```
+
+### Namespace Cleanup Behavior
+
+**Shared namespace** (namespace = guid):
+- Job and pods deleted
+- Namespace preserved (shared with other resources)
+
+**Dedicated namespace** (namespace != guid):
+- Job and pods deleted
+- Namespace deleted
+
+### Manual Cleanup
+
+If needed, clean up manually:
+
+```bash
+# Delete just the Job
+oc delete job litemaas-benchmark -n <namespace>
+
+# Delete all benchmark resources
+oc delete all -l app=litemaas-benchmark -n <namespace>
+
+# Delete entire namespace (if dedicated)
+oc delete namespace <namespace>
+```
+
 ## Troubleshooting
 
 ### View Live Logs
