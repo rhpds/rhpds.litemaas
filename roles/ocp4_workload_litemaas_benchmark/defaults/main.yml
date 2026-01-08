@@ -1,0 +1,36 @@
+---
+# LiteMaaS Benchmark Runner Configuration
+# ========================================
+
+# Enable/disable benchmark execution
+ocp4_workload_litemaas_benchmark_enabled: true
+
+# Benchmark namespace (defaults to guid if not specified)
+ocp4_workload_litemaas_benchmark_namespace: "{{ guid }}"
+
+# LiteMaaS connection details (auto-populated from virtual keys workload)
+ocp4_workload_litemaas_benchmark_url: "{{ lookup('agnosticd_user_data', 'litellm_api_base_url') | default('') }}"
+ocp4_workload_litemaas_benchmark_key: "{{ lookup('agnosticd_user_data', 'litellm_virtual_key') | default('') }}"
+
+# Benchmark load configuration
+ocp4_workload_litemaas_benchmark_conversations: 20
+ocp4_workload_litemaas_benchmark_turns: 10
+ocp4_workload_litemaas_benchmark_parallel_workers: 4
+ocp4_workload_litemaas_benchmark_max_tokens: 500
+
+# Request timing (simulates real user behavior)
+ocp4_workload_litemaas_benchmark_min_delay: 0.5
+ocp4_workload_litemaas_benchmark_max_delay: 2.0
+
+# Container image for benchmark tool
+ocp4_workload_litemaas_benchmark_image: quay.io/hayesphilip/multi-turn-benchmark:0.0.1
+
+# Job timeout
+ocp4_workload_litemaas_benchmark_timeout_seconds: 3600
+
+# Performance thresholds
+ocp4_workload_litemaas_benchmark_ttft_p95_threshold_ms: 500
+ocp4_workload_litemaas_benchmark_speedup_threshold: 2.0
+
+# Save results to user.info
+ocp4_workload_litemaas_benchmark_save_results: true
