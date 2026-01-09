@@ -27,23 +27,23 @@
   ansible.builtin.set_fact:
     _benchmark_parallel_workers: >-
       {{
-        ocp4_workload_litemaas_benchmark_parallel_workers
-        if (ocp4_workload_litemaas_benchmark_parallel_workers is defined and ocp4_workload_litemaas_benchmark_parallel_workers != none)
-        else (
-          16 if (ocp4_workload_litemaas_benchmark_conversations | int > 100)
-          else 8 if (ocp4_workload_litemaas_benchmark_conversations | int > 60)
-          else 4 if (ocp4_workload_litemaas_benchmark_conversations | int > 30)
-          else 2
-        )
+      ocp4_workload_litemaas_benchmark_parallel_workers
+      if (ocp4_workload_litemaas_benchmark_parallel_workers is defined and ocp4_workload_litemaas_benchmark_parallel_workers != none)
+      else (
+      16 if (ocp4_workload_litemaas_benchmark_conversations | int > 100)
+      else 8 if (ocp4_workload_litemaas_benchmark_conversations | int > 60)
+      else 4 if (ocp4_workload_litemaas_benchmark_conversations | int > 30)
+      else 2
+      )
       }}
 
 - name: Calculate effective turns (apply 3x multiplier if MCP enabled)
   ansible.builtin.set_fact:
     _benchmark_effective_turns: >-
       {{
-        (ocp4_workload_litemaas_benchmark_turns | int * 3)
-        if (ocp4_workload_litemaas_benchmark_mcp_enabled | default(false) | bool)
-        else ocp4_workload_litemaas_benchmark_turns | int
+      (ocp4_workload_litemaas_benchmark_turns | int * 3)
+      if (ocp4_workload_litemaas_benchmark_mcp_enabled | default(false) | bool)
+      else ocp4_workload_litemaas_benchmark_turns | int
       }}
 
 - name: Save benchmark configuration to user.info data
@@ -382,19 +382,19 @@
                   app: benchmark-report
               spec:
                 containers:
-                - name: httpd
-                  image: registry.access.redhat.com/ubi9/httpd-24:latest
-                  ports:
-                  - containerPort: 8080
-                    protocol: TCP
-                  volumeMounts:
-                  - name: report
-                    mountPath: /var/www/html
-                    readOnly: true
+                  - name: httpd
+                    image: registry.access.redhat.com/ubi9/httpd-24:latest
+                    ports:
+                      - containerPort: 8080
+                        protocol: TCP
+                    volumeMounts:
+                      - name: report
+                        mountPath: /var/www/html
+                        readOnly: true
                 volumes:
-                - name: report
-                  configMap:
-                    name: benchmark-report
+                  - name: report
+                    configMap:
+                      name: benchmark-report
 
     - name: Create Service for report
       kubernetes.core.k8s:
@@ -412,9 +412,9 @@
             selector:
               app: benchmark-report
             ports:
-            - port: 8080
-              targetPort: 8080
-              protocol: TCP
+              - port: 8080
+                targetPort: 8080
+                protocol: TCP
 
     - name: Create Route for report
       kubernetes.core.k8s:
