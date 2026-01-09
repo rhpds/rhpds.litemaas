@@ -291,6 +291,7 @@
           litemaas_benchmark_total_time_seconds: "{{ benchmark_total_time }}"
           litemaas_benchmark_total_requests: "{{ benchmark_total_requests }}"
           litemaas_benchmark_requests_per_second: "{{ benchmark_rps }}"
+          litemaas_benchmark_p95_threshold: "{{ _benchmark_p95_threshold }}"
 
 - name: Display benchmark results (Success)
   when: benchmark_succeeded and benchmark_output is defined
@@ -325,9 +326,9 @@
       Overall Status: {{ benchmark_status }}
 
       Performance Interpretation:
-        TTFT P95 < {{ ocp4_workload_litemaas_benchmark_ttft_p95_threshold_ms }}ms:   Excellent user experience
-        TTFT P95 < {{ ocp4_workload_litemaas_benchmark_ttft_p95_threshold_ms * 2 }}ms:  Good user experience
-        TTFT P95 > {{ ocp4_workload_litemaas_benchmark_ttft_p95_threshold_ms * 2 }}ms:  May need optimization
+        TTFT P95 < {{ _benchmark_p95_threshold }}ms:   Excellent user experience
+        TTFT P95 < {{ _benchmark_p95_threshold | int * 2 }}ms:  Good user experience
+        TTFT P95 > {{ _benchmark_p95_threshold | int * 2 }}ms:  May need optimization
 
         Speedup > {{ ocp4_workload_litemaas_benchmark_speedup_threshold * 1.5 }}x:  Excellent prefix caching
         Speedup > {{ ocp4_workload_litemaas_benchmark_speedup_threshold }}x:    Good prefix caching
@@ -354,6 +355,7 @@
         report_timestamp: "{{ benchmark_report_timestamp }}"
         litemaas_benchmark_parallel_workers: "{{ _benchmark_parallel_workers }}"
         litemaas_benchmark_effective_turns: "{{ _benchmark_effective_turns }}"
+        litemaas_benchmark_p95_threshold: "{{ _benchmark_p95_threshold }}"
 
     - name: Create ConfigMap with HTML report
       kubernetes.core.k8s:
