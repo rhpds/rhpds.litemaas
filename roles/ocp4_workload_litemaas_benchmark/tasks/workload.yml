@@ -87,9 +87,29 @@
               guid: "{{ guid }}"
           spec:
             restartPolicy: Never
+            initContainers:
+              - name: patch-auth
+                image: "{{ ocp4_workload_litemaas_benchmark_image }}"
+                command:
+                  - /bin/sh
+                  - -c
+                  - |
+                    cp /opt/app-root/src/multi-turn-benchmark.py /shared/multi-turn-benchmark.py
+                    sed -i '/self.seed_documents: list\[SeedDocument\] = \[\]/a\        \n        # Read API key from environment\n        self.api_key = os.environ.get("OPENAI_API_KEY", "")\n        self.headers = {}\n        if self.api_key:\n            self.headers["Authorization"] = f"Bearer {self.api_key}"' /shared/multi-turn-benchmark.py
+                    sed -i 's/async with httpx.AsyncClient(verify=False, timeout=self.timeout) as client:/async with httpx.AsyncClient(verify=False, timeout=self.timeout, headers=self.headers) as client:/' /shared/multi-turn-benchmark.py
+                    sed -i 's/self.client = httpx.AsyncClient(verify=False, timeout=self.timeout, limits=limits)/self.client = httpx.AsyncClient(verify=False, timeout=self.timeout, limits=limits, headers=self.headers)/' /shared/multi-turn-benchmark.py
+                    cp -r /opt/app-root/src/seed-documents /shared/
+                    echo "✓ Patched benchmark script for authentication"
+                volumeMounts:
+                  - name: shared-data
+                    mountPath: /shared
             containers:
               - name: benchmark
                 image: "{{ ocp4_workload_litemaas_benchmark_image }}"
+                workingDir: /shared
+                command:
+                  - python3
+                  - /shared/multi-turn-benchmark.py
                 args:
                   - "{{ _benchmark_litellm_url }}"
                   - "--conversations"
@@ -107,6 +127,9 @@
                 env:
                   - name: OPENAI_API_KEY
                     value: "{{ _benchmark_litellm_key }}"
+                volumeMounts:
+                  - name: shared-data
+                    mountPath: /shared
                 resources:
                   requests:
                     cpu: "500m"
@@ -114,6 +137,9 @@
                   limits:
                     cpu: "2"
                     memory: "2Gi"
+            volumes:
+              - name: shared-data
+                emptyDir: {}
 
 - name: Save benchmark job info
   when: ocp4_workload_litemaas_benchmark_save_results | bool
