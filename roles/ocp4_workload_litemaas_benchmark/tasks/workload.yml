@@ -14,6 +14,13 @@
       LiteMaaS URL or API key not configured.
       Ensure rhpds.litellm_virtual_keys workload ran successfully first.
 
+- name: Save benchmark configuration to user.info data
+  agnosticd.core.agnosticd_user_info:
+    data:
+      litemaas_benchmark_namespace: "{{ ocp4_workload_litemaas_benchmark_namespace }}"
+      litemaas_benchmark_conversations: "{{ ocp4_workload_litemaas_benchmark_conversations }}"
+      litemaas_benchmark_turns: "{{ ocp4_workload_litemaas_benchmark_turns }}"
+
 - name: Display benchmark start message
   agnosticd.core.agnosticd_user_info:
     msg: |
