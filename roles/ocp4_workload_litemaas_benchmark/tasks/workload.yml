@@ -150,6 +150,20 @@
       litemaas_benchmark_conversations: "{{ ocp4_workload_litemaas_benchmark_conversations }}"
       litemaas_benchmark_turns: "{{ ocp4_workload_litemaas_benchmark_turns }}"
 
+- name: Calculate benchmark timeout
+  ansible.builtin.set_fact:
+    # Estimated: conversations × turns × 10 seconds per request + 20% buffer
+    _benchmark_estimated_minutes: "{{ ((ocp4_workload_litemaas_benchmark_conversations | int * ocp4_workload_litemaas_benchmark_turns | int * 10 / 60) * 1.2) | int }}"
+    _benchmark_retries: "{{ (((ocp4_workload_litemaas_benchmark_conversations | int * ocp4_workload_litemaas_benchmark_turns | int * 10 / 60) * 1.2) * 2) | int }}"  # retries = minutes * 2 (30 second intervals)
+
+- name: Display benchmark timeout
+  ansible.builtin.debug:
+    msg:
+      - "Benchmark timeout calculation:"
+      - "  Estimated duration: {{ _benchmark_estimated_minutes }} minutes"
+      - "  Max wait time: {{ _benchmark_retries * 0.5 }} minutes"
+      - "  Retries: {{ _benchmark_retries }}"
+
 - name: Wait for benchmark to complete
   kubernetes.core.k8s_info:
     api_version: batch/v1
@@ -160,7 +174,7 @@
   until:
     - benchmark_job.resources | length > 0
     - benchmark_job.resources[0].status.succeeded is defined or benchmark_job.resources[0].status.failed is defined
-  retries: 240  # 240 * 30 seconds = 120 minutes
+  retries: "{{ _benchmark_retries | int }}"
   delay: 30
   ignore_errors: true
 
