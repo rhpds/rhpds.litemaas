@@ -296,12 +296,17 @@
 - name: Deploy benchmark report web page
   when: benchmark_succeeded and benchmark_output is defined
   block:
+    - name: Set report generation timestamp
+      ansible.builtin.set_fact:
+        benchmark_report_timestamp: "{{ lookup('pipe', 'date -u +\"%Y-%m-%dT%H:%M:%SZ\"') }}"
+
     - name: Render HTML report
       ansible.builtin.template:
         src: benchmark-report.html.j2
         dest: /tmp/benchmark-report-{{ guid }}.html
       vars:
         benchmark_output_raw: "{{ benchmark_output.log }}"
+        report_timestamp: "{{ benchmark_report_timestamp }}"
 
     - name: Create ConfigMap with HTML report
       kubernetes.core.k8s:
