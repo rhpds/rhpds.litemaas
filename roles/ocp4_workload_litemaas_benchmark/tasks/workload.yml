@@ -9,6 +9,7 @@
   ansible.builtin.set_fact:
     _benchmark_litellm_url: "{{ lookup('agnosticd_user_data', 'litellm_api_base_url') }}"
     _benchmark_litellm_key: "{{ lookup('agnosticd_user_data', 'litellm_virtual_key') }}"
+    _benchmark_litellm_models: "{{ lookup('agnosticd_user_data', 'litellm_available_models_list') }}"
 
 - name: Validate benchmark configuration
   ansible.builtin.assert:
@@ -51,15 +52,14 @@
     _benchmark_p95_threshold: >-
       {{
       20000 if (ocp4_workload_litemaas_benchmark_conversations | int >= 60)
-      else 15000 if (ocp4_workload_litemaas_benchmark_conversations | int >= 30)
-      else 10000 if (ocp4_workload_litemaas_benchmark_conversations | int >= 10)
-      else 5000
+      else 15000
       }}
 
 - name: Save benchmark configuration to user.info data
   agnosticd.core.agnosticd_user_info:
     data:
       litemaas_benchmark_namespace: "{{ ocp4_workload_litemaas_benchmark_namespace }}"
+      litemaas_benchmark_models: "{{ _benchmark_litellm_models }}"
       litemaas_benchmark_conversations: "{{ ocp4_workload_litemaas_benchmark_conversations }}"
       litemaas_benchmark_sessions: "{{ ocp4_workload_litemaas_benchmark_sessions }}"
       litemaas_benchmark_turns: "{{ ocp4_workload_litemaas_benchmark_turns }}"
@@ -353,6 +353,7 @@
       vars:
         benchmark_output_raw: "{{ benchmark_output.log }}"
         report_timestamp: "{{ benchmark_report_timestamp }}"
+        litemaas_benchmark_models: "{{ _benchmark_litellm_models }}"
         litemaas_benchmark_parallel_workers: "{{ _benchmark_parallel_workers }}"
         litemaas_benchmark_effective_turns: "{{ _benchmark_effective_turns }}"
         litemaas_benchmark_p95_threshold: "{{ _benchmark_p95_threshold }}"
