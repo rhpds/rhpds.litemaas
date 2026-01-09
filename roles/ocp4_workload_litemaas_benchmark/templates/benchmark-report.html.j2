@@ -47,6 +47,27 @@
             font-family: 'Red Hat Mono', monospace;
         }
 
+        .download-button {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 12px 30px;
+            background: white;
+            color: #ee0000;
+            border: none;
+            border-radius: 6px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+        }
+
+        .download-button:hover {
+            background: #f5f5f5;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
         .status-banner {
             padding: 30px;
             text-align: center;
@@ -225,7 +246,38 @@
             font-size: 0.85em;
             margin-top: 10px;
         }
+
+        /* Print styles for PDF export */
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+
+            .container {
+                box-shadow: none;
+                border-radius: 0;
+            }
+
+            .download-button {
+                display: none;
+            }
+
+            .section {
+                page-break-inside: avoid;
+            }
+
+            .raw-output {
+                max-height: none;
+                page-break-inside: avoid;
+            }
+        }
     </style>
+    <script>
+        function downloadPDF() {
+            window.print();
+        }
+    </script>
 </head>
 <body>
     <div class="container">
@@ -233,6 +285,7 @@
         <div class="header">
             <h1>LiteMaaS Benchmark Results</h1>
             <div class="guid">Environment: {{ guid }}</div>
+            <button class="download-button" onclick="downloadPDF()">📄 Download as PDF</button>
         </div>
 
         <!-- Status Banner -->
