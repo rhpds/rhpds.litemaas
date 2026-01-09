@@ -259,14 +259,14 @@
   block:
     - name: Extract metrics from output
       ansible.builtin.set_fact:
-        benchmark_p95: "{{ benchmark_output.log | regex_search('P95:\\s+(\\d+\\.\\d+)', '\\1') | first | default('N/A') }}"
-        benchmark_p99: "{{ benchmark_output.log | regex_search('P99:\\s+(\\d+\\.\\d+)', '\\1') | first | default('N/A') }}"
-        benchmark_mean: "{{ benchmark_output.log | regex_search('Mean:\\s+(\\d+\\.\\d+)', '\\1') | first | default('N/A') }}"
-        benchmark_p50: "{{ benchmark_output.log | regex_search('P50:\\s+(\\d+\\.\\d+)', '\\1') | first | default('N/A') }}"
-        benchmark_speedup: "{{ benchmark_output.log | regex_search('Speedup ratio:\\s+(\\d+\\.\\d+)', '\\1') | first | default('N/A') }}"
-        benchmark_total_time: "{{ benchmark_output.log | regex_search('Total time:\\s+(\\d+\\.\\d+)s', '\\1') | first | default('N/A') }}"
-        benchmark_total_requests: "{{ benchmark_output.log | regex_search('Total requests:\\s+(\\d+)', '\\1') | first | default('N/A') }}"
-        benchmark_rps: "{{ benchmark_output.log | regex_search('Requests per second:\\s+(\\d+\\.\\d+)', '\\1') | first | default('N/A') }}"
+        benchmark_p95: "{{ benchmark_output.log | regex_search('P95:\\s+(\\d+\\.\\d+)', '\\1') | default([]) | first | default('N/A') }}"
+        benchmark_p99: "{{ benchmark_output.log | regex_search('P99:\\s+(\\d+\\.\\d+)', '\\1') | default([]) | first | default('N/A') }}"
+        benchmark_mean: "{{ benchmark_output.log | regex_search('Mean:\\s+(\\d+\\.\\d+)', '\\1') | default([]) | first | default('N/A') }}"
+        benchmark_p50: "{{ benchmark_output.log | regex_search('P50:\\s+(\\d+\\.\\d+)', '\\1') | default([]) | first | default('N/A') }}"
+        benchmark_speedup: "{{ benchmark_output.log | regex_search('Speedup ratio:\\s+(\\d+\\.\\d+)', '\\1') | default([]) | first | default('N/A') }}"
+        benchmark_total_time: "{{ benchmark_output.log | regex_search('Total time:\\s+(\\d+\\.\\d+)s', '\\1') | default([]) | first | default('N/A') }}"
+        benchmark_total_requests: "{{ benchmark_output.log | regex_search('Total requests:\\s+(\\d+)', '\\1') | default([]) | first | default('N/A') }}"
+        benchmark_rps: "{{ benchmark_output.log | regex_search('Requests per second:\\s+(\\d+\\.\\d+)', '\\1') | default([]) | first | default('N/A') }}"
 
     - name: Determine benchmark status
       ansible.builtin.set_fact:
