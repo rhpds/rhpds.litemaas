@@ -51,7 +51,9 @@
   ansible.builtin.set_fact:
     _benchmark_p95_threshold: >-
       {{
-      20000 if (ocp4_workload_litemaas_benchmark_conversations | int >= 60)
+      60000 if (ocp4_workload_litemaas_benchmark_conversations | int >= 120)
+      else 30000 if (ocp4_workload_litemaas_benchmark_conversations | int >= 60)
+      else 25000 if (ocp4_workload_litemaas_benchmark_conversations | int >= 30)
       else 15000
       }}
 
