@@ -383,7 +383,7 @@
               spec:
                 containers:
                 - name: nginx
-                  image: registry.access.redhat.com/ubi9/nginx-124:latest
+                  image: registry.access.redhat.com/ubi9/nginx-120:latest
                   ports:
                   - containerPort: 8080
                     protocol: TCP
