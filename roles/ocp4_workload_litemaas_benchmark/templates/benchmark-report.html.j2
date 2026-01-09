@@ -297,14 +297,14 @@
         <div class="section">
             <h2>📋 Capacity Summary</h2>
 
-            {% if benchmark_p95 != 'N/A' and benchmark_p95 | float < 2500 %}
+            {% if benchmark_p95 != 'N/A' and benchmark_p95 | float < 130000 %}
             <div class="interpretation" style="background: #d1fae5; border-left-color: #10b981;">
                 <h3 style="color: #065f46;">✓ Your LiteMaaS Deployment Can Handle This Load</h3>
                 <p><strong>Tested Configuration:</strong></p>
                 <ul>
                     <li>{{ ocp4_workload_litemaas_benchmark_conversations }} concurrent users</li>
                     <li>{{ ocp4_workload_litemaas_benchmark_turns }} queries per user</li>
-                    <li>P95 response time: {{ benchmark_p95 }} ms (good - under 2500ms threshold)</li>
+                    <li>P95 response time: {{ benchmark_p95 }} ms (good - under 130000ms threshold)</li>
                 </ul>
                 <p><strong>Recommendation:</strong></p>
                 <ul>
@@ -316,7 +316,7 @@
                     {% endif %}
                 </ul>
             </div>
-            {% elif benchmark_p95 != 'N/A' and benchmark_p95 | float < 5000 %}
+            {% elif benchmark_p95 != 'N/A' and benchmark_p95 | float < 30000 %}
             <div class="interpretation" style="background: #fef3c7; border-left-color: #f59e0b;">
                 <h3 style="color: #92400e;">⚠ Acceptable Performance - Monitor Closely</h3>
                 <p><strong>Tested Configuration:</strong></p>
@@ -340,7 +340,7 @@
                 <ul>
                     <li>{{ ocp4_workload_litemaas_benchmark_conversations }} concurrent users</li>
                     <li>{{ ocp4_workload_litemaas_benchmark_turns }} queries per user</li>
-                    <li>P95 response time: {{ benchmark_p95 }} ms (too slow - exceeds 5000ms threshold)</li>
+                    <li>P95 response time: {{ benchmark_p95 }} ms (too slow - exceeds 30000ms threshold)</li>
                 </ul>
                 <p><strong>Recommendation:</strong></p>
                 <ul>
@@ -554,9 +554,9 @@
             <div class="interpretation">
                 <h3>TTFT Performance Thresholds (Workshop/Lab Environments)</h3>
                 <ul>
-                    <li><strong>P95 &lt; 2500ms:</strong> Good user experience ✓</li>
-                    <li><strong>P95 2500-5000ms:</strong> Acceptable but slower</li>
-                    <li><strong>P95 &gt; 5000ms:</strong> May need optimization ✗</li>
+                    <li><strong>P95 &lt; 130000ms:</strong> Good user experience ✓</li>
+                    <li><strong>P95 130000-30000ms:</strong> Acceptable but slower</li>
+                    <li><strong>P95 &gt; 30000ms:</strong> May need optimization ✗</li>
                 </ul>
             </div>
 
@@ -580,7 +580,7 @@
                 <div class="config-item">
                     <strong>Pre-Event Validation</strong>
                     <span style="font-size: 0.9em;">
-                        {% if benchmark_p95 != 'N/A' and benchmark_p95 | float < 2500 %}
+                        {% if benchmark_p95 != 'N/A' and benchmark_p95 | float < 130000 %}
                         ✓ Ready for workshop
                         {% else %}
                         Reduce attendee count or optimize

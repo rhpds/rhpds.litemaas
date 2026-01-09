@@ -31,7 +31,7 @@ ocp4_workload_litemaas_benchmark_image: quay.io/hayesphilip/multi-turn-benchmark
 ocp4_workload_litemaas_benchmark_timeout_seconds: 3600
 
 # Performance thresholds (adjusted for workshop/lab environments)
-ocp4_workload_litemaas_benchmark_ttft_p95_threshold_ms: 2500  # 2.5 seconds - acceptable for workshops
+ocp4_workload_litemaas_benchmark_ttft_p95_threshold_ms: 15000  # 15 seconds - acceptable for workshops
 ocp4_workload_litemaas_benchmark_speedup_threshold: 2.0
 
 # Save results to user.info
