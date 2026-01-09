@@ -389,7 +389,7 @@
                     protocol: TCP
                   volumeMounts:
                   - name: report
-                    mountPath: /usr/share/nginx/html
+                    mountPath: /opt/app-root/src
                     readOnly: true
                 volumes:
                 - name: report
