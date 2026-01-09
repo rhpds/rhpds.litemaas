@@ -131,8 +131,8 @@
 
 - name: Check if benchmark succeeded
   ansible.builtin.set_fact:
-    benchmark_succeeded: "{{ benchmark_job.resources[0].status.succeeded | default(0) == 1 }}"
-    benchmark_failed: "{{ benchmark_job.resources[0].status.failed | default(0) == 1 }}"
+    benchmark_succeeded: "{{ (benchmark_job.resources | default([]) | length > 0) and (benchmark_job.resources[0].status.succeeded | default(0) == 1) }}"
+    benchmark_failed: "{{ (benchmark_job.resources | default([]) | length > 0) and (benchmark_job.resources[0].status.failed | default(0) == 1) }}"
 
 - name: Get benchmark pod name
   when: benchmark_succeeded or benchmark_failed
@@ -146,6 +146,8 @@
 
 - name: Fetch benchmark results
   when:
+    - benchmark_pods is defined
+    - benchmark_pods.resources is defined
     - benchmark_pods.resources | length > 0
     - benchmark_succeeded or benchmark_failed
   kubernetes.core.k8s_log:
