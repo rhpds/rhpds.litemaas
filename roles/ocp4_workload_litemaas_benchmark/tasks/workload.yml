@@ -359,7 +359,7 @@
           data:
             index.html: "{{ lookup('file', '/tmp/benchmark-report-' + guid + '.html') }}"
 
-    - name: Create nginx Deployment for report
+    - name: Create httpd Deployment for report
       kubernetes.core.k8s:
         state: present
         definition:
@@ -382,14 +382,14 @@
                   app: benchmark-report
               spec:
                 containers:
-                - name: nginx
-                  image: registry.access.redhat.com/ubi9/nginx-120:latest
+                - name: httpd
+                  image: registry.access.redhat.com/ubi9/httpd-24:latest
                   ports:
                   - containerPort: 8080
                     protocol: TCP
                   volumeMounts:
                   - name: report
-                    mountPath: /opt/app-root/src
+                    mountPath: /var/www/html
                     readOnly: true
                 volumes:
                 - name: report
