@@ -328,13 +328,13 @@
       Overall Status: {{ benchmark_status }}
 
       Performance Interpretation:
-        TTFT P95 < {{ _benchmark_p95_threshold }}ms:   Excellent user experience
-        TTFT P95 < {{ _benchmark_p95_threshold | int * 2 }}ms:  Good user experience
-        TTFT P95 > {{ _benchmark_p95_threshold | int * 2 }}ms:  May need optimization
+        TTFT P95 < {{ _benchmark_p95_threshold }}ms:   Excellent - Ready for workshops
+        TTFT P95 < {{ _benchmark_p95_threshold | int * 2 }}ms:  Good - Acceptable for workshops
+        TTFT P95 > {{ _benchmark_p95_threshold | int * 2 }}ms:  Too slow - Reduce load
 
-        Speedup > {{ ocp4_workload_litemaas_benchmark_speedup_threshold * 1.5 }}x:  Excellent prefix caching
-        Speedup > {{ ocp4_workload_litemaas_benchmark_speedup_threshold }}x:    Good prefix caching
-        Speedup < {{ ocp4_workload_litemaas_benchmark_speedup_threshold }}x:    Poor cache effectiveness
+        Speedup > 2.5x:  Excellent prefix caching
+        Speedup > 1.5x:  Good prefix caching (acceptable)
+        Speedup < 1.5x:  Cache working but less effective
 
       Full Results:
         oc logs -n {{ ocp4_workload_litemaas_benchmark_namespace }} -l app=litemaas-benchmark

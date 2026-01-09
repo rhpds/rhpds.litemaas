@@ -358,15 +358,17 @@
             </div>
             {% endif %}
 
-            {% if benchmark_speedup != 'N/A' and benchmark_speedup | float < 2 %}
-            <div class="interpretation" style="background: #fee2e2; border-left-color: #ef4444; margin-top: 20px;">
-                <h3 style="color: #991b1b;">⚠ Warning: Poor Prefix Caching Performance</h3>
+            {% if benchmark_speedup != 'N/A' and benchmark_speedup | float < 1.5 %}
+            <div class="interpretation" style="background: #fef3c7; border-left-color: #f59e0b; margin-top: 20px;">
+                <h3 style="color: #92400e;">💡 Cache Performance Note</h3>
                 <ul>
-                    <li>Speedup ratio: {{ benchmark_speedup }}x (below 2x threshold)</li>
-                    <li>This means the KV cache is not working effectively</li>
-                    <li>Multi-turn conversations will be slower than expected</li>
-                    <li><strong>Check:</strong> Does this model support prefix caching?</li>
-                    <li><strong>Check:</strong> Is context size too large for effective caching?</li>
+                    <li>Speedup ratio: {{ benchmark_speedup }}x</li>
+                    <li>Prefix caching is working, but could be better</li>
+                    <li>This is acceptable for workshop environments</li>
+                    <li>Multi-turn conversations will still benefit from some caching</li>
+                    {% if benchmark_speedup | float < 1.2 %}
+                    <li><strong>Tip:</strong> If speedup is very low (&lt;1.2x), check if model supports prefix caching</li>
+                    {% endif %}
                 </ul>
             </div>
             {% endif %}
@@ -410,9 +412,10 @@
                 <h3>What does this mean?</h3>
                 <ul>
                     <li><strong>Speedup Ratio:</strong> How much faster later turns are vs the first turn</li>
-                    <li>&gt; 3x = Excellent prefix caching (cached context reused effectively)</li>
-                    <li>&gt; 2x = Good prefix caching</li>
-                    <li>&lt; 2x = Poor cache effectiveness (may need optimization)</li>
+                    <li>&gt; 2.5x = Excellent prefix caching (cached context reused very effectively)</li>
+                    <li>&gt; 1.5x = Good prefix caching (acceptable for workshops)</li>
+                    <li>1.2-1.5x = Cache is working but less effective</li>
+                    <li>&lt; 1.2x = Very low caching benefit (check model compatibility)</li>
                 </ul>
             </div>
         </div>
@@ -569,10 +572,11 @@
                 <h3>What Should I Do With These Results?</h3>
                 <ul>
                     <li><strong>PASS Status:</strong> Your configuration is ready for the workshop!</li>
-                    <li><strong>WARN Status:</strong> Acceptable but monitor. Consider reducing load by 20-30% for better experience.</li>
+                    <li><strong>WARN Status:</strong> Acceptable performance. Ready for workshops, monitor if needed.</li>
                     <li><strong>FAIL Status:</strong> Too slow. Reduce attendees, questions, or max_tokens and re-test.</li>
-                    <li><strong>Speedup &gt; 3x:</strong> Excellent caching! Multi-turn conversations work well.</li>
-                    <li><strong>Speedup &lt; 2x:</strong> Poor caching. Check if context is too large or model supports caching.</li>
+                    <li><strong>Speedup &gt; 2.5x:</strong> Excellent caching! Multi-turn conversations are very fast.</li>
+                    <li><strong>Speedup &gt; 1.5x:</strong> Good caching. Acceptable for workshop use.</li>
+                    <li><strong>Speedup &lt; 1.2x:</strong> Very low caching. Check model compatibility with prefix caching.</li>
                 </ul>
             </div>
         </div>
