@@ -5,14 +5,23 @@
 # Runs multi-turn conversation benchmarks to validate LiteMaaS performance
 # ============================================================================
 
+- name: Get LiteMaaS credentials from virtual keys workload
+  ansible.builtin.set_fact:
+    _benchmark_litellm_url: "{{ lookup('agnosticd_user_data', 'litellm_api_base_url') }}"
+    _benchmark_litellm_key: "{{ lookup('agnosticd_user_data', 'litellm_virtual_key') }}"
+
 - name: Validate benchmark configuration
   ansible.builtin.assert:
     that:
-      - ocp4_workload_litemaas_benchmark_url | length > 0
-      - ocp4_workload_litemaas_benchmark_key | length > 0
+      - _benchmark_litellm_url is defined
+      - _benchmark_litellm_url | length > 0
+      - _benchmark_litellm_key is defined
+      - _benchmark_litellm_key | length > 0
     fail_msg: |
       LiteMaaS URL or API key not configured.
       Ensure rhpds.litellm_virtual_keys workload ran successfully first.
+      URL: {{ _benchmark_litellm_url | default('NOT SET') }}
+      Key: {{ 'SET' if _benchmark_litellm_key is defined and _benchmark_litellm_key | length > 0 else 'NOT SET' }}
 
 - name: Save benchmark configuration to user.info data
   agnosticd.core.agnosticd_user_info:
@@ -36,7 +45,7 @@
         • Max Tokens:     {{ ocp4_workload_litemaas_benchmark_max_tokens }}
         • Request Delay:  {{ ocp4_workload_litemaas_benchmark_min_delay }}-{{ ocp4_workload_litemaas_benchmark_max_delay }}s
 
-      Endpoint: {{ ocp4_workload_litemaas_benchmark_url }}
+      Endpoint: {{ _benchmark_litellm_url }}
 
       Estimated Duration:
         {{ (ocp4_workload_litemaas_benchmark_conversations * ocp4_workload_litemaas_benchmark_turns * 10 / 60) | int }} minutes
@@ -82,7 +91,7 @@
               - name: benchmark
                 image: "{{ ocp4_workload_litemaas_benchmark_image }}"
                 args:
-                  - "{{ ocp4_workload_litemaas_benchmark_url }}"
+                  - "{{ _benchmark_litellm_url }}"
                   - "--conversations"
                   - "{{ ocp4_workload_litemaas_benchmark_conversations | string }}"
                   - "--turns"
@@ -97,7 +106,7 @@
                   - "{{ ocp4_workload_litemaas_benchmark_max_delay | string }}"
                 env:
                   - name: OPENAI_API_KEY
-                    value: "{{ ocp4_workload_litemaas_benchmark_key }}"
+                    value: "{{ _benchmark_litellm_key }}"
                 resources:
                   requests:
                     cpu: "500m"
