@@ -331,15 +331,67 @@
 
         <!-- Performance Interpretation -->
         <div class="section">
-            <h2>Performance Interpretation</h2>
+            <h2>Understanding Your Results</h2>
 
             <div class="interpretation">
-                <h3>TTFT (Time to First Token) Thresholds</h3>
+                <h3>What Do These Metrics Mean?</h3>
                 <ul>
-                    <li>P95 &lt; 500ms = Excellent user experience ✓</li>
-                    <li>P95 500-1000ms = Good user experience</li>
-                    <li>P95 &gt; 1000ms = May need optimization ✗</li>
+                    <li><strong>P50 (Median):</strong> Half of requests were faster than this</li>
+                    <li><strong>P95:</strong> 95% of requests were faster (key metric for user experience)</li>
+                    <li><strong>P99:</strong> 99% of requests were faster (catches outliers)</li>
+                    <li><strong>Speedup Ratio:</strong> How much faster later turns are vs the first turn</li>
+                    <li>Higher speedup = Better prefix caching (compares first turn vs cached turns)</li>
                 </ul>
+            </div>
+
+            <div class="interpretation">
+                <h3>TTFT Performance Thresholds</h3>
+                <ul>
+                    <li><strong>P95 &lt; 500ms:</strong> Excellent user experience ✓</li>
+                    <li><strong>P95 500-1000ms:</strong> Good user experience</li>
+                    <li><strong>P95 &gt; 1000ms:</strong> May need optimization ✗</li>
+                </ul>
+            </div>
+
+            <div class="interpretation">
+                <h3>What Should I Do With These Results?</h3>
+                <ul>
+                    <li><strong>P95 &lt; 500ms:</strong> Excellent! Your configuration can handle this load.</li>
+                    <li><strong>P95 500-1000ms:</strong> Acceptable but monitor. Consider reducing load for better UX.</li>
+                    <li><strong>P95 &gt; 1000ms:</strong> Too slow. Reduce conversations, turns, or max_tokens in next test.</li>
+                    <li><strong>Speedup &gt; 3x:</strong> Excellent caching! Multi-turn conversations work well.</li>
+                    <li><strong>Speedup &lt; 2x:</strong> Poor caching. Check if context is too large or model supports caching.</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Next Steps -->
+        <div class="section">
+            <h2>Next Steps</h2>
+
+            <div class="config-grid">
+                <div class="config-item">
+                    <strong>Pre-Event Validation</strong>
+                    <span style="font-size: 0.9em;">
+                        {% if benchmark_p95 != 'N/A' and benchmark_p95 | float < 500 %}
+                        ✓ Ready for workshop
+                        {% else %}
+                        Reduce attendee count or optimize
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="config-item">
+                    <strong>Model Comparison</strong>
+                    <span style="font-size: 0.9em;">Order with different model to compare P95 and Speedup</span>
+                </div>
+                <div class="config-item">
+                    <strong>Load Testing</strong>
+                    <span style="font-size: 0.9em;">Increase conversations to find capacity limits</span>
+                </div>
+                <div class="config-item">
+                    <strong>Re-run Test</strong>
+                    <span style="font-size: 0.9em;">Destroy and re-order with adjusted parameters</span>
+                </div>
             </div>
         </div>
 
