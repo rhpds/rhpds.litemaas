@@ -53,6 +53,42 @@
 - name: Remove benchmark workload
   when: ocp4_workload_litemaas_benchmark_enabled | default(false) | bool
   block:
+    - name: Delete benchmark report Route
+      kubernetes.core.k8s:
+        state: absent
+        api_version: route.openshift.io/v1
+        kind: Route
+        name: benchmark-report
+        namespace: "{{ ocp4_workload_litemaas_benchmark_namespace }}"
+      failed_when: false
+
+    - name: Delete benchmark report Service
+      kubernetes.core.k8s:
+        state: absent
+        api_version: v1
+        kind: Service
+        name: benchmark-report
+        namespace: "{{ ocp4_workload_litemaas_benchmark_namespace }}"
+      failed_when: false
+
+    - name: Delete benchmark report Deployment
+      kubernetes.core.k8s:
+        state: absent
+        api_version: apps/v1
+        kind: Deployment
+        name: benchmark-report
+        namespace: "{{ ocp4_workload_litemaas_benchmark_namespace }}"
+      failed_when: false
+
+    - name: Delete benchmark report ConfigMap
+      kubernetes.core.k8s:
+        state: absent
+        api_version: v1
+        kind: ConfigMap
+        name: benchmark-report
+        namespace: "{{ ocp4_workload_litemaas_benchmark_namespace }}"
+      failed_when: false
+
     - name: Delete benchmark Job
       kubernetes.core.k8s:
         state: absent

@@ -244,6 +244,144 @@
 
       ════════════════════════════════════════════════════════════════
 
+- name: Deploy benchmark report web page
+  when: benchmark_succeeded and benchmark_output is defined
+  block:
+    - name: Render HTML report
+      ansible.builtin.template:
+        src: benchmark-report.html.j2
+        dest: /tmp/benchmark-report-{{ guid }}.html
+      vars:
+        benchmark_output_raw: "{{ benchmark_output.log }}"
+
+    - name: Create ConfigMap with HTML report
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: benchmark-report
+            namespace: "{{ ocp4_workload_litemaas_benchmark_namespace }}"
+            labels:
+              app: benchmark-report
+              guid: "{{ guid }}"
+          data:
+            index.html: "{{ lookup('file', '/tmp/benchmark-report-' + guid + '.html') }}"
+
+    - name: Create nginx Deployment for report
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: benchmark-report
+            namespace: "{{ ocp4_workload_litemaas_benchmark_namespace }}"
+            labels:
+              app: benchmark-report
+              guid: "{{ guid }}"
+          spec:
+            replicas: 1
+            selector:
+              matchLabels:
+                app: benchmark-report
+            template:
+              metadata:
+                labels:
+                  app: benchmark-report
+              spec:
+                containers:
+                - name: nginx
+                  image: registry.access.redhat.com/ubi9/nginx-124:latest
+                  ports:
+                  - containerPort: 8080
+                    protocol: TCP
+                  volumeMounts:
+                  - name: report
+                    mountPath: /usr/share/nginx/html
+                    readOnly: true
+                volumes:
+                - name: report
+                  configMap:
+                    name: benchmark-report
+
+    - name: Create Service for report
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: benchmark-report
+            namespace: "{{ ocp4_workload_litemaas_benchmark_namespace }}"
+            labels:
+              app: benchmark-report
+              guid: "{{ guid }}"
+          spec:
+            selector:
+              app: benchmark-report
+            ports:
+            - port: 8080
+              targetPort: 8080
+              protocol: TCP
+
+    - name: Create Route for report
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: route.openshift.io/v1
+          kind: Route
+          metadata:
+            name: benchmark-report
+            namespace: "{{ ocp4_workload_litemaas_benchmark_namespace }}"
+            labels:
+              app: benchmark-report
+              guid: "{{ guid }}"
+          spec:
+            to:
+              kind: Service
+              name: benchmark-report
+            port:
+              targetPort: 8080
+            tls:
+              termination: edge
+              insecureEdgeTerminationPolicy: Redirect
+      register: benchmark_report_route
+
+    - name: Get Route URL
+      kubernetes.core.k8s_info:
+        api_version: route.openshift.io/v1
+        kind: Route
+        name: benchmark-report
+        namespace: "{{ ocp4_workload_litemaas_benchmark_namespace }}"
+      register: report_route_info
+
+    - name: Save report URL to user.info
+      when: report_route_info.resources | length > 0
+      agnosticd.core.agnosticd_user_info:
+        data:
+          litemaas_benchmark_report_url: "https://{{ report_route_info.resources[0].spec.host }}"
+
+    - name: Display report URL
+      when: report_route_info.resources | length > 0
+      agnosticd.core.agnosticd_user_info:
+        msg: |
+
+          ════════════════════════════════════════════════════════════════
+          📊 View Full Benchmark Report
+          ════════════════════════════════════════════════════════════════
+
+          https://{{ report_route_info.resources[0].spec.host }}
+
+          This interactive report includes:
+            • Visual metrics and charts
+            • Performance interpretation
+            • Full benchmark output
+            • Configuration details
+
+          ════════════════════════════════════════════════════════════════
+
 - name: Display benchmark failure
   when: benchmark_failed
   agnosticd.core.agnosticd_user_info:

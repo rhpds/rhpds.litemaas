@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LiteMaaS Benchmark Results - {{ guid }}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Red Hat Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #ee0000 0%, #c00000 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .header .guid {
+            font-size: 1.2em;
+            opacity: 0.9;
+            font-family: 'Red Hat Mono', monospace;
+        }
+
+        .status-banner {
+            padding: 30px;
+            text-align: center;
+            font-size: 2em;
+            font-weight: bold;
+        }
+
+        .status-banner.pass {
+            background: #22c55e;
+            color: white;
+        }
+
+        .status-banner.warn {
+            background: #f59e0b;
+            color: white;
+        }
+
+        .status-banner.fail {
+            background: #ef4444;
+            color: white;
+        }
+
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            padding: 40px;
+        }
+
+        .metric-card {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            padding: 25px;
+            border-radius: 8px;
+            border-left: 4px solid #ee0000;
+        }
+
+        .metric-card.highlight {
+            background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%);
+            border-left-color: #e17055;
+        }
+
+        .metric-label {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .metric-value {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .metric-unit {
+            font-size: 0.5em;
+            color: #666;
+            margin-left: 5px;
+        }
+
+        .section {
+            padding: 40px;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .section h2 {
+            font-size: 1.8em;
+            margin-bottom: 20px;
+            color: #ee0000;
+        }
+
+        .config-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .config-item {
+            background: #f9fafb;
+            padding: 15px;
+            border-radius: 6px;
+        }
+
+        .config-item strong {
+            display: block;
+            color: #666;
+            font-size: 0.85em;
+            margin-bottom: 5px;
+        }
+
+        .config-item span {
+            font-size: 1.3em;
+            color: #333;
+        }
+
+        .raw-output {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-family: 'Red Hat Mono', 'Courier New', monospace;
+            font-size: 0.9em;
+            line-height: 1.6;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .interpretation {
+            background: #f0f9ff;
+            border-left: 4px solid #3b82f6;
+            padding: 20px;
+            margin-top: 20px;
+            border-radius: 4px;
+        }
+
+        .interpretation h3 {
+            color: #1e40af;
+            margin-bottom: 15px;
+        }
+
+        .interpretation ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .interpretation li {
+            padding: 8px 0;
+            display: flex;
+            align-items: center;
+        }
+
+        .interpretation li::before {
+            content: "→";
+            color: #3b82f6;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+
+        .badge.excellent {
+            background: #22c55e;
+            color: white;
+        }
+
+        .badge.good {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .badge.poor {
+            background: #ef4444;
+            color: white;
+        }
+
+        .footer {
+            background: #f9fafb;
+            padding: 30px;
+            text-align: center;
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .timestamp {
+            color: #999;
+            font-size: 0.85em;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>LiteMaaS Benchmark Results</h1>
+            <div class="guid">Environment: {{ guid }}</div>
+        </div>
+
+        <!-- Status Banner -->
+        <div class="status-banner {{ 'pass' if benchmark_status == 'PASS ✓' else 'warn' if benchmark_status == 'WARN ⚠' else 'fail' }}">
+            Overall Status: {{ benchmark_status }}
+        </div>
+
+        <!-- Key Metrics -->
+        <div class="metrics">
+            <div class="metric-card highlight">
+                <div class="metric-label">P95 TTFT</div>
+                <div class="metric-value">{{ benchmark_p95 }}<span class="metric-unit">ms</span></div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-label">P50 (Median)</div>
+                <div class="metric-value">{{ benchmark_p50 }}<span class="metric-unit">ms</span></div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-label">Mean TTFT</div>
+                <div class="metric-value">{{ benchmark_mean }}<span class="metric-unit">ms</span></div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-label">P99 TTFT</div>
+                <div class="metric-value">{{ benchmark_p99 }}<span class="metric-unit">ms</span></div>
+            </div>
+        </div>
+
+        <!-- Cache Performance -->
+        <div class="section">
+            <h2>Cache Performance <span class="badge {{ 'excellent' if 'EXCELLENT' in benchmark_cache_status else 'good' if 'GOOD' in benchmark_cache_status else 'poor' }}">{{ benchmark_cache_status }}</span></h2>
+
+            <div class="metrics">
+                <div class="metric-card highlight">
+                    <div class="metric-label">Speedup Ratio</div>
+                    <div class="metric-value">{{ benchmark_speedup }}<span class="metric-unit">x</span></div>
+                </div>
+            </div>
+
+            <div class="interpretation">
+                <h3>What does this mean?</h3>
+                <ul>
+                    <li><strong>Speedup Ratio:</strong> How much faster later turns are vs the first turn</li>
+                    <li>&gt; 3x = Excellent prefix caching (cached context reused effectively)</li>
+                    <li>&gt; 2x = Good prefix caching</li>
+                    <li>&lt; 2x = Poor cache effectiveness (may need optimization)</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Load Testing Results -->
+        <div class="section">
+            <h2>Load Testing Results</h2>
+
+            <div class="config-grid">
+                <div class="config-item">
+                    <strong>Total Time</strong>
+                    <span>{{ benchmark_total_time }} seconds</span>
+                </div>
+                <div class="config-item">
+                    <strong>Total Requests</strong>
+                    <span>{{ benchmark_total_requests }}</span>
+                </div>
+                <div class="config-item">
+                    <strong>Requests/Second</strong>
+                    <span>{{ benchmark_rps }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Test Configuration -->
+        <div class="section">
+            <h2>Test Configuration</h2>
+
+            <div class="config-grid">
+                <div class="config-item">
+                    <strong>Conversations</strong>
+                    <span>{{ ocp4_workload_litemaas_benchmark_conversations }}</span>
+                </div>
+                <div class="config-item">
+                    <strong>Turns per Conversation</strong>
+                    <span>{{ ocp4_workload_litemaas_benchmark_turns }}</span>
+                </div>
+                <div class="config-item">
+                    <strong>Parallel Workers</strong>
+                    <span>{{ ocp4_workload_litemaas_benchmark_parallel_workers }}</span>
+                </div>
+                <div class="config-item">
+                    <strong>Max Tokens</strong>
+                    <span>{{ ocp4_workload_litemaas_benchmark_max_tokens }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Performance Interpretation -->
+        <div class="section">
+            <h2>Performance Interpretation</h2>
+
+            <div class="interpretation">
+                <h3>TTFT (Time to First Token) Thresholds</h3>
+                <ul>
+                    <li>P95 &lt; 500ms = Excellent user experience ✓</li>
+                    <li>P95 500-1000ms = Good user experience</li>
+                    <li>P95 &gt; 1000ms = May need optimization ✗</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Raw Output -->
+        <div class="section">
+            <h2>Full Benchmark Output</h2>
+            <pre class="raw-output">{{ benchmark_output_raw }}</pre>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <div>LiteMaaS Benchmark Report</div>
+            <div class="timestamp">Generated: {{ ansible_date_time.iso8601 }}</div>
+        </div>
+    </div>
+</body>
+</html>
