@@ -23,12 +23,39 @@
       URL: {{ _benchmark_litellm_url | default('NOT SET') }}
       Key: {{ 'SET' if _benchmark_litellm_key is defined and _benchmark_litellm_key | length > 0 else 'NOT SET' }}
 
+- name: Calculate parallel workers if not specified (auto-calculate based on attendees)
+  ansible.builtin.set_fact:
+    _benchmark_parallel_workers: >-
+      {{
+        ocp4_workload_litemaas_benchmark_parallel_workers
+        if (ocp4_workload_litemaas_benchmark_parallel_workers is defined and ocp4_workload_litemaas_benchmark_parallel_workers != none)
+        else (
+          16 if (ocp4_workload_litemaas_benchmark_conversations | int > 100)
+          else 8 if (ocp4_workload_litemaas_benchmark_conversations | int > 60)
+          else 4 if (ocp4_workload_litemaas_benchmark_conversations | int > 30)
+          else 2
+        )
+      }}
+
+- name: Calculate effective turns (apply 3x multiplier if MCP enabled)
+  ansible.builtin.set_fact:
+    _benchmark_effective_turns: >-
+      {{
+        (ocp4_workload_litemaas_benchmark_turns | int * 3)
+        if (ocp4_workload_litemaas_benchmark_mcp_enabled | default(false) | bool)
+        else ocp4_workload_litemaas_benchmark_turns | int
+      }}
+
 - name: Save benchmark configuration to user.info data
   agnosticd.core.agnosticd_user_info:
     data:
       litemaas_benchmark_namespace: "{{ ocp4_workload_litemaas_benchmark_namespace }}"
       litemaas_benchmark_conversations: "{{ ocp4_workload_litemaas_benchmark_conversations }}"
+      litemaas_benchmark_sessions: "{{ ocp4_workload_litemaas_benchmark_sessions }}"
       litemaas_benchmark_turns: "{{ ocp4_workload_litemaas_benchmark_turns }}"
+      litemaas_benchmark_effective_turns: "{{ _benchmark_effective_turns }}"
+      litemaas_benchmark_mcp_enabled: "{{ ocp4_workload_litemaas_benchmark_mcp_enabled | default(false) }}"
+      litemaas_benchmark_parallel_workers: "{{ _benchmark_parallel_workers }}"
 
 - name: Display benchmark start message
   agnosticd.core.agnosticd_user_info:
@@ -38,17 +65,24 @@
       LiteMaaS Benchmark Starting
       ════════════════════════════════════════════════════════════════
 
-      Configuration:
-        • Conversations:  {{ ocp4_workload_litemaas_benchmark_conversations }}
-        • Turns:          {{ ocp4_workload_litemaas_benchmark_turns }}
-        • Parallel:       {{ ocp4_workload_litemaas_benchmark_parallel_workers }}
-        • Max Tokens:     {{ ocp4_workload_litemaas_benchmark_max_tokens }}
-        • Request Delay:  {{ ocp4_workload_litemaas_benchmark_min_delay }}-{{ ocp4_workload_litemaas_benchmark_max_delay }}s
+      Workshop Configuration:
+        • Attendees/Session:  {{ ocp4_workload_litemaas_benchmark_conversations }}
+        • Number of Sessions: {{ ocp4_workload_litemaas_benchmark_sessions }}
+        • Questions/Person:   {{ ocp4_workload_litemaas_benchmark_turns }}
+        {% if ocp4_workload_litemaas_benchmark_mcp_enabled | default(false) | bool %}
+        • Tool Calling (MCP): ✓ Enabled (3x multiplier)
+        • Effective Queries:  {{ _benchmark_effective_turns }} ({{ ocp4_workload_litemaas_benchmark_turns }} × 3)
+        {% endif %}
+
+      Test Configuration:
+        • Parallel Workers:   {{ _benchmark_parallel_workers }}{% if ocp4_workload_litemaas_benchmark_parallel_workers is not defined or ocp4_workload_litemaas_benchmark_parallel_workers == none %} (auto-calculated){% endif %}
+        • Max Tokens:         {{ ocp4_workload_litemaas_benchmark_max_tokens }}
+        • Request Delay:      {{ ocp4_workload_litemaas_benchmark_min_delay }}-{{ ocp4_workload_litemaas_benchmark_max_delay }}s
 
       Endpoint: {{ _benchmark_litellm_url }}
 
       Estimated Duration:
-        {{ (ocp4_workload_litemaas_benchmark_conversations * ocp4_workload_litemaas_benchmark_turns * 10 / 60) | int }} minutes
+        {{ (_benchmark_effective_turns | int * ocp4_workload_litemaas_benchmark_conversations | int * 10 / 60) | int }} minutes
 
       ════════════════════════════════════════════════════════════════
 
@@ -115,9 +149,9 @@
                   - "--conversations"
                   - "{{ ocp4_workload_litemaas_benchmark_conversations | string }}"
                   - "--turns"
-                  - "{{ ocp4_workload_litemaas_benchmark_turns | string }}"
+                  - "{{ _benchmark_effective_turns | string }}"
                   - "--parallel"
-                  - "{{ ocp4_workload_litemaas_benchmark_parallel_workers | string }}"
+                  - "{{ _benchmark_parallel_workers | string }}"
                   - "--max-tokens"
                   - "{{ ocp4_workload_litemaas_benchmark_max_tokens | string }}"
                   - "--min-delay"
@@ -152,9 +186,9 @@
 
 - name: Calculate benchmark timeout
   ansible.builtin.set_fact:
-    # Estimated: conversations × turns × 10 seconds per request + 20% buffer
-    _benchmark_estimated_minutes: "{{ ((ocp4_workload_litemaas_benchmark_conversations | int * ocp4_workload_litemaas_benchmark_turns | int * 10 / 60) * 1.2) | int }}"
-    _benchmark_retries: "{{ (((ocp4_workload_litemaas_benchmark_conversations | int * ocp4_workload_litemaas_benchmark_turns | int * 10 / 60) * 1.2) * 2) | int }}"  # retries = minutes * 2 (30 second intervals)
+    # Estimated: conversations × effective_turns × 10 seconds per request + 20% buffer
+    _benchmark_estimated_minutes: "{{ ((ocp4_workload_litemaas_benchmark_conversations | int * _benchmark_effective_turns | int * 10 / 60) * 1.2) | int }}"
+    _benchmark_retries: "{{ (((ocp4_workload_litemaas_benchmark_conversations | int * _benchmark_effective_turns | int * 10 / 60) * 1.2) * 2) | int }}"  # retries = minutes * 2 (30 second intervals)
 
 - name: Display benchmark timeout
   ansible.builtin.debug:

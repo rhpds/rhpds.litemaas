@@ -13,10 +13,12 @@ ocp4_workload_litemaas_benchmark_url: "{{ lookup('agnosticd_user_data', 'litellm
 ocp4_workload_litemaas_benchmark_key: "{{ lookup('agnosticd_user_data', 'litellm_virtual_key') | default('') }}"
 
 # Benchmark load configuration
-ocp4_workload_litemaas_benchmark_conversations: 20
-ocp4_workload_litemaas_benchmark_turns: 10
-ocp4_workload_litemaas_benchmark_parallel_workers: 4
-ocp4_workload_litemaas_benchmark_max_tokens: 500
+ocp4_workload_litemaas_benchmark_conversations: "{{ benchmark_conversations_count | default(60) }}"
+ocp4_workload_litemaas_benchmark_sessions: "{{ benchmark_sessions_count | default(1) }}"
+ocp4_workload_litemaas_benchmark_turns: "{{ benchmark_turns_count | default(10) }}"
+ocp4_workload_litemaas_benchmark_mcp_enabled: "{{ benchmark_model_supports_mcp | default(false) }}"
+ocp4_workload_litemaas_benchmark_parallel_workers: "{{ benchmark_parallel | default(none) }}"  # null = auto-calculate
+ocp4_workload_litemaas_benchmark_max_tokens: "{{ benchmark_max_tokens_count | default(500) }}"
 
 # Request timing (simulates real user behavior)
 ocp4_workload_litemaas_benchmark_min_delay: 0.5

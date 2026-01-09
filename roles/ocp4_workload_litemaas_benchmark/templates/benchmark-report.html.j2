@@ -385,21 +385,101 @@
 
             <div class="config-grid">
                 <div class="config-item">
-                    <strong>Conversations</strong>
+                    <strong>Attendees Per Session</strong>
                     <span>{{ ocp4_workload_litemaas_benchmark_conversations }}</span>
                 </div>
                 <div class="config-item">
-                    <strong>Turns per Conversation</strong>
-                    <span>{{ ocp4_workload_litemaas_benchmark_turns }}</span>
+                    <strong>Number of Sessions</strong>
+                    <span>{{ ocp4_workload_litemaas_benchmark_sessions }}</span>
                 </div>
                 <div class="config-item">
+                    <strong>Questions Per Person</strong>
+                    <span>{{ ocp4_workload_litemaas_benchmark_turns }}</span>
+                </div>
+                {% if ocp4_workload_litemaas_benchmark_mcp_enabled | default(false) | bool %}
+                <div class="config-item">
+                    <strong>Tool Calling (MCP)</strong>
+                    <span>✓ Enabled</span>
+                </div>
+                <div class="config-item">
+                    <strong>Multiplier Applied</strong>
+                    <span>3x ({{ ocp4_workload_litemaas_benchmark_turns }} × 3 = {{ litemaas_benchmark_effective_turns | default(ocp4_workload_litemaas_benchmark_turns | int * 3) }})</span>
+                </div>
+                <div class="config-item">
+                    <strong>Effective Test Queries</strong>
+                    <span>{{ litemaas_benchmark_effective_turns | default(ocp4_workload_litemaas_benchmark_turns | int * 3) }}</span>
+                </div>
+                {% endif %}
+                <div class="config-item">
                     <strong>Parallel Workers</strong>
-                    <span>{{ ocp4_workload_litemaas_benchmark_parallel_workers }}</span>
+                    <span>{{ litemaas_benchmark_parallel_workers }}</span>
                 </div>
                 <div class="config-item">
                     <strong>Max Tokens</strong>
                     <span>{{ ocp4_workload_litemaas_benchmark_max_tokens }}</span>
                 </div>
+            </div>
+        </div>
+
+        <!-- How This Test Works -->
+        <div class="section">
+            <h2>📚 How This Test Works</h2>
+
+            <div class="interpretation">
+                <h3>What Did We Just Test?</h3>
+                <p>This benchmark simulates a real workshop scenario to validate if your LiteMaaS deployment can handle the expected load.</p>
+
+                <ul>
+                    <li><strong>Your Workshop Setup:</strong></li>
+                    <li style="margin-left: 20px;">• {{ ocp4_workload_litemaas_benchmark_conversations }} people attend each session</li>
+                    <li style="margin-left: 20px;">• {{ ocp4_workload_litemaas_benchmark_sessions }} session(s) per day</li>
+                    <li style="margin-left: 20px;">• Each person asks ~{{ ocp4_workload_litemaas_benchmark_turns }} questions</li>
+                    {% if ocp4_workload_litemaas_benchmark_mcp_enabled | default(false) | bool %}
+                    <li style="margin-left: 20px;">• LibreChat/MCP tool calling enabled (3x multiplier applied)</li>
+                    {% endif %}
+                </ul>
+
+                <ul>
+                    <li><strong>What We Tested:</strong></li>
+                    <li style="margin-left: 20px;">• Created {{ ocp4_workload_litemaas_benchmark_conversations }} simulated users (fake people)</li>
+                    <li style="margin-left: 20px;">• Each fake person asked {{ litemaas_benchmark_effective_turns | default(ocp4_workload_litemaas_benchmark_turns) }} questions to the AI</li>
+                    <li style="margin-left: 20px;">• {{ litemaas_benchmark_parallel_workers }} people asking questions at the same time (like a queue)</li>
+                    <li style="margin-left: 20px;">• Total test queries: {{ ocp4_workload_litemaas_benchmark_conversations }} × {{ litemaas_benchmark_effective_turns | default(ocp4_workload_litemaas_benchmark_turns) }} = {{ ocp4_workload_litemaas_benchmark_conversations | int * (litemaas_benchmark_effective_turns | default(ocp4_workload_litemaas_benchmark_turns) | int) }}</li>
+                </ul>
+
+                <ul>
+                    <li><strong>Parallel Workers Explained:</strong></li>
+                    <li style="margin-left: 20px;">• Not all {{ ocp4_workload_litemaas_benchmark_conversations }} people ask questions at the exact same moment</li>
+                    <li style="margin-left: 20px;">• In real workshops, maybe 4-8 people are actively typing at any second</li>
+                    <li style="margin-left: 20px;">• We used {{ litemaas_benchmark_parallel_workers }} parallel workers to simulate realistic load</li>
+                    <li style="margin-left: 20px;">• Think of it like: {{ litemaas_benchmark_parallel_workers }} checkout lanes at a store for {{ ocp4_workload_litemaas_benchmark_conversations }} customers</li>
+                </ul>
+
+                {% if ocp4_workload_litemaas_benchmark_mcp_enabled | default(false) | bool %}
+                <ul>
+                    <li><strong>Why the 3x Multiplier?</strong></li>
+                    <li style="margin-left: 20px;">• LibreChat/MCP workshops use tool calling (AI can invoke functions/tools)</li>
+                    <li style="margin-left: 20px;">• Each user question might trigger 2-3 additional AI requests</li>
+                    <li style="margin-left: 20px;">• Example: User asks "deploy an app" → AI calls tool to check cluster → calls tool to deploy → responds to user</li>
+                    <li style="margin-left: 20px;">• Your {{ ocp4_workload_litemaas_benchmark_turns }} questions became {{ litemaas_benchmark_effective_turns | default(ocp4_workload_litemaas_benchmark_turns | int * 3) }} actual AI requests in the test</li>
+                </ul>
+                {% endif %}
+            </div>
+
+            <div class="interpretation">
+                <h3>Auto-Calculated Settings</h3>
+                <p>The system automatically adjusted some settings based on your configuration:</p>
+                <ul>
+                    <li><strong>Parallel Workers:</strong> {{ litemaas_benchmark_parallel_workers }}</li>
+                    <li style="margin-left: 20px;">• Auto-calculated based on {{ ocp4_workload_litemaas_benchmark_conversations }} attendees</li>
+                    <li style="margin-left: 20px;">• 1-30 people = 2 workers | 31-60 people = 4 workers | 61-100 people = 8 workers | 101+ = 16 workers</li>
+
+                    {% if ocp4_workload_litemaas_benchmark_mcp_enabled | default(false) | bool %}
+                    <li><strong>Effective Queries:</strong> {{ litemaas_benchmark_effective_turns | default(ocp4_workload_litemaas_benchmark_turns | int * 3) }}</li>
+                    <li style="margin-left: 20px;">• Auto-calculated: {{ ocp4_workload_litemaas_benchmark_turns }} base questions × 3 (MCP multiplier)</li>
+                    <li style="margin-left: 20px;">• Accounts for tool calling creating additional AI requests</li>
+                    {% endif %}
+                </ul>
             </div>
         </div>
 
