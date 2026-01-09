@@ -160,7 +160,7 @@
   until:
     - benchmark_job.resources | length > 0
     - benchmark_job.resources[0].status.succeeded is defined or benchmark_job.resources[0].status.failed is defined
-  retries: 120
+  retries: 240  # 240 * 30 seconds = 120 minutes
   delay: 30
   ignore_errors: true
 
