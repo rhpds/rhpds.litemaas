@@ -46,6 +46,16 @@
       else ocp4_workload_litemaas_benchmark_turns | int
       }}
 
+- name: Calculate dynamic P95 threshold based on number of users
+  ansible.builtin.set_fact:
+    _benchmark_p95_threshold: >-
+      {{
+      20000 if (ocp4_workload_litemaas_benchmark_conversations | int >= 60)
+      else 15000 if (ocp4_workload_litemaas_benchmark_conversations | int >= 30)
+      else 10000 if (ocp4_workload_litemaas_benchmark_conversations | int >= 10)
+      else 5000
+      }}
+
 - name: Save benchmark configuration to user.info data
   agnosticd.core.agnosticd_user_info:
     data:
@@ -56,6 +66,7 @@
       litemaas_benchmark_effective_turns: "{{ _benchmark_effective_turns }}"
       litemaas_benchmark_mcp_enabled: "{{ ocp4_workload_litemaas_benchmark_mcp_enabled | default(false) }}"
       litemaas_benchmark_parallel_workers: "{{ _benchmark_parallel_workers }}"
+      litemaas_benchmark_p95_threshold: "{{ _benchmark_p95_threshold }}"
 
 - name: Display benchmark start message
   agnosticd.core.agnosticd_user_info:
@@ -258,8 +269,8 @@
     - name: Determine benchmark status
       ansible.builtin.set_fact:
         benchmark_status: >-
-          {{ 'PASS ✓' if (benchmark_p95 != 'N/A' and benchmark_p95 | float < ocp4_workload_litemaas_benchmark_ttft_p95_threshold_ms)
-             else 'WARN ⚠' if (benchmark_p95 != 'N/A' and benchmark_p95 | float < (ocp4_workload_litemaas_benchmark_ttft_p95_threshold_ms * 2))
+          {{ 'PASS ✓' if (benchmark_p95 != 'N/A' and benchmark_p95 | float < (_benchmark_p95_threshold | int))
+             else 'WARN ⚠' if (benchmark_p95 != 'N/A' and benchmark_p95 | float < ((_benchmark_p95_threshold | int) * 2))
              else 'FAIL ✗' }}
         benchmark_cache_status: >-
           {{ 'EXCELLENT ✓' if (benchmark_speedup != 'N/A' and benchmark_speedup | float > (ocp4_workload_litemaas_benchmark_speedup_threshold * 1.5))
