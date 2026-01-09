@@ -18,7 +18,7 @@ ocp4_workload_litemaas_benchmark_sessions: "{{ benchmark_sessions_count | defaul
 ocp4_workload_litemaas_benchmark_turns: "{{ benchmark_turns_count | default(10) }}"
 ocp4_workload_litemaas_benchmark_mcp_enabled: "{{ benchmark_model_supports_mcp | default(false) }}"
 ocp4_workload_litemaas_benchmark_parallel_workers: "{{ benchmark_parallel | default(none) }}"  # null = auto-calculate
-ocp4_workload_litemaas_benchmark_max_tokens: "{{ benchmark_max_tokens_count | default(500) }}"
+ocp4_workload_litemaas_benchmark_max_tokens: "{{ benchmark_max_tokens_count | default(300) }}"
 
 # Request timing (simulates real user behavior)
 ocp4_workload_litemaas_benchmark_min_delay: 0.5
