@@ -43,6 +43,18 @@
 
       ════════════════════════════════════════════════════════════════
 
+- name: Create benchmark namespace
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ ocp4_workload_litemaas_benchmark_namespace }}"
+        labels:
+          guid: "{{ guid }}"
+          workload: ocp4_workload_litemaas_benchmark
+
 - name: Create benchmark Job
   kubernetes.core.k8s:
     state: present
