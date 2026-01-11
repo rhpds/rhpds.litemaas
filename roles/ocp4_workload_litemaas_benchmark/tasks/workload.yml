@@ -200,8 +200,9 @@
 - name: Calculate benchmark timeout
   ansible.builtin.set_fact:
     # Estimated: conversations × effective_turns × 10 seconds per request + 20% buffer
-    _benchmark_estimated_minutes: "{{ ((ocp4_workload_litemaas_benchmark_conversations | int * _benchmark_effective_turns | int * 10 / 60) * 1.2) | int }}"
-    _benchmark_retries: "{{ (((ocp4_workload_litemaas_benchmark_conversations | int * _benchmark_effective_turns | int * 10 / 60) * 1.2) * 2) | int }}"  # retries = minutes * 2 (30 second intervals)
+    # Minimum 4 hours (240 minutes) for heavy load tests
+    _benchmark_estimated_minutes: "{{ [((ocp4_workload_litemaas_benchmark_conversations | int * _benchmark_effective_turns | int * 10 / 60) * 1.2) | int, 240] | max }}"
+    _benchmark_retries: "{{ [((((ocp4_workload_litemaas_benchmark_conversations | int * _benchmark_effective_turns | int * 10 / 60) * 1.2) * 2) | int), 480] | max }}"  # retries = minutes * 2 (30 second intervals), minimum 480 (4 hours)
 
 - name: Display benchmark timeout
   ansible.builtin.debug:

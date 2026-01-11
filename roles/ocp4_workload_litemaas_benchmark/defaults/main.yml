@@ -27,8 +27,8 @@ ocp4_workload_litemaas_benchmark_max_delay: 2.0
 # Container image for benchmark tool
 ocp4_workload_litemaas_benchmark_image: quay.io/hayesphilip/multi-turn-benchmark:0.0.1
 
-# Job timeout
-ocp4_workload_litemaas_benchmark_timeout_seconds: 3600
+# Job timeout (minimum 4 hours for heavy load tests)
+ocp4_workload_litemaas_benchmark_timeout_seconds: 14400  # 4 hours
 
 # Performance thresholds (adjusted for workshop/lab environments)
 ocp4_workload_litemaas_benchmark_ttft_p95_threshold_ms: 15000  # 15 seconds - acceptable for workshops
