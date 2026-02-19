@@ -12,7 +12,7 @@
           - "LiteMaaS Deployment for RHPDS"
           - "========================================="
           - "Namespace: rhpds"
-          - "Version: {{ ocp4_workload_litemaas_version | default('0.1.2') }}"
+          - "Version: {{ ocp4_workload_litemaas_version | default('0.2.1') }}"
           - "========================================="
 
     - name: Deploy LiteMaaS workload

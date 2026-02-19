@@ -212,7 +212,7 @@
               spec:
                 containers:
                   - name: backend
-                    image: "{{ ocp4_workload_litemaas_backend_image }}:{{ ocp4_workload_litemaas_version }}"
+                    image: "{{ ocp4_workload_litemaas_backend_image }}:{{ ocp4_workload_litemaas_backend_tag }}"
                     ports:
                       - containerPort: 3000
                         name: http
@@ -258,6 +258,10 @@
                             key: LITELLM_MASTER_KEY
                       - name: CORS_ORIGIN
                         value: "https://{{ ocp4_workload_litemaas_frontend_route_name }}.{{ ocp4_workload_litemaas_cluster_domain }}"
+                      - name: REDIS_HOST
+                        value: "litellm-redis"
+                      - name: REDIS_PORT
+                        value: "6379"
                     resources:
                       limits:
                         memory: "{{ ocp4_workload_litemaas_backend_memory_limit }}"
@@ -309,6 +313,94 @@
             tls:
               termination: edge
               insecureEdgeTerminationPolicy: Redirect
+
+- name: Deploy Redis (for LiteLLM cache)
+  when: not (ocp4_workload_litemaas_multi_user | bool)
+  block:
+    - name: Create Redis deployment
+      kubernetes.core.k8s:
+        state: present
+        namespace: "{{ ocp4_workload_litemaas_namespace }}"
+        definition:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: litellm-redis
+            labels:
+              app: litellm-redis
+              component: cache
+          spec:
+            replicas: 1
+            selector:
+              matchLabels:
+                app: litellm-redis
+            template:
+              metadata:
+                labels:
+                  app: litellm-redis
+                  component: cache
+              spec:
+                containers:
+                  - name: redis
+                    image: "{{ ocp4_workload_litemaas_redis_image }}"
+                    imagePullPolicy: IfNotPresent
+                    ports:
+                      - containerPort: 6379
+                        name: redis
+                    resources:
+                      requests:
+                        memory: "{{ ocp4_workload_litemaas_redis_memory_request }}"
+                        cpu: "{{ ocp4_workload_litemaas_redis_cpu_request }}"
+                      limits:
+                        memory: "{{ ocp4_workload_litemaas_redis_memory_limit }}"
+                        cpu: "{{ ocp4_workload_litemaas_redis_cpu_limit }}"
+                    livenessProbe:
+                      tcpSocket:
+                        port: 6379
+                      initialDelaySeconds: 30
+                      periodSeconds: 10
+                    readinessProbe:
+                      exec:
+                        command:
+                          - /bin/sh
+                          - -c
+                          - redis-cli ping | grep PONG
+                      initialDelaySeconds: 10
+                      periodSeconds: 5
+
+    - name: Create Redis service
+      kubernetes.core.k8s:
+        state: present
+        namespace: "{{ ocp4_workload_litemaas_namespace }}"
+        definition:
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: litellm-redis
+            labels:
+              app: litellm-redis
+              component: cache
+          spec:
+            ports:
+              - port: 6379
+                targetPort: 6379
+                name: redis
+            selector:
+              app: litellm-redis
+
+    - name: Wait for Redis to be ready
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Pod
+        namespace: "{{ ocp4_workload_litemaas_namespace }}"
+        label_selectors:
+          - app=litellm-redis
+      register: r_redis_pods
+      until:
+        - r_redis_pods.resources | length > 0
+        - r_redis_pods.resources[0].status.phase == "Running"
+      retries: 15
+      delay: 10
 
 - name: Deploy LiteLLM Gateway
   when: not (ocp4_workload_litemaas_multi_user | bool)

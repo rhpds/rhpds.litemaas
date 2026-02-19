@@ -33,11 +33,19 @@ ocp4_workload_litemaas_oauth_proxy_cookie_secret: "{{ lookup('password', '/dev/n
 ocp4_workload_litemaas_oauth_proxy_serviceaccount: "litemaas-oauth-proxy"
 
 # Image configuration
-ocp4_workload_litemaas_image_registry: "quay.io/rh-aiservices-bu"
-ocp4_workload_litemaas_backend_image: "quay.io/rh-aiservices-bu/litemaas-backend"
+ocp4_workload_litemaas_image_registry: "quay.io/rhpds"
+ocp4_workload_litemaas_backend_image: "quay.io/rhpds/litemaas"
+ocp4_workload_litemaas_backend_tag: "backend-0.2.1"
 ocp4_workload_litemaas_frontend_image: "quay.io/rh-aiservices-bu/litemaas-frontend"
 ocp4_workload_litemaas_litellm_image: "ghcr.io/berriai/litellm-non_root"
-ocp4_workload_litemaas_litellm_tag: "main-v1.74.7-stable"
+ocp4_workload_litemaas_litellm_tag: "main-v1.81.0-stable"
+
+# Redis configuration (for LiteLLM cache flush from backend)
+ocp4_workload_litemaas_redis_image: "quay.io/sclorg/redis-7-c9s:latest"
+ocp4_workload_litemaas_redis_memory_request: "128Mi"
+ocp4_workload_litemaas_redis_memory_limit: "256Mi"
+ocp4_workload_litemaas_redis_cpu_request: "100m"
+ocp4_workload_litemaas_redis_cpu_limit: "250m"
 
 # Cloud provider (auto-detected if not set)
 ocp4_workload_litemaas_cloud_provider: ""
@@ -122,6 +130,11 @@ ocp4_workload_litemaas_litellm_cpu_limit: "1000m"
 
 # Workload control
 ocp4_workload_litemaas_remove: false
+ocp4_workload_litemaas_update: false
+
+# Update configuration (used when ocp4_workload_litemaas_update is true)
+ocp4_workload_litemaas_update_target_version: "0.2.1"
+ocp4_workload_litemaas_update_litellm_tag: "main-v1.81.0-stable"
 
 # Component deployment control
 ocp4_workload_litemaas_deploy_frontend: true  # User-facing web interface

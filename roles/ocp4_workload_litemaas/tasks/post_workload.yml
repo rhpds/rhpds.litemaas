@@ -162,6 +162,8 @@
                     value: "True"
                   - name: LITELLM_MODE
                     value: "PRODUCTION"
+                  - name: DISABLE_SCHEMA_UPDATE
+                    value: "true"
                 livenessProbe:
                   httpGet:
                     path: /health/liveness
