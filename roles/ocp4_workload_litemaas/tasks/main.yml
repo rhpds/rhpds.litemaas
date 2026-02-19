@@ -1,18 +1,9 @@
 ---
 # Main task file following AgnosticD core_workload pattern
 
-- name: Update workload
-  when:
-    - ocp4_workload_litemaas_update | bool
-    - not ocp4_workload_litemaas_remove | bool
-  block:
-    - name: Run update_workload tasks
-      ansible.builtin.include_tasks: update_workload.yml
-
 - name: Set up workload for user
   when:
     - not ocp4_workload_litemaas_remove | bool
-    - not ocp4_workload_litemaas_update | bool
   block:
     - name: Run pre_workload tasks
       ansible.builtin.include_tasks: pre_workload.yml

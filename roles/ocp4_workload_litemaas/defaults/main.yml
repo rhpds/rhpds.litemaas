@@ -130,11 +130,6 @@ ocp4_workload_litemaas_litellm_cpu_limit: "1000m"
 
 # Workload control
 ocp4_workload_litemaas_remove: false
-ocp4_workload_litemaas_update: false
-
-# Update configuration (used when ocp4_workload_litemaas_update is true)
-ocp4_workload_litemaas_update_target_version: "0.2.1"
-ocp4_workload_litemaas_update_litellm_tag: "main-v1.81.0-stable"
 
 # Component deployment control
 ocp4_workload_litemaas_deploy_frontend: true  # User-facing web interface
