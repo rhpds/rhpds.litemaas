@@ -107,7 +107,7 @@ print_status() {
 
 backup_databases() {
     local ns=$1
-    log_info "Backing up databases in $ns..."
+    log_info "Backing up full database in $ns..."
 
     oc exec -n "$ns" litellm-postgres-0 -- bash -c "
         export PGPASSWORD=\$(printenv POSTGRES_PASSWORD)
@@ -115,7 +115,64 @@ backup_databases() {
         echo 'done'
     " 2>/dev/null
 
-    log_ok "Database backup created at /tmp/litemaas_backup_pre_v021.sql"
+    log_ok "Full database backup created at /tmp/litemaas_backup_pre_v021.sql"
+}
+
+backup_litemaas_tables() {
+    local ns=$1
+    log_info "Backing up individual LiteMaaS tables (for selective restore if Prisma drops them)..."
+
+    # Dump each LiteMaaS table individually so we can restore them
+    # without touching LiteLLM's Prisma-managed tables
+    local tables="users teams team_members models subscriptions api_keys api_key_models subscription_status_history audit_logs daily_usage_cache"
+    oc exec -n "$ns" litellm-postgres-0 -- bash -c "
+        export PGPASSWORD=\$(printenv POSTGRES_PASSWORD)
+        for table in $tables; do
+            if psql -U litellm -d litellm -c \"SELECT 1 FROM \$table LIMIT 1\" &>/dev/null; then
+                pg_dump -U litellm -d litellm --data-only --table=\$table --no-owner --no-acl > /tmp/litemaas_backup_\${table}.sql 2>/dev/null
+                rows=\$(psql -U litellm -d litellm -t -c \"SELECT COUNT(*) FROM \$table;\" 2>/dev/null | tr -d ' ')
+                echo \"  \$table: \$rows rows backed up\"
+            else
+                echo \"  \$table: not found (skipped)\"
+            fi
+        done
+    " 2>/dev/null
+
+    log_ok "Individual LiteMaaS table backups created in /tmp/litemaas_backup_*.sql"
+}
+
+restore_litemaas_tables() {
+    local ns=$1
+    log_info "Restoring LiteMaaS table data from backups..."
+
+    # Restore in FK dependency order:
+    # 1. users, teams (no FK deps)
+    # 2. team_members (FK: user_id, team_id)
+    # 3. models (no FK deps)
+    # 4. subscriptions (FK: user_id, model_id)
+    # 5. api_keys (FK: user_id)
+    # 6. api_key_models (FK: api_key_id)
+    # 7. subscription_status_history (FK: subscription_id)
+    # 8. daily_usage_cache, audit_logs
+    local ordered_tables="users teams team_members models subscriptions api_keys api_key_models subscription_status_history daily_usage_cache audit_logs"
+
+    oc exec -n "$ns" litellm-postgres-0 -- bash -c "
+        export PGPASSWORD=\$(printenv POSTGRES_PASSWORD)
+        for table in $ordered_tables; do
+            if [ -f /tmp/litemaas_backup_\${table}.sql ]; then
+                # Disable FK checks during restore, skip conflicts
+                psql -U litellm -d litellm -c \"SET session_replication_role = replica;\" 2>/dev/null
+                psql -U litellm -d litellm < /tmp/litemaas_backup_\${table}.sql 2>/dev/null
+                psql -U litellm -d litellm -c \"SET session_replication_role = DEFAULT;\" 2>/dev/null
+                rows=\$(psql -U litellm -d litellm -t -c \"SELECT COUNT(*) FROM \$table;\" 2>/dev/null | tr -d ' ')
+                echo \"  \$table: \$rows rows restored\"
+            else
+                echo \"  \$table: no backup found (skipped)\"
+            fi
+        done
+    " 2>/dev/null
+
+    log_ok "LiteMaaS table data restored"
 }
 
 check_health() {
@@ -251,6 +308,7 @@ fi
 # ============================================================================
 log_phase "Database Backup"
 backup_databases "$NAMESPACE"
+backup_litemaas_tables "$NAMESPACE"
 
 # ============================================================================
 # Phase 1: Update Backend & Frontend
@@ -402,42 +460,138 @@ else
     log_ok "DISABLE_SCHEMA_UPDATE already set ($EXISTING_DISABLE)"
 fi
 
-# Check if LiteMaaS tables were dropped by Prisma during LiteLLM upgrade
+# ============================================================================
+# Table Recovery: Check if Prisma dropped LiteMaaS tables and restore
+# ============================================================================
+log_phase "Table Recovery"
+
 LITEMAAS_TABLES=$(oc exec litellm-postgres-0 -n "$NAMESPACE" -- bash -c "
     export PGPASSWORD=\$(printenv POSTGRES_PASSWORD)
     psql -U litellm -d litellm -t -c \"SELECT COUNT(*) FROM pg_tables WHERE schemaname = 'public' AND tablename = 'users';\"
 " 2>/dev/null | tr -d ' \n')
 
 if [ "$LITEMAAS_TABLES" = "0" ]; then
-    log_warn "LiteMaaS tables were dropped by Prisma during LiteLLM upgrade — restarting backend to recreate..."
+    log_warn "LiteMaaS tables were dropped by Prisma during LiteLLM upgrade"
+    log_info "Restarting backend to recreate table schema..."
     oc rollout restart deployment/litellm-backend -n "$NAMESPACE"
     oc rollout status deployment/litellm-backend -n "$NAMESPACE" --timeout="${ROLLOUT_TIMEOUT}" 2>&1
-    log_ok "Backend restarted — LiteMaaS tables recreated"
+    log_ok "Backend restarted — LiteMaaS table schema recreated (empty)"
+
+    log_info "Restoring data from pre-upgrade backups..."
+    restore_litemaas_tables "$NAMESPACE"
+else
+    log_ok "LiteMaaS tables intact — no restore needed"
 fi
 
 # ============================================================================
-# Data Sync: Fix user ID mismatches
+# Data Sync: Users and API Keys
 # ============================================================================
-log_phase "Data Sync: User IDs"
+log_phase "Data Sync: Users & API Keys"
 sync_user_ids "$NAMESPACE"
 
-# Data migration (sync users/keys from LiteLLM tables to LiteMaaS tables)
+# Sync users from LiteLLM_UserTable that don't exist in LiteMaaS users table
+# Uses real OpenShift UIDs as oauth_id so OAuth login works immediately
 log_info "Syncing users from LiteLLM to LiteMaaS..."
 POSTGRES_POD="litellm-postgres-0"
+
+# Get emails of users that need migrating
+MIGRATE_EMAILS=$(oc exec -n "$NAMESPACE" "$POSTGRES_POD" -- bash -c "
+    export PGPASSWORD=\$(printenv POSTGRES_PASSWORD)
+    psql -U litellm -d litellm -t -c \"
+        SELECT l.user_email FROM \\\"LiteLLM_UserTable\\\" l
+        WHERE l.user_email IS NOT NULL AND l.user_email != ''
+        AND l.user_email NOT IN (SELECT email FROM users WHERE email IS NOT NULL);
+    \"
+" 2>/dev/null | tr -d ' ' | grep -v '^$' || true)
+
+# Fetch OpenShift user UIDs once (used for both new and existing users)
+OC_USERS=$(oc get users -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.uid}{"\n"}{end}' 2>/dev/null || true)
+
+if [ -n "$MIGRATE_EMAILS" ]; then
+    log_info "Looking up OpenShift UIDs for migrating users..."
+    while IFS= read -r email; do
+        [ -z "$email" ] && continue
+        OC_UID=$(echo "$OC_USERS" | grep "^${email}	" | awk '{print $2}' || true)
+        if [ -z "$OC_UID" ]; then
+            log_warn "  No OpenShift user found for $email — using placeholder (will be fixed on first login)"
+            OC_UID="migration-placeholder"
+        fi
+
+        oc exec -n "$NAMESPACE" "$POSTGRES_POD" -- bash -c "
+            export PGPASSWORD=\$(printenv POSTGRES_PASSWORD)
+            psql -U litellm -d litellm -c \"
+                INSERT INTO users (id, username, email, oauth_provider, oauth_id, roles, sync_status, created_at, updated_at)
+                SELECT user_id::uuid, user_email, user_email, 'openshift', '$OC_UID',
+                    CASE WHEN user_role = 'proxy_admin' THEN ARRAY['admin','user'] ELSE ARRAY['user'] END,
+                    'synced', NOW(), NOW()
+                FROM \\\"LiteLLM_UserTable\\\"
+                WHERE user_email = '$email'
+                ON CONFLICT (id) DO UPDATE SET oauth_id = '$OC_UID', updated_at = NOW();
+            \"
+        " 2>/dev/null
+        log_ok "  Migrated $email (oauth_id=${OC_UID:0:8}...)"
+    done <<< "$MIGRATE_EMAILS"
+else
+    log_ok "No new users to migrate"
+fi
+
+# Fix any existing users that still have stale 'migration-' oauth_id
+log_info "Checking for users with stale oauth_id..."
+STALE_EMAILS=$(oc exec -n "$NAMESPACE" "$POSTGRES_POD" -- bash -c "
+    export PGPASSWORD=\$(printenv POSTGRES_PASSWORD)
+    psql -U litellm -d litellm -t -c \"
+        SELECT email FROM users WHERE oauth_id LIKE 'migration-%' AND email != 'system@litemaas.internal';
+    \"
+" 2>/dev/null | tr -d ' ' | grep -v '^$' || true)
+
+if [ -n "$STALE_EMAILS" ]; then
+    while IFS= read -r email; do
+        [ -z "$email" ] && continue
+        OC_UID=$(echo "$OC_USERS" | grep "^${email}	" | awk '{print $2}' || true)
+        if [ -n "$OC_UID" ]; then
+            oc exec -n "$NAMESPACE" "$POSTGRES_POD" -- bash -c "
+                export PGPASSWORD=\$(printenv POSTGRES_PASSWORD)
+                psql -U litellm -d litellm -c \"
+                    UPDATE users SET oauth_id = '$OC_UID', updated_at = NOW() WHERE email = '$email';
+                \"
+            " 2>/dev/null
+            log_ok "  Fixed oauth_id for $email"
+        else
+            log_warn "  No OpenShift UID found for $email — will be fixed on first login"
+        fi
+    done <<< "$STALE_EMAILS"
+else
+    log_ok "No users with stale oauth_id"
+fi
+
+# Sync API keys from LiteLLM_VerificationToken to api_keys table
+log_info "Syncing API keys from LiteLLM to LiteMaaS..."
 oc exec -n "$NAMESPACE" "$POSTGRES_POD" -- bash -c "
 export PGPASSWORD=\$(printenv POSTGRES_PASSWORD)
 psql -U litellm -d litellm <<'EOSQL'
-INSERT INTO users (id, username, email, oauth_provider, oauth_id, roles, sync_status, created_at, updated_at)
-SELECT user_id::uuid, user_email, user_email, 'openshift', 'migration-' || user_id,
-  CASE WHEN user_role = 'proxy_admin' THEN ARRAY['admin','user'] ELSE ARRAY['user'] END,
-  'synced', NOW(), NOW()
-FROM \"LiteLLM_UserTable\"
-WHERE user_email IS NOT NULL AND user_email != ''
-  AND user_email NOT IN (SELECT email FROM users WHERE email IS NOT NULL)
-ON CONFLICT (id) DO NOTHING;
+INSERT INTO api_keys (id, user_id, name, key_hash, key_prefix, lite_llm_key_value, permissions, current_spend, is_active, sync_status, litellm_key_alias, created_at, updated_at, last_sync_at)
+SELECT
+    gen_random_uuid(),
+    u.id,
+    COALESCE(NULLIF(vt.key_alias, ''), vt.key_name, 'migrated-key'),
+    vt.token,
+    vt.key_name,
+    vt.key_name,
+    '{}',
+    COALESCE(vt.spend, 0),
+    true,
+    'synced',
+    vt.key_alias,
+    COALESCE(vt.created_at, NOW()),
+    NOW(),
+    NOW()
+FROM "LiteLLM_VerificationToken" vt
+JOIN users u ON u.id::text = vt.user_id
+WHERE vt.token NOT IN (SELECT key_hash FROM api_keys WHERE key_hash IS NOT NULL)
+  AND vt.user_id != 'default_user_id';
 EOSQL
 " 2>/dev/null
-log_ok "Users synced"
+log_ok "API keys synced"
 
 # Restart backend for model sync + key alias backfill
 log_info "Restarting backend for model sync..."
