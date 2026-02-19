@@ -311,6 +311,74 @@ fi
 # ============================================================================
 log_phase "PHASE 3: Apply v0.2.1 fixes"
 
+# Deploy Redis if not already present
+if ! oc get deployment litellm-redis -n "$NAMESPACE" &>/dev/null; then
+    log_info "Deploying Redis..."
+    oc apply -n "$NAMESPACE" -f - <<'REDIS_EOF'
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: litellm-redis
+  labels:
+    app: litellm-redis
+    component: cache
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: litellm-redis
+  template:
+    metadata:
+      labels:
+        app: litellm-redis
+        component: cache
+    spec:
+      containers:
+        - name: redis
+          image: quay.io/sclorg/redis-7-c9s:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 6379
+              name: redis
+          resources:
+            requests:
+              memory: 128Mi
+              cpu: 100m
+            limits:
+              memory: 256Mi
+              cpu: 250m
+          livenessProbe:
+            tcpSocket:
+              port: 6379
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            exec:
+              command: ["/bin/sh", "-c", "redis-cli ping | grep PONG"]
+            initialDelaySeconds: 10
+            periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: litellm-redis
+  labels:
+    app: litellm-redis
+    component: cache
+spec:
+  ports:
+    - port: 6379
+      targetPort: 6379
+      name: redis
+  selector:
+    app: litellm-redis
+REDIS_EOF
+    oc rollout status deployment/litellm-redis -n "$NAMESPACE" --timeout="${ROLLOUT_TIMEOUT}" 2>&1
+    log_ok "Redis deployed"
+else
+    log_ok "Redis already deployed"
+fi
+
 # Set REDIS env vars on backend (if not already set)
 EXISTING_REDIS=$(oc get deployment litellm-backend -n "$NAMESPACE" -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="REDIS_HOST")].value}' 2>/dev/null || echo "")
 if [ -z "$EXISTING_REDIS" ]; then
