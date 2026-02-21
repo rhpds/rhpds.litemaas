@@ -27,21 +27,6 @@
   ansible.builtin.set_fact:
     _litemaas_actual_postgres_password: "{{ r_actual_pg_password.stdout | trim }}"
 
-- name: Create LiteLLM database using oc exec with actual password
-  ansible.builtin.shell: |
-    oc exec -n {{ ocp4_workload_litemaas_namespace }} postgres-0 -- bash -c "
-    export PGPASSWORD='{{ _litemaas_actual_postgres_password }}'
-    psql -U litemaas -d postgres -c 'DROP DATABASE IF EXISTS litellm_db;'
-    psql -U litemaas -d postgres -c 'CREATE DATABASE litellm_db OWNER litemaas;'
-    echo 'LiteLLM database created successfully'
-    "
-  register: r_db_creation
-  failed_when: false
-
-- name: Display database creation result
-  ansible.builtin.debug:
-    msg: "{{ r_db_creation.stdout_lines }}"
-
 - name: Check if litellm-secret already exists
   kubernetes.core.k8s_info:
     api_version: v1
@@ -88,15 +73,9 @@
         LITELLM_MASTER_KEY: "{{ _litemaas_litellm_master_key }}"
         UI_USERNAME: "{{ _litemaas_litellm_ui_username }}"
         UI_PASSWORD: "{{ _litemaas_litellm_ui_password }}"
-        DATABASE_URL: "postgresql://litemaas:{{ _litemaas_actual_postgres_password }}@postgres:5432/litellm_db?sslmode=disable"
+        DATABASE_URL: "postgresql://litemaas:{{ _litemaas_actual_postgres_password }}@postgres:5432/litemaas?sslmode=disable"
 
-- name: Restart LiteLLM deployment to pick up secret changes
-  ansible.builtin.shell: |
-    oc rollout restart deployment/litellm -n {{ ocp4_workload_litemaas_namespace }}
-  register: r_litellm_restart
-  changed_when: true
-
-- name: Update LiteLLM deployment with database environment variables
+- name: Update LiteLLM deployment with DISABLE_SCHEMA_UPDATE and correct DATABASE_URL
   kubernetes.core.k8s:
     state: present
     namespace: "{{ ocp4_workload_litemaas_namespace }}"
