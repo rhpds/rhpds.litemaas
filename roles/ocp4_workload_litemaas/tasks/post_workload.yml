@@ -215,8 +215,8 @@
   loop: "{{ _litemaas_enabled_deployments }}"
   vars:
     _litemaas_enabled_deployments: >-
-      {{ (ocp4_workload_litemaas_deploy_backend | bool) | ternary(['litemaas-backend'], []) +
-         (ocp4_workload_litemaas_deploy_frontend | bool) | ternary(['litemaas-frontend'], []) }}
+      {{ (ocp4_workload_litemaas_deploy_backend | bool) | ternary(['litellm-backend'], []) +
+         (ocp4_workload_litemaas_deploy_frontend | bool) | ternary(['litellm-frontend'], []) }}
 
 - name: Get frontend route
   when: ocp4_workload_litemaas_deploy_frontend | bool

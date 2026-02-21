@@ -214,13 +214,13 @@
                   - name: backend
                     image: "{{ ocp4_workload_litemaas_backend_image }}:{{ ocp4_workload_litemaas_backend_tag }}"
                     ports:
-                      - containerPort: 3000
+                      - containerPort: 8080
                         name: http
                     env:
                       - name: NODE_ENV
                         value: "production"
                       - name: PORT
-                        value: "3000"
+                        value: "8080"
                       - name: NODE_TLS_REJECT_UNAUTHORIZED
                         value: "0"
                       - name: DATABASE_URL
@@ -283,8 +283,8 @@
               app: litellm-backend
           spec:
             ports:
-              - port: 3000
-                targetPort: 3000
+              - port: 8080
+                targetPort: 8080
                 name: http
             selector:
               app: litellm-backend
@@ -663,7 +663,7 @@
                         name: http
                     env:
                       - name: BACKEND_URL
-                        value: "http://litellm-backend:3000"
+                        value: "http://litellm-backend:8080"
 {% if ocp4_workload_litemaas_enable_custom_logo | bool %}
                     volumeMounts:
                       - name: assets-volume
