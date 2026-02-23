@@ -28,7 +28,6 @@ ocp4_workload_litemaas_oauth_proxy_enabled: true
 
 ```bash
 ansible-playbook playbooks/deploy_litemaas_ha.yml \
-  -e ocp4_workload_litemaas_ha_enabled=true \
   -e ocp4_workload_litemaas_oauth_proxy_enabled=true
 ```
 
@@ -56,14 +55,14 @@ ansible-playbook playbooks/deploy_litemaas_ha.yml \
 
 ```yaml
 # In AgnosticV common.yaml
-ocp4_workload_litemaas_ha_enabled: true
+
 ocp4_workload_litemaas_oauth_proxy_enabled: true
 ```
 
 ### Example 2: Custom OAuth Proxy Image
 
 ```yaml
-ocp4_workload_litemaas_ha_enabled: true
+
 ocp4_workload_litemaas_oauth_proxy_enabled: true
 ocp4_workload_litemaas_oauth_proxy_image: "quay.io/openshift/origin-oauth-proxy:4.15"
 ```
@@ -210,13 +209,7 @@ oc get clusterrolebinding litemaas-oauth-proxy-litemaas
 
 ## Compatibility
 
-| Deployment Mode | OAuth Proxy Support |
-|----------------|---------------------|
-| Single Instance | ⏳ Coming soon |
-| Multi-User | ⏳ Coming soon |
-| HA Mode | ✅ Yes |
-
-**Currently implemented for HA deployments only.**
+OAuth Proxy is supported for all HA deployments.
 
 ## Security Considerations
 
@@ -252,7 +245,7 @@ workloads:
   - rhpds.litemaas.ocp4_workload_litemaas
 
 # Enable HA with OAuth Proxy
-ocp4_workload_litemaas_ha_enabled: true
+
 ocp4_workload_litemaas_oauth_proxy_enabled: true
 ```
 
@@ -266,14 +259,12 @@ Login required: Use your OpenShift credentials
 
 ## Limitations
 
-1. **HA Only**: Currently only implemented for HA deployments
-2. **All Users**: No group-based access control (all authenticated users allowed)
-3. **OpenShift Only**: Requires OpenShift cluster (uses OpenShift OAuth)
-4. **No External OAuth**: Only works with OpenShift internal authentication
+1. **All Users**: No group-based access control (all authenticated users allowed)
+2. **OpenShift Only**: Requires OpenShift cluster (uses OpenShift OAuth)
+3. **No External OAuth**: Only works with OpenShift internal authentication
 
 ## Future Enhancements
 
-- Support for single and multi-user deployments
 - Group-based access control
 - Custom session timeout configuration
 - Support for external OAuth providers

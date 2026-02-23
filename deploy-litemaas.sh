@@ -2,33 +2,23 @@
 # =============================================================================
 # LiteMaaS Deployment Script
 # =============================================================================
-# Deploys LiteMaaS infrastructure with automatic Python venv setup
+# Deploys LiteMaaS in High Availability mode with automatic Python venv setup
 #
 # Usage:
-#   Single-user deployment:
-#     ./deploy-litemaas.sh <namespace>
+#   # Standard HA deployment
+#   ./deploy-litemaas.sh <namespace>
 #
-#   Multi-user deployment:
-#     ./deploy-litemaas.sh <namespace> --multi-user --num-users <count>
+#   # HA with RHDP branding
+#   ./deploy-litemaas.sh <namespace> --rhdp
 #
-#   High availability deployment:
-#     ./deploy-litemaas.sh <namespace> --ha --replicas <count>
+#   # Custom replicas
+#   ./deploy-litemaas.sh <namespace> --replicas 5
 #
-#   Remove deployment:
-#     ./deploy-litemaas.sh <namespace> --remove
+#   # With OAuth and custom route prefix
+#   ./deploy-litemaas.sh <namespace> --oauth --route-prefix litellm-prod
 #
-#   Examples:
-#     # Single instance in litellm-rhpds namespace
-#     ./deploy-litemaas.sh litellm-rhpds
-#
-#     # Multi-user (10 users) in custom namespace
-#     ./deploy-litemaas.sh my-litemaas --multi-user --num-users 10
-#
-#     # HA deployment with 3 replicas
-#     ./deploy-litemaas.sh litellm-prod --ha --replicas 3
-#
-#     # Remove deployment
-#     ./deploy-litemaas.sh litellm-rhpds --remove
+#   # Remove deployment
+#   ./deploy-litemaas.sh <namespace> --remove
 # =============================================================================
 
 set -e
@@ -45,17 +35,13 @@ VENV_DIR="$SCRIPT_DIR/.venv"
 
 # Default values
 NAMESPACE=""
-DEPLOYMENT_MODE="single"
-NUM_USERS=1
-HA_REPLICAS=2
+HA_REPLICAS=3
 REMOVE_MODE=false
 EXTRA_VARS=""
 
 # Feature flags
 ENABLE_OAUTH=false
-ENABLE_BACKEND=false
-ENABLE_FRONTEND=false
-ENABLE_LOGOS=false
+ENABLE_RHDP=false
 ROUTE_PREFIX=""
 
 # Parse arguments
@@ -64,38 +50,26 @@ if [ $# -eq 0 ]; then
     echo ""
     echo "Usage: $0 <namespace> [options]"
     echo ""
-    echo "Deployment Modes:"
-    echo "  --multi-user          Deploy multi-user lab environment"
-    echo "  --num-users <count>   Number of users (default: 1)"
-    echo "  --ha                  Deploy high availability (auto-enables backend + frontend)"
-    echo "  --replicas <count>    Number of LiteLLM replicas (default: 2)"
+    echo "Options:"
+    echo "  --replicas <count>    Number of LiteLLM replicas (default: 3)"
     echo "  --remove              Remove existing deployment"
-    echo ""
-    echo "Optional Features:"
     echo "  --oauth               Enable OAuth authentication with OpenShift"
-    echo "  --logos               Enable Red Hat logos and Beta labels (RHDP branding)"
+    echo "  --rhdp                Enable RHDP branding (logos + footer)"
     echo "  --route-prefix <name> Set custom route prefix (e.g., litellm-prod)"
-    echo ""
-    echo "Advanced:"
     echo "  -e <key=value>        Pass extra variables to Ansible"
     echo ""
     echo "Examples:"
-    echo "  # Simple single-user deployment"
-    echo "  $0 litellm-dev"
+    echo "  # Standard HA deployment"
+    echo "  $0 litellm-rhpds"
     echo ""
-    echo "  # HA deployment (auto-enables backend + frontend)"
-    echo "  $0 litellm-rhpds --ha --replicas 3"
+    echo "  # HA with RHDP branding"
+    echo "  $0 litellm-rhpds --rhdp"
     echo ""
-    echo "  # HA with OAuth and custom routes"
-    echo "  $0 litellm-rhpds --ha --replicas 3 --oauth --route-prefix litellm-prod"
+    echo "  # Full RHDP production (OAuth + branding + custom routes)"
+    echo "  $0 litellm-rhpds --oauth --rhdp --route-prefix litellm-prod"
     echo ""
-    echo "  # Full RHDP production (HA + OAuth + branding)"
-    echo "  $0 litellm-rhpds --ha --replicas 3 --oauth --logos --route-prefix litellm-prod"
-    echo ""
-    echo "  # Multi-user lab (10 users)"
-    echo "  $0 my-lab --multi-user --num-users 10"
-    echo ""
-    echo "Note: HA mode automatically deploys backend and frontend for full stack experience."
+    echo "  # Remove deployment"
+    echo "  $0 litellm-rhpds --remove"
     exit 1
 fi
 
@@ -104,18 +78,6 @@ shift
 
 while [[ $# -gt 0 ]]; do
     case $1 in
-        --multi-user)
-            DEPLOYMENT_MODE="multi-user"
-            shift
-            ;;
-        --num-users)
-            NUM_USERS="$2"
-            shift 2
-            ;;
-        --ha)
-            DEPLOYMENT_MODE="ha"
-            shift
-            ;;
         --replicas)
             HA_REPLICAS="$2"
             shift 2
@@ -128,16 +90,8 @@ while [[ $# -gt 0 ]]; do
             ENABLE_OAUTH=true
             shift
             ;;
-        --backend)
-            ENABLE_BACKEND=true
-            shift
-            ;;
-        --frontend)
-            ENABLE_FRONTEND=true
-            shift
-            ;;
-        --logos)
-            ENABLE_LOGOS=true
+        --rhdp)
+            ENABLE_RHDP=true
             shift
             ;;
         --route-prefix)
@@ -231,52 +185,24 @@ echo ""
 
 # Prepare Ansible variables
 ANSIBLE_VARS="-e ocp4_workload_litemaas_namespace=$NAMESPACE"
+ANSIBLE_VARS="$ANSIBLE_VARS -e ocp4_workload_litemaas_ha_litellm_replicas=$HA_REPLICAS"
+PLAYBOOK="playbooks/deploy_litemaas_ha.yml"
 
 if [ "$REMOVE_MODE" = true ]; then
     ANSIBLE_VARS="$ANSIBLE_VARS -e ocp4_workload_litemaas_remove=true"
 fi
 
-# Add deployment mode specific variables
-case $DEPLOYMENT_MODE in
-    multi-user)
-        ANSIBLE_VARS="$ANSIBLE_VARS -e ocp4_workload_litemaas_multi_user=true -e num_users=$NUM_USERS"
-        PLAYBOOK="playbooks/deploy_litemaas.yml"
-        ;;
-    ha)
-        ANSIBLE_VARS="$ANSIBLE_VARS -e ocp4_workload_litemaas_ha_litellm_replicas=$HA_REPLICAS"
-        PLAYBOOK="playbooks/deploy_litemaas_ha.yml"
-
-        # HA mode: Enable backend and frontend by default (unless explicitly disabled)
-        if [ "$ENABLE_BACKEND" = false ]; then
-            ENABLE_BACKEND=true
-        fi
-        if [ "$ENABLE_FRONTEND" = false ]; then
-            ENABLE_FRONTEND=true
-        fi
-        ;;
-    single)
-        PLAYBOOK="playbooks/deploy_litemaas.yml"
-        ;;
-esac
-
-# Display deployment configuration (after auto-enable logic)
+# Display deployment configuration
 echo "========================================="
-echo "LiteMaaS Deployment"
+echo "LiteMaaS HA Deployment"
 echo "========================================="
 echo "Namespace:        $NAMESPACE"
-echo "Deployment Mode:  $DEPLOYMENT_MODE"
-if [ "$DEPLOYMENT_MODE" == "multi-user" ]; then
-    echo "Number of Users:  $NUM_USERS"
-elif [ "$DEPLOYMENT_MODE" == "ha" ]; then
-    echo "HA Replicas:      $HA_REPLICAS"
-fi
+echo "HA Replicas:      $HA_REPLICAS"
 echo "Remove Mode:      $REMOVE_MODE"
 echo ""
 echo "Features:"
 echo "  OAuth:          $ENABLE_OAUTH"
-echo "  Backend:        $ENABLE_BACKEND"
-echo "  Frontend:       $ENABLE_FRONTEND"
-echo "  Logos/Beta:     $ENABLE_LOGOS"
+echo "  RHDP Branding:  $ENABLE_RHDP"
 if [ -n "$ROUTE_PREFIX" ]; then
     echo "  Route Prefix:   $ROUTE_PREFIX"
 fi
@@ -287,16 +213,12 @@ if [ "$ENABLE_OAUTH" = true ]; then
     ANSIBLE_VARS="$ANSIBLE_VARS -e ocp4_workload_litemaas_oauth_enabled=true"
 fi
 
-if [ "$ENABLE_BACKEND" = true ]; then
-    ANSIBLE_VARS="$ANSIBLE_VARS -e ocp4_workload_litemaas_deploy_backend=true"
-fi
+# Backend and frontend always enabled in HA
+ANSIBLE_VARS="$ANSIBLE_VARS -e ocp4_workload_litemaas_deploy_backend=true"
+ANSIBLE_VARS="$ANSIBLE_VARS -e ocp4_workload_litemaas_deploy_frontend=true"
 
-if [ "$ENABLE_FRONTEND" = true ]; then
-    ANSIBLE_VARS="$ANSIBLE_VARS -e ocp4_workload_litemaas_deploy_frontend=true"
-fi
-
-if [ "$ENABLE_LOGOS" = true ]; then
-    ANSIBLE_VARS="$ANSIBLE_VARS -e ocp4_workload_litemaas_enable_custom_logo=true"
+if [ "$ENABLE_RHDP" = true ]; then
+    ANSIBLE_VARS="$ANSIBLE_VARS -e ocp4_workload_litemaas_branding_enabled=true"
 fi
 
 if [ -n "$ROUTE_PREFIX" ]; then
@@ -360,20 +282,13 @@ if ansible-playbook "$PLAYBOOK" $ANSIBLE_VARS; then
         echo "  oc get secret backend-secret -n $NAMESPACE -o jsonpath='{.data.ADMIN_PASSWORD}' | base64 -d"
         echo ""
 
-        if [ "$DEPLOYMENT_MODE" == "multi-user" ]; then
-            echo -e "${YELLOW}Multi-User Deployment:${NC}"
-            echo "  Namespaces created: ${NAMESPACE}-user1 to ${NAMESPACE}-user${NUM_USERS}"
-            echo ""
-        elif [ "$DEPLOYMENT_MODE" == "ha" ]; then
-            echo -e "${YELLOW}High Availability:${NC}"
-            echo "  LiteLLM replicas: $HA_REPLICAS"
-            echo ""
-        fi
+        echo -e "${YELLOW}High Availability:${NC}"
+        echo "  LiteLLM replicas: $HA_REPLICAS"
+        echo ""
 
         echo "Next steps:"
         echo "  1. Get the master API key using command above"
         echo "  2. Add models via LiteLLM admin UI or playbook"
-        echo "  3. Run sync: ./sync-models.sh $NAMESPACE"
     fi
 else
     echo ""

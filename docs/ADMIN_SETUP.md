@@ -52,7 +52,7 @@ Admins can use the API key in two ways:
 To add additional admin API keys, update the deployment:
 
 ```bash
-ansible-playbook playbooks/deploy_litemaas.yml \
+ansible-playbook playbooks/deploy_litemaas_ha.yml \
   -e ocp4_workload_litemaas_oauth_client_id=... \
   -e ocp4_workload_litemaas_oauth_client_secret=... \
   -e '{"ocp4_workload_litemaas_admin_api_keys": ["key1", "key2", "key3"]}'

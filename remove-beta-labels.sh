@@ -177,9 +177,9 @@ if [ "$PERMANENT" = true ]; then
         if [ "$HAS_INIT_CONTAINER" -gt 0 ]; then
             echo ""
             echo -e "${YELLOW}Deployment has initContainer that adds Beta labels.${NC}"
-            echo "To make removal permanent, you need to redeploy without --logos flag:"
+            echo "To make removal permanent, redeploy without --rhdp flag:"
             echo ""
-            echo -e "  ${GREEN}./deploy-litemaas.sh $NAMESPACE --ha --replicas <count> --oauth --route-prefix <name>${NC}"
+            echo -e "  ${GREEN}./deploy-litemaas.sh $NAMESPACE --replicas <count> --oauth --route-prefix <name>${NC}"
             echo ""
             echo "Or manually edit the deployment and remove initContainer sed commands:"
             echo ""
@@ -218,7 +218,7 @@ echo ""
 if [ "$PERMANENT" = false ]; then
     echo -e "${YELLOW}Note: Changes will revert if the pod restarts.${NC}"
     echo "For permanent removal, run: $0 $NAMESPACE --permanent"
-    echo "Or redeploy without --logos flag"
+    echo "Or redeploy without --rhdp flag"
 fi
 
 echo ""

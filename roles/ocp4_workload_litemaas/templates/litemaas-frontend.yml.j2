@@ -18,73 +18,27 @@ spec:
         component: web
     spec:
       initContainers:
-{% if ocp4_workload_litemaas_enable_custom_logo | bool %}
-        - name: copy-custom-logos
-          image: "{{ ocp4_workload_litemaas_frontend_image }}:{{ ocp4_workload_litemaas_version }}"
+{% if ocp4_workload_litemaas_branding_enabled | default(false) | bool %}
+        - name: setup-branding
+          image: busybox:1.36
           command:
             - sh
             - -c
             - |
-              echo "Setting up assets with custom logos..."
-
-              # First, copy ALL assets from the image to the shared volume
-              echo "Copying all frontend assets to shared volume..."
-              cp -r /opt/app-root/src/assets/* /shared-assets/
-
-              # Now replace the logo files with custom ones
-              echo "Replacing logos with custom versions..."
-              LOGO_LIGHT=$(ls /shared-assets/logo-title-*.svg 2>/dev/null | head -1)
-              LOGO_DARK=$(ls /shared-assets/logo-title-white-*.svg 2>/dev/null | head -1)
-              FAVICON=$(ls /shared-assets/litemaas_favicon-*.svg 2>/dev/null | head -1)
-
-              if [ -n "$LOGO_LIGHT" ]; then
-                echo "Found light logo: $LOGO_LIGHT"
-                cp /tmp/logos/logo-light.svg "$LOGO_LIGHT"
-                echo "✓ Replaced light logo"
-              fi
-
-              if [ -n "$LOGO_DARK" ]; then
-                echo "Found dark logo: $LOGO_DARK"
-                cp /tmp/logos/logo-dark.svg "$LOGO_DARK"
-                echo "✓ Replaced dark logo"
-              fi
-
-              if [ -n "$FAVICON" ]; then
-                echo "Found favicon: $FAVICON"
-                cp /tmp/logos/favicon.svg "$FAVICON"
-                echo "✓ Replaced favicon"
-              fi
-
-              echo "✓ Assets setup complete!"
-
-              # Replace welcome message and add disclaimer
-              echo "Customizing welcome message and adding disclaimer..."
-              for jsfile in /shared-assets/*.js; do
-                if grep -q "Welcome to LiteMaaS" "$jsfile" 2>/dev/null; then
-                  sed -i 's/Welcome to LiteMaaS/Welcome to Red Hat Demo Platform MaaS service/g' "$jsfile"
-                  echo "✓ Updated welcome message in $(basename $jsfile)"
-                fi
-                # Replace subtitle with disclaimer
-                if grep -q "Your Model as a Service platform" "$jsfile" 2>/dev/null; then
-                  sed -i 's/Your Model as a Service platform for accessing and managing AI models\./This service is intended for demos, workshops, and training purposes only. Do not share credentials or use for customer-facing production workloads./g' "$jsfile"
-                  echo "✓ Replaced subtitle with disclaimer in $(basename $jsfile)"
-                fi
-                # Update login page title
-                if grep -q "Sign in to LiteMaaS" "$jsfile" 2>/dev/null; then
-                  sed -i 's/Sign in to LiteMaaS/Sign in to Red Hat Demo Platform MaaS/g' "$jsfile"
-                  echo "✓ Updated login page title in $(basename $jsfile)"
-                fi
-                # Handle "Log in to LiteMaaS" variant
-                if grep -q "Log in to LiteMaaS" "$jsfile" 2>/dev/null; then
-                  sed -i 's/Log in to LiteMaaS/Log in to Red Hat Demo Platform MaaS/g' "$jsfile"
-                  echo "✓ Updated login page title (Log in variant) in $(basename $jsfile)"
-                fi
-              done
+              echo "Setting up branding assets..."
+              mkdir -p /opt/app-root/src/branding
+              cp /tmp/branding/logo-light.svg /opt/app-root/src/branding/
+              cp /tmp/branding/logo-dark.svg /opt/app-root/src/branding/
+              cp /tmp/branding/branding-inject.js /opt/app-root/src/branding/
+              # Decode favicon from base64
+              echo "/tmp/branding/favicon.png" | xargs cat | base64 -d > /opt/app-root/src/branding/favicon.png 2>/dev/null || cp /tmp/branding/favicon.png /opt/app-root/src/branding/favicon.png
+              echo "Branding assets ready"
+              ls -la /opt/app-root/src/branding/
           volumeMounts:
-            - name: custom-logo
-              mountPath: /tmp/logos
-            - name: assets-volume
-              mountPath: /shared-assets
+            - name: branding-assets
+              mountPath: /tmp/branding
+            - name: branding-volume
+              mountPath: /opt/app-root/src/branding
 {% endif %}
         - name: wait-for-backend
           image: busybox:1.36
@@ -107,12 +61,6 @@ spec:
           env:
             - name: BACKEND_URL
               value: "http://litellm-backend:8080"
-{% if ocp4_workload_litemaas_enable_custom_logo | bool %}
-          volumeMounts:
-            - name: assets-volume
-              mountPath: /opt/app-root/src/assets
-              readOnly: true
-{% endif %}
           resources:
             requests:
               memory: "128Mi"
@@ -136,12 +84,57 @@ spec:
             periodSeconds: 15
             timeoutSeconds: 5
             failureThreshold: 3
-{% if ocp4_workload_litemaas_enable_custom_logo | bool %}
+{% if ocp4_workload_litemaas_branding_enabled | default(false) | bool %}
+        - name: branding-proxy
+          image: "{{ ocp4_workload_litemaas_frontend_image }}:{{ ocp4_workload_litemaas_version }}"
+          command:
+            - nginx
+            - -c
+            - /etc/nginx/branding/nginx.conf
+            - -g
+            - "daemon off;"
+          ports:
+            - containerPort: 8081
+              name: branding
+          volumeMounts:
+            - name: branding-nginx-config
+              mountPath: /etc/nginx/branding
+            - name: branding-volume
+              mountPath: /opt/app-root/src/branding
+              readOnly: true
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "128Mi"
+              cpu: "100m"
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8081
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8081
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+{% endif %}
+{% if ocp4_workload_litemaas_branding_enabled | default(false) | bool %}
       volumes:
-        - name: custom-logo
+        - name: branding-assets
           configMap:
-            name: litellm-custom-logo
-        - name: assets-volume
+            name: litemaas-branding
+        - name: branding-nginx-config
+          configMap:
+            name: litemaas-branding-nginx-config
+        - name: branding-volume
           emptyDir: {}
 {% endif %}
 ---
@@ -155,7 +148,11 @@ metadata:
 spec:
   ports:
     - port: 8080
+{% if ocp4_workload_litemaas_branding_enabled | default(false) | bool %}
+      targetPort: 8081
+{% else %}
       targetPort: 8080
+{% endif %}
       name: http
   selector:
     app: litellm-frontend

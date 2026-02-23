@@ -1,5 +1,5 @@
 ---
-# Main task file following AgnosticD core_workload pattern
+# Main task file - HA deployment only
 
 - name: Set up workload for user
   when:
@@ -12,18 +12,7 @@
       ansible.builtin.include_tasks: setup_oauth.yml
 
     - name: Run HA workload tasks
-      when: ocp4_workload_litemaas_ha_enabled | bool
       ansible.builtin.include_tasks: workload_litemaas_ha.yml
-
-    - name: Run standard workload tasks
-      when: not (ocp4_workload_litemaas_ha_enabled | bool)
-      ansible.builtin.include_tasks: workload.yml
-
-    - name: Run post_workload tasks
-      when:
-        - not (ocp4_workload_litemaas_multi_user | bool)
-        - not (ocp4_workload_litemaas_ha_enabled | bool)
-      ansible.builtin.include_tasks: post_workload.yml
 
 - name: Remove workload
   when: ocp4_workload_litemaas_remove | bool

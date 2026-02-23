@@ -48,7 +48,7 @@ spec:
               done
               echo "Database is ready!"
         - name: run-migrations
-          image: "{{ ocp4_workload_litemaas_backend_image }}:{{ ocp4_workload_litemaas_version }}"
+          image: "{{ ocp4_workload_litemaas_backend_image }}:{{ ocp4_workload_litemaas_backend_tag }}"
           command:
             - sh
             - -c
@@ -70,7 +70,7 @@ spec:
               value: "/tmp"
       containers:
         - name: backend
-          image: "{{ ocp4_workload_litemaas_backend_image }}:{{ ocp4_workload_litemaas_version }}"
+          image: "{{ ocp4_workload_litemaas_backend_image }}:{{ ocp4_workload_litemaas_backend_tag }}"
           ports:
             - containerPort: 8080
               name: http
