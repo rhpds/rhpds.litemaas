@@ -1,5 +1,0 @@
----
-# OpenShift OAuth Setup
-# OAuth is handled by the LiteMaaS backend (not an oauth-proxy sidecar).
-# The OAuthClient and redirect URIs are configured in pre_workload.yml.
-# This file is kept as a placeholder for any future OAuth-related setup tasks.

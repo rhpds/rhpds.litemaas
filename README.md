@@ -154,7 +154,7 @@ ansible-playbook playbooks/deploy_litemaas_ha.yml \
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `ocp4_workload_litemaas_namespace` | `litemaas` | Deployment namespace |
-| `ocp4_workload_litemaas_version` | `latest` | Container image version |
+| `ocp4_workload_litemaas_version` | `0.2.2` | Container image version |
 | `ocp4_workload_litemaas_ha_litellm_replicas` | `3` | Number of LiteLLM replicas |
 
 ### OAuth Settings
