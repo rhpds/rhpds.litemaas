@@ -3,7 +3,7 @@
 ocp4_workload_litemaas_collection_version: "0.3.0"
 
 # Container image versions (backend/frontend images)
-ocp4_workload_litemaas_version: "latest"
+ocp4_workload_litemaas_version: "0.2.2"
 
 # Namespace configuration
 ocp4_workload_litemaas_namespace: "litemaas"
@@ -25,10 +25,11 @@ ocp4_workload_litemaas_oauth_proxy_cookie_secret: "{{ lookup('password', '/dev/n
 ocp4_workload_litemaas_oauth_proxy_serviceaccount: "litemaas-oauth-proxy"
 
 # Image configuration
-ocp4_workload_litemaas_image_registry: "quay.io/rh-aiservices-bu"
-ocp4_workload_litemaas_backend_image: "quay.io/rh-aiservices-bu/litemaas-backend"
-ocp4_workload_litemaas_backend_tag: "latest"
-ocp4_workload_litemaas_frontend_image: "quay.io/rh-aiservices-bu/litemaas-frontend"
+ocp4_workload_litemaas_image_registry: "quay.io/rhpds"
+ocp4_workload_litemaas_backend_image: "quay.io/rhpds/litemaas"
+ocp4_workload_litemaas_backend_tag: "backend-0.2.2"
+ocp4_workload_litemaas_frontend_image: "quay.io/rhpds/litemaas"
+ocp4_workload_litemaas_frontend_tag: "frontend-0.2.2"
 ocp4_workload_litemaas_litellm_image: "ghcr.io/berriai/litellm-non_root"
 ocp4_workload_litemaas_litellm_tag: "main-v1.81.0-stable"
 
