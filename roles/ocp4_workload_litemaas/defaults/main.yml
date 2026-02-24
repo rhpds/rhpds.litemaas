@@ -18,12 +18,6 @@ ocp4_workload_litemaas_api_route_name: "litellm"         # API route name
 ocp4_workload_litemaas_admin_route_name: "litellm-admin" # Admin route name
 ocp4_workload_litemaas_frontend_route_name: "litellm-frontend"  # Frontend route name
 
-# OpenShift OAuth Proxy Integration (set to true to require OpenShift login)
-ocp4_workload_litemaas_oauth_proxy_enabled: false
-ocp4_workload_litemaas_oauth_proxy_image: "quay.io/openshift/origin-oauth-proxy:latest"
-ocp4_workload_litemaas_oauth_proxy_cookie_secret: "{{ lookup('password', '/dev/null length=32 chars=ascii_letters,digits') }}"
-ocp4_workload_litemaas_oauth_proxy_serviceaccount: "litemaas-oauth-proxy"
-
 # Image configuration
 ocp4_workload_litemaas_image_registry: "quay.io/rhpds"
 ocp4_workload_litemaas_backend_image: "quay.io/rhpds/litemaas"
@@ -32,13 +26,6 @@ ocp4_workload_litemaas_frontend_image: "quay.io/rhpds/litemaas"
 ocp4_workload_litemaas_frontend_tag: "frontend-0.2.2"
 ocp4_workload_litemaas_litellm_image: "ghcr.io/berriai/litellm-non_root"
 ocp4_workload_litemaas_litellm_tag: "main-v1.81.0-stable"
-
-# Redis configuration (for LiteLLM cache flush from backend)
-ocp4_workload_litemaas_redis_image: "quay.io/sclorg/redis-7-c9s:latest"
-ocp4_workload_litemaas_redis_memory_request: "128Mi"
-ocp4_workload_litemaas_redis_memory_limit: "256Mi"
-ocp4_workload_litemaas_redis_cpu_request: "100m"
-ocp4_workload_litemaas_redis_cpu_limit: "250m"
 
 # Cloud provider (auto-detected if not set)
 ocp4_workload_litemaas_cloud_provider: ""
