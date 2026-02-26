@@ -49,16 +49,20 @@ spec:
               echo "Database is ready!"
         - name: run-migrations
           image: "{{ ocp4_workload_litemaas_backend_image }}:{{ ocp4_workload_litemaas_backend_tag }}"
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           command:
             - sh
             - -c
             - |
               echo "Running database migrations..."
-              cd /app/backend
-              export npm_config_cache=/tmp/.npm
-              npx prisma migrate deploy || npx prisma db push || echo "Migrations not available, skipping..."
-              echo "Migrations complete!"
+              node -e "
+              const {Pool}=require('/app/node_modules/pg');
+              const {applyMigrations}=require('/app/backend/dist/lib/database-migrations');
+              const pool=new Pool({connectionString:process.env.DATABASE_URL});
+              const dbUtils={query:(sql,p)=>pool.query(sql,p),queryOne:(sql,p)=>pool.query(sql,p).then(r=>r.rows[0])};
+              applyMigrations(dbUtils).then(()=>{console.log('Migrations complete');pool.end();}).catch(e=>{console.error('Migration failed:',e.message);pool.end();process.exit(1);});
+              "
+              echo "Done."
           env:
             - name: DATABASE_URL
               valueFrom:
@@ -72,7 +76,7 @@ spec:
       containers:
         - name: backend
           image: "{{ ocp4_workload_litemaas_backend_image }}:{{ ocp4_workload_litemaas_backend_tag }}"
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
               name: http
@@ -181,6 +185,10 @@ spec:
     - port: 8080
       targetPort: 8080
       name: http
+  sessionAffinity: ClientIP
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: 3600
   selector:
     app: litellm-backend
 ---

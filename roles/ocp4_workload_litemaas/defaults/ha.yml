@@ -22,8 +22,8 @@ ocp4_workload_litemaas_ha_postgres_password: "{{ lookup('password', '/dev/null l
 ocp4_workload_litemaas_ha_postgres_pvc_size: "10Gi"
 
 # Resource limits for HA deployment
-ocp4_workload_litemaas_ha_litellm_memory_request: "512Mi"
-ocp4_workload_litemaas_ha_litellm_memory_limit: "2Gi"
+ocp4_workload_litemaas_ha_litellm_memory_request: "1Gi"
+ocp4_workload_litemaas_ha_litellm_memory_limit: "4Gi"
 ocp4_workload_litemaas_ha_litellm_cpu_request: "500m"
 ocp4_workload_litemaas_ha_litellm_cpu_limit: "2000m"
 
