@@ -105,20 +105,20 @@ graph TB
     end
 
     subgraph APP["LiteMaaS Application (×3 replicas each)"]
-        FE["Frontend\nReact + nginx\nv0.4.0"]
-        BE["Backend\nFastify / Node.js\nv0.4.0"]
+        FE["Frontend\nReact + nginx · v0.4.0"]
+        BE["Backend\nFastify / Node.js · v0.4.0"]
         PROXY["AI Proxy\nLiteLLM custom fork\nv1.81.0-stable-custom"]
     end
 
     subgraph DATA["Data (single node)"]
-        PG[("PostgreSQL 16\n10 Gi storage\nlitemaas_db + litellm_db")]
+        PG[("PostgreSQL 16\n10 Gi · litemaas_db + litellm_db\nbranding stored here")]
         RD[("Redis\nmodel + key cache")]
     end
 
     R1 --> FE
     R2 --> BE
     R3 --> PROXY
-    FE --> BE
+    FE -->|"API calls + branding\nfrom DB at runtime"| BE
     BE --> PROXY
     BE --> PG
     PROXY --> PG
@@ -206,11 +206,6 @@ graph LR
     <table>
       <tr><th>Pod</th><th>Init Container</th><th>What it does</th></tr>
       <tr>
-        <td><code>litellm-frontend</code></td>
-        <td><code>copy-custom-logos</code></td>
-        <td>Copies RHDP-branded SVG logos into a shared volume. Patches JS bundle to replace default LiteMaaS text with RHDP branding. Nginx then serves from this volume.</td>
-      </tr>
-      <tr>
         <td><code>litellm-backend</code></td>
         <td><code>wait-for-database</code></td>
         <td>Polls PostgreSQL until it accepts connections before starting the backend.</td>
@@ -221,6 +216,22 @@ graph LR
         <td>Runs LiteMaaS DB schema migrations on startup. Ensures <code>litemaas_db</code> schema is up to date.</td>
       </tr>
     </table>
+
+    <h3>Branding</h3>
+    <p>RHDP branding (logos, login title, disclaimer) is stored in the <code>branding_settings</code> table in PostgreSQL and served via the LiteMaaS API. Admins configure it through <strong>Admin → Settings → Branding</strong> in the portal. No changes to the frontend image are needed — branding is applied at runtime from the database.</p>
+    <pre style="background:#1e1e1e;color:#d4d4d4;padding:1rem;border-radius:6px;font-size:0.82rem;margin-top:0.5rem;"><span style="color:#6a9955"># Upload logos via API after deployment</span>
+ADMIN_URL=https://litellm-prod-admin.apps.maas.redhatworkshops.io
+JWT=&lt;your-admin-jwt&gt;
+
+curl -X PUT "$ADMIN_URL/api/v1/branding/images/login-logo" \
+  -H "Authorization: Bearer $JWT" \
+  -H "Content-Type: application/json" \
+  -d "{\"data\":\"$(base64 -i logo.svg)\",\"mimeType\":\"image/svg+xml\"}"
+
+curl -X PATCH "$ADMIN_URL/api/v1/branding" \
+  -H "Authorization: Bearer $JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"loginLogoEnabled":true,"loginTitleEnabled":true,"loginTitle":"Sign in to Red Hat Demo Platform MaaS","headerBrandEnabled":true}'</pre>
 
     <h3>Databases (both on litellm-postgres)</h3>
     <table>
