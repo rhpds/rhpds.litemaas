@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LiteMaaS — Product Overview</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Red Hat Text', 'Segoe UI', sans-serif; background: #f5f5f5; color: #151515; line-height: 1.6; }
+    header { background: #cc0000; color: white; padding: 1.5rem 3rem; display: flex; align-items: center; gap: 1.5rem; }
+    header h1 { font-size: 1.5rem; font-weight: 700; }
+    header p { opacity: 0.85; font-size: 0.9rem; margin-top: 0.2rem; }
+    nav { background: #151515; padding: 0 3rem; display: flex; gap: 0; flex-wrap: wrap; }
+    nav a { color: #e0e0e0; text-decoration: none; padding: 0.85rem 1.2rem; font-size: 0.9rem; display: block; transition: background 0.15s; }
+    nav a:hover, nav a.active { background: #cc0000; color: white; }
+    nav .nav-group { position: relative; }
+    nav .nav-group:hover .nav-dropdown { display: block; }
+    .nav-dropdown { display: none; position: absolute; top: 100%; left: 0; background: #1f1f1f; min-width: 200px; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+    .nav-dropdown a { display: block; padding: 0.7rem 1.2rem; border-bottom: 1px solid #333; }
+    .container { max-width: 1100px; margin: 2rem auto; padding: 0 2rem; }
+    .breadcrumb { font-size: 0.82rem; color: #666; margin-bottom: 1.5rem; }
+    .breadcrumb a { color: #cc0000; text-decoration: none; }
+    .breadcrumb a:hover { text-decoration: underline; }
+    h1.page-title { font-size: 1.8rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .page-subtitle { color: #555; margin-bottom: 2rem; font-size: 1rem; }
+    .section { background: white; border-radius: 8px; padding: 2rem; margin-bottom: 1.5rem; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+    .section h2 { font-size: 1.2rem; font-weight: 700; margin-bottom: 1rem; color: #151515; border-bottom: 2px solid #cc0000; padding-bottom: 0.5rem; }
+    .section h3 { font-size: 1rem; font-weight: 700; margin: 1.2rem 0 0.5rem; color: #333; }
+    .section p { margin-bottom: 0.8rem; color: #333; }
+    .section ul, .section ol { padding-left: 1.5rem; margin-bottom: 0.8rem; }
+    .section li { margin-bottom: 0.4rem; color: #333; }
+    .feature-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1rem; margin-top: 1rem; }
+    .feature-card { background: #f9f9f9; border-radius: 6px; padding: 1.2rem; border-left: 3px solid #cc0000; }
+    .feature-card h4 { font-size: 0.9rem; font-weight: 700; margin-bottom: 0.4rem; color: #151515; }
+    .feature-card p { font-size: 0.85rem; color: #555; margin: 0; }
+    .badge { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 3px; font-size: 0.72rem; font-weight: 600; margin: 0.15rem; }
+    .badge-blue { background: #d1ecf1; color: #0c5460; }
+    .badge-green { background: #d4edda; color: #155724; }
+    .badge-orange { background: #fff3cd; color: #856404; }
+    .badge-red { background: #f8d7da; color: #721c24; }
+    .badge-purple { background: #e2d9f3; color: #4a235a; }
+    .arch-layer { border-radius: 8px; padding: 1rem 1.5rem; margin-bottom: 0.8rem; }
+    .arch-layer.layer-1 { background: #fef0f0; border: 1px solid #f5c2c7; }
+    .arch-layer.layer-2 { background: #f0f4ff; border: 1px solid #b8c7f5; }
+    .arch-layer.layer-3 { background: #f0faf2; border: 1px solid #b2dfdb; }
+    .arch-layer h4 { font-weight: 700; margin-bottom: 0.4rem; font-size: 0.9rem; }
+    .arch-layer p { font-size: 0.85rem; color: #555; margin: 0; }
+    .mermaid { margin: 1.5rem 0; background: #f9f9f9; border-radius: 8px; padding: 1rem; }
+    .info-box { background: #e8f4fd; border-left: 4px solid #0066cc; padding: 1rem 1.5rem; border-radius: 0 6px 6px 0; margin: 1rem 0; }
+    .info-box p { margin: 0; font-size: 0.9rem; color: #004080; }
+    table { width: 100%; border-collapse: collapse; margin-top: 1rem; font-size: 0.88rem; }
+    th { background: #151515; color: white; padding: 0.6rem 0.8rem; text-align: left; font-weight: 600; }
+    td { padding: 0.6rem 0.8rem; border-bottom: 1px solid #e8e8e8; vertical-align: top; }
+    tr:nth-child(even) { background: #f9f9f9; }
+    footer { background: #151515; color: #aaa; text-align: center; padding: 1.5rem; font-size: 0.85rem; margin-top: 3rem; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>RHDP LiteMaaS</h1>
+    <p>Model as a Service for Red Hat Demo Platform</p>
+  </div>
+</header>
+
+<nav>
+  <a href="../index.html">Home</a>
+  <a href="../architecture.html">Architecture</a>
+  <div class="nav-group">
+    <a href="overview.html" class="active">Product ▾</a>
+    <div class="nav-dropdown">
+      <a href="overview.html" class="active">Overview</a>
+      <a href="models.html">Models Reference</a>
+    </div>
+  </div>
+  <div class="nav-group">
+    <a href="../install/deployment.html">Install ▾</a>
+    <div class="nav-dropdown">
+      <a href="../install/deployment.html">Deployment Guide</a>
+    </div>
+  </div>
+  <div class="nav-group">
+    <a href="../day2/operations.html">Day-2 ▾</a>
+    <div class="nav-dropdown">
+      <a href="../day2/operations.html">Operations</a>
+      <a href="../day2/grafana.html">Grafana / Metrics</a>
+    </div>
+  </div>
+  <div class="nav-group">
+    <a href="../troubleshooting/common.html">Troubleshooting ▾</a>
+    <div class="nav-dropdown">
+      <a href="../troubleshooting/common.html">Common Issues</a>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+
+  <div class="breadcrumb">
+    <a href="../index.html">Home</a> / <a href="overview.html">Product</a> / Overview
+  </div>
+
+  <h1 class="page-title">Product Overview</h1>
+  <p class="page-subtitle">What LiteMaaS is, what problem it solves, and how it works.</p>
+
+  <!-- What is LiteMaaS -->
+  <div class="section">
+    <h2>What is RHDP LiteMaaS?</h2>
+    <p>
+      LiteMaaS (Model as a Service) is the AI model access platform for the Red Hat Demo Platform (RHDP). It provides
+      workshop attendees, partners, and Red Hat engineers with a unified, governed interface to production-grade AI models
+      hosted on OpenShift AI — without requiring each user to manage credentials, endpoints, or rate limits themselves.
+    </p>
+    <p>
+      At its core, LiteMaaS wraps the open-source <strong>LiteLLM proxy</strong> with a custom subscription and key
+      management layer (the LiteMaaS backend and frontend), adding per-user API key lifecycle management, subscription
+      approval workflows, usage analytics, and branding — all deployed natively on OpenShift.
+    </p>
+
+    <div class="info-box">
+      <p>
+        <strong>Production deployment:</strong> The RHDP production instance runs at
+        <code>litellm-prod.apps.maas.redhatworkshops.io</code> (API),
+        <code>litellm-prod-frontend.apps.maas.redhatworkshops.io</code> (user portal), and
+        <code>litellm-prod-admin.apps.maas.redhatworkshops.io/api</code> (admin API).
+        It currently serves 8 running model predictors across chat, embedding, safety, and document conversion workloads.
+      </p>
+    </div>
+  </div>
+
+  <!-- Problem Statement -->
+  <div class="section">
+    <h2>The Problem It Solves</h2>
+    <p>
+      RHDP delivers hundreds of workshops and demos per year, many of which require participants to call AI model APIs.
+      Without a managed service, every workshop had to solve these problems independently:
+    </p>
+    <ul>
+      <li><strong>Credential sprawl:</strong> Sharing a single master API key across all participants is a security anti-pattern. Revoking access for one person requires rotating the key for everyone.</li>
+      <li><strong>No rate limiting:</strong> A single participant could saturate a model endpoint and degrade the experience for everyone else in the workshop.</li>
+      <li><strong>No budget controls:</strong> Without per-user spend limits, a misconfigured script could exhaust the budget for the entire event.</li>
+      <li><strong>No audit trail:</strong> It was impossible to know which participant called which model, when, and how many tokens they used.</li>
+      <li><strong>Model endpoint churn:</strong> As models are updated or replaced, every workshop's curl examples and SDK configurations had to be updated manually.</li>
+      <li><strong>Restricted model access:</strong> Some models (e.g., large frontier models with high inference cost) should require admin approval before a user can subscribe.</li>
+    </ul>
+    <p>LiteMaaS addresses all of these at the platform level, so individual workshops don't have to.</p>
+  </div>
+
+  <!-- Key Features -->
+  <div class="section">
+    <h2>Key Features</h2>
+
+    <div class="feature-grid">
+      <div class="feature-card">
+        <h4>Virtual API Key Management</h4>
+        <p>Each user receives a personal virtual API key scoped to their subscription. Keys can have per-key TPM, RPM, and budget ceilings independently of other users.</p>
+      </div>
+      <div class="feature-card">
+        <h4>Model Subscriptions</h4>
+        <p>Users subscribe to models they need. Admins can mark models as "restricted" requiring approval before access is granted. Full audit trail on all state changes.</p>
+      </div>
+      <div class="feature-card">
+        <h4>Usage Tracking &amp; Analytics</h4>
+        <p>Day-by-day incremental usage caching with multi-dimensional filtering (user, model, provider, API key). Export to CSV/JSON. Admin-only system-wide view.</p>
+      </div>
+      <div class="feature-card">
+        <h4>Per-Key Rate &amp; Budget Limits</h4>
+        <p>Per-user configurable TPM (tokens per minute), RPM (requests per minute), max budget, budget duration, and soft budget thresholds enforced at the LiteLLM proxy layer.</p>
+      </div>
+      <div class="feature-card">
+        <h4>Chat Playground</h4>
+        <p>Built-in browser-based chat UI in the frontend. Users can interactively test models they are subscribed to without writing code. Only chat-capable models are shown.</p>
+      </div>
+      <div class="feature-card">
+        <h4>Model Capability Labels</h4>
+        <p>Color-coded labels on model cards: Chat (blue), Embeddings (green), Tokenize (red-orange), Document Conversion (orange). Curl examples adapt to capability type.</p>
+      </div>
+      <div class="feature-card">
+        <h4>OpenShift OAuth Login</h4>
+        <p>Three-tier RBAC (admin / adminReadonly / user) backed by OpenShift OAuth. Users log in with their OpenShift credentials — no separate account needed.</p>
+      </div>
+      <div class="feature-card">
+        <h4>HA Architecture</h4>
+        <p>All components run with multiple replicas. LiteLLM runs 3 replicas behind Redis for session and key caching. PostgreSQL 16 on a dedicated PVC. Stateless frontend and backend scale horizontally.</p>
+      </div>
+      <div class="feature-card">
+        <h4>Branding Customization</h4>
+        <p>Admin-controlled login page branding: custom logo, title, subtitle, header logos (light/dark), and footer text. Stored in database, served via public API endpoint.</p>
+      </div>
+      <div class="feature-card">
+        <h4>Automated Key Cleanup</h4>
+        <p>Daily cron job on the bastion host purges expired or stale keys (older than 30 days) from LiteLLM and syncs revocation status back to the LiteMaaS database.</p>
+      </div>
+      <div class="feature-card">
+        <h4>Backup &amp; Restore</h4>
+        <p>Monthly automated pg_dump to S3 with VolumeSnapshot fallback. Admin-initiated backup and test restore from the Settings UI. 12-month retention for SQL dumps.</p>
+      </div>
+      <div class="feature-card">
+        <h4>Docling Integration</h4>
+        <p>Granite Docling 258M model exposed via a dedicated document conversion endpoint. Frontend hides irrelevant fields (TPM costs, max tokens) for this model type.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Architecture Layers -->
+  <div class="section">
+    <h2>Three-Layer Architecture</h2>
+    <p>LiteMaaS is composed of three distinct layers. Each layer has a clear responsibility and communicates with the others over well-defined internal interfaces.</p>
+
+    <div class="arch-layer layer-1">
+      <h4>Layer 1 — User Portal (LiteMaaS Frontend + Backend)</h4>
+      <p>The LiteMaaS custom application: React + PatternFly 6 frontend, Fastify backend API. Handles user authentication (OpenShift OAuth), subscription management, API key lifecycle, usage analytics, admin workflows, and branding. Runs as <code>litellm-frontend</code> and <code>litellm-backend</code> deployments. Does not handle LLM inference directly — all model calls go through Layer 2.</p>
+    </div>
+    <div class="arch-layer layer-2">
+      <h4>Layer 2 — LiteLLM Proxy</h4>
+      <p>The open-source LiteLLM proxy (<code>quay.io/rh-aiservices-bu/litellm-non-root:main-v1.81.0-stable-custom</code>) running as 3 HA replicas. Handles all actual model routing, virtual key enforcement (TPM/RPM/budget), request rate limiting, caching via Redis, and spend tracking. Stores its state in PostgreSQL. Exposes the OpenAI-compatible API on the <code>litellm-prod</code> route.</p>
+    </div>
+    <div class="arch-layer layer-3">
+      <h4>Layer 3 — Model Serving (OpenShift AI / KServe)</h4>
+      <p>The actual model inference layer — Red Hat OpenShift AI (RHOAI) running KServe predictors in the <code>llm-hosting</code> namespace. Models are deployed as InferenceServices on GPU or CPU nodes. LiteLLM calls these internal ClusterIP services directly over the cluster network (no external routing required for model traffic). Currently hosting Granite, Llama Scout, CodeLlama, Nomic Embed, Llama Guard, and Granite Docling models.</p>
+    </div>
+
+    <div class="mermaid">
+graph TD
+    U[User / Workshop Participant] -->|HTTPS| FE[litellm-prod-frontend<br/>LiteMaaS Frontend]
+    U -->|API calls with virtual key| PROXY[litellm-prod<br/>LiteLLM Proxy x3]
+    FE -->|REST API| BE[litellm-backend<br/>LiteMaaS Backend x3]
+    BE -->|virtual key management| PROXY
+    PROXY -->|model routing| M1[granite-3-2-8b-instruct]
+    PROXY -->|model routing| M2[llama-scout-17b]
+    PROXY -->|model routing| M3[granite-4-0-h-tiny]
+    PROXY -->|model routing| M4[nomic-embed-text-v1-5]
+    PROXY -->|model routing| M5[granite-docling-258m]
+    PROXY -->|model routing| M6[codellama-7b-instruct]
+    PROXY -->|model routing| M7[llama-guard-3-1b]
+    BE -->|store state| PG[(PostgreSQL 16<br/>litellm-postgres-0)]
+    PROXY -->|cache / sessions| RD[(Redis 7<br/>litellm-redis)]
+    PROXY -->|spend tracking| PG
+    style PROXY fill:#fef0f0,stroke:#cc0000
+    style BE fill:#f0f4ff,stroke:#0066cc
+    style FE fill:#f0faf2,stroke:#3e8635
+    </div>
+  </div>
+
+  <!-- User Roles -->
+  <div class="section">
+    <h2>User Role Hierarchy</h2>
+    <p>LiteMaaS implements a three-tier RBAC system enforced at both the backend API level and the frontend UI level.</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Role</th>
+          <th>How Assigned</th>
+          <th>Capabilities</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="badge badge-red">admin</span></td>
+          <td>Manually via <code>promote-admin.sh</code> or psql UPDATE</td>
+          <td>Full platform control: manage users, models, budgets, subscriptions, approve restricted access, view audit logs, configure branding, backup/restore</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-orange">adminReadonly</span></td>
+          <td>Manually assigned</td>
+          <td>Read-only admin views: view all users, analytics, audit logs, and system state — cannot modify</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-blue">user</span></td>
+          <td>Automatically on first OAuth login</td>
+          <td>Browse and subscribe to models, manage own API keys (create/revoke), view own usage, use Chat Playground</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="info-box" style="margin-top: 1rem;">
+      <p>
+        <strong>Important:</strong> Users must log in via OAuth at least once before being promoted to admin.
+        Direct database inserts will break OAuth login because the OpenShift OAuth ID (a UUID) will not be set.
+        See <a href="../docs/ADMIN_SETUP.md" style="color:#0066cc;">Admin Setup</a> for the correct procedure.
+      </p>
+    </div>
+  </div>
+
+  <!-- Model Capabilities -->
+  <div class="section">
+    <h2>Model Capability System</h2>
+    <p>
+      LiteMaaS supports more than just chat models. Each model is tagged with one or more capability types that
+      control how it appears in the UI, which endpoints are available, and what curl examples are shown to users.
+    </p>
+    <table>
+      <thead>
+        <tr>
+          <th>Capability</th>
+          <th>Badge</th>
+          <th>API Endpoint</th>
+          <th>Example Models</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Chat</td>
+          <td><span class="badge badge-blue">Chat</span></td>
+          <td><code>/v1/chat/completions</code></td>
+          <td>granite-3-2-8b-instruct, llama-scout-17b, granite-4-0-h-tiny, codellama-7b-instruct</td>
+        </tr>
+        <tr>
+          <td>Embeddings</td>
+          <td><span class="badge badge-green">Embeddings</span></td>
+          <td><code>/v1/embeddings</code></td>
+          <td>nomic-embed-text-v1-5</td>
+        </tr>
+        <tr>
+          <td>Tokenize</td>
+          <td><span class="badge badge-red">Tokenize</span></td>
+          <td><code>/v1/tokenize</code></td>
+          <td>Additive flag on chat models</td>
+        </tr>
+        <tr>
+          <td>Document Conversion</td>
+          <td><span class="badge badge-orange">Docling</span></td>
+          <td><code>/docling</code></td>
+          <td>granite-docling-258m</td>
+        </tr>
+        <tr>
+          <td>Safety / Guardrails</td>
+          <td><span class="badge badge-purple">Safety</span></td>
+          <td><code>/v1/chat/completions</code></td>
+          <td>llama-guard-3-1b</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Key Flow -->
+  <div class="section">
+    <h2>End-to-End User Flow</h2>
+    <div class="mermaid">
+sequenceDiagram
+    participant U as User
+    participant FE as LiteMaaS Frontend
+    participant BE as LiteMaaS Backend
+    participant LL as LiteLLM Proxy
+    participant M as Model (KServe)
+
+    U->>FE: Visit portal, click Login
+    FE->>BE: GET /api/auth/login
+    BE->>BE: Redirect to OpenShift OAuth
+    U->>BE: Complete OAuth, callback
+    BE->>BE: Create/update user in DB, issue JWT
+    BE->>FE: Set session cookie
+    U->>FE: Browse model catalog
+    FE->>BE: GET /api/models
+    BE->>FE: Return model list with capability badges
+    U->>FE: Click "Subscribe" on a model
+    FE->>BE: POST /api/subscriptions
+    BE->>LL: POST /key/generate (scoped to model)
+    LL->>BE: Return virtual key (sk-...)
+    BE->>BE: Store key in api_keys table
+    BE->>FE: Return key to user
+    U->>LL: POST /v1/chat/completions with sk-...
+    LL->>LL: Validate key, check TPM/RPM/budget
+    LL->>M: Forward request to KServe predictor
+    M->>LL: Return inference response
+    LL->>U: Stream response back
+    </div>
+  </div>
+
+  <!-- Production URLs -->
+  <div class="section">
+    <h2>Production Endpoints</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Route Name</th>
+          <th>URL</th>
+          <th>Purpose</th>
+          <th>Audience</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>litellm-prod</code></td>
+          <td><code>https://litellm-prod.apps.maas.redhatworkshops.io</code></td>
+          <td>OpenAI-compatible API endpoint (LiteLLM proxy)</td>
+          <td>All API users, SDK clients</td>
+        </tr>
+        <tr>
+          <td><code>litellm-prod-frontend</code></td>
+          <td><code>https://litellm-prod-frontend.apps.maas.redhatworkshops.io</code></td>
+          <td>LiteMaaS user portal (React UI)</td>
+          <td>Workshop participants, end users</td>
+        </tr>
+        <tr>
+          <td><code>litellm-prod-admin</code></td>
+          <td><code>https://litellm-prod-admin.apps.maas.redhatworkshops.io/api</code></td>
+          <td>LiteMaaS admin API (backend)</td>
+          <td>Admin scripts, automation</td>
+        </tr>
+      </tbody>
+    </table>
+    <p style="margin-top:0.8rem; font-size: 0.85rem; color: #555;">
+      All routes use edge TLS termination with automatic redirect from HTTP. HAProxy timeout is set to 600 seconds
+      to support long-running inference with large context windows.
+    </p>
+  </div>
+
+</div>
+
+<footer>
+  <p>RHDP LiteMaaS Documentation &mdash; Red Hat Demo Platform &mdash; maas.redhatworkshops.io</p>
+</footer>
+
+<script>mermaid.initialize({ startOnLoad: true, theme: 'neutral' });</script>
+</body>
+</html>

@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RHDP LiteMaaS — Documentation</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Red Hat Text', 'Segoe UI', sans-serif; background: #f5f5f5; color: #151515; line-height: 1.6; }
+    header { background: #cc0000; color: white; padding: 1.5rem 3rem; display: flex; align-items: center; gap: 1.5rem; }
+    header h1 { font-size: 1.5rem; font-weight: 700; }
+    header p { opacity: 0.85; font-size: 0.9rem; margin-top: 0.2rem; }
+    nav { background: #151515; padding: 0 3rem; display: flex; gap: 0; }
+    nav a { color: #e0e0e0; text-decoration: none; padding: 0.85rem 1.2rem; font-size: 0.9rem; display: block; transition: background 0.15s; }
+    nav a:hover, nav a.active { background: #cc0000; color: white; }
+    .container { max-width: 1100px; margin: 2rem auto; padding: 0 2rem; }
+    .hero { background: white; border-radius: 8px; padding: 2rem; margin-bottom: 1.5rem; box-shadow: 0 1px 4px rgba(0,0,0,0.1); border-left: 4px solid #cc0000; }
+    .hero h2 { font-size: 1.2rem; margin-bottom: 0.5rem; }
+    .hero p { color: #555; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.2rem; margin-bottom: 2rem; }
+    .card { background: white; border-radius: 8px; padding: 1.5rem; box-shadow: 0 1px 4px rgba(0,0,0,0.1); text-decoration: none; color: inherit; display: block; transition: box-shadow 0.2s, transform 0.2s; }
+    .card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.15); transform: translateY(-2px); }
+    .card-icon { font-size: 1.8rem; margin-bottom: 0.8rem; }
+    .card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 0.4rem; color: #151515; }
+    .card p { font-size: 0.88rem; color: #666; }
+    .badge { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 3px; font-size: 0.72rem; font-weight: 600; margin-left: 0.5rem; }
+    .badge-green { background: #d4edda; color: #155724; }
+    .badge-blue { background: #d1ecf1; color: #0c5460; }
+    .status-bar { background: white; border-radius: 8px; padding: 1.2rem 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 1px 4px rgba(0,0,0,0.1); display: flex; gap: 2rem; flex-wrap: wrap; align-items: center; }
+    .status-item { display: flex; align-items: center; gap: 0.4rem; font-size: 0.88rem; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: #3e8635; }
+    .dot-blue { background: #0066cc; }
+    footer { background: #151515; color: #aaa; text-align: center; padding: 1.5rem; font-size: 0.85rem; margin-top: 3rem; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>RHDP LiteMaaS</h1>
+    <p>Model as a Service for Red Hat Demo Platform</p>
+  </div>
+</header>
+
+<nav>
+  <a href="index.html" class="active">Home</a>
+  <a href="architecture.html">Architecture</a>
+  <a href="ADDING_MODELS.md">Adding Models</a>
+  <a href="ADMIN_SETUP.md">Admin Setup</a>
+  <a href="HA_DEPLOYMENT.md">HA Deployment</a>
+  <a href="INFRA_TEAM_GUIDE.md">Infra Guide</a>
+  <a href="BACKUP.md">Backup</a>
+</nav>
+
+<div class="container">
+
+  <div class="status-bar">
+    <span style="font-weight:700; font-size:0.9rem;">Production Status</span>
+    <div class="status-item"><span class="dot"></span> LiteLLM Proxy <span class="badge badge-green">v1.81.0-custom</span></div>
+    <div class="status-item"><span class="dot"></span> LiteMaaS <span class="badge badge-green">v0.4.0</span></div>
+    <div class="status-item"><span class="dot dot-blue"></span> 11 Models Available</div>
+    <div class="status-item"><span class="dot dot-blue"></span> maas.redhatworkshops.io</div>
+  </div>
+
+  <div class="hero">
+    <h2>What is RHDP LiteMaaS?</h2>
+    <p>LiteMaaS is a Model-as-a-Service platform built on LiteLLM that provides Red Hat Demo Platform users with managed access to AI/LLM models. It handles API key management, model subscriptions, usage tracking, rate limiting, and budget controls — so workshop attendees and developers get a simple API endpoint without managing infrastructure.</p>
+  </div>
+
+  <div class="grid">
+    <a class="card" href="architecture.html">
+      <div class="card-icon">🏗</div>
+      <h3>Architecture</h3>
+      <p>Full component diagram — LiteMaaS frontend/backend, LiteLLM proxy, PostgreSQL, Redis, model servers, and how they connect.</p>
+    </a>
+    <a class="card" href="ADDING_MODELS.md">
+      <div class="card-icon">🤖</div>
+      <h3>Adding Models</h3>
+      <p>How to register a new model in LiteLLM and sync it to LiteMaaS. Covers chat, embedding, and document conversion model types.</p>
+    </a>
+    <a class="card" href="ADMIN_SETUP.md">
+      <div class="card-icon">⚙️</div>
+      <h3>Admin Setup</h3>
+      <p>Initial admin user configuration, promoting users to admin, and managing the platform after deployment.</p>
+    </a>
+    <a class="card" href="HA_DEPLOYMENT.md">
+      <div class="card-icon">🔁</div>
+      <h3>HA Deployment</h3>
+      <p>High availability deployment with multiple replicas, Redis cache, and PostgreSQL. Covers the Ansible workload role.</p>
+    </a>
+    <a class="card" href="INFRA_TEAM_GUIDE.md">
+      <div class="card-icon">🛠</div>
+      <h3>Infra Team Guide</h3>
+      <p>Day-2 operations — upgrading LiteLLM, updating images, running migrations, scaling, and troubleshooting.</p>
+    </a>
+    <a class="card" href="BACKUP.md">
+      <div class="card-icon">💾</div>
+      <h3>Backup & Restore</h3>
+      <p>How to back up and restore the LiteMaaS and LiteLLM databases. Includes the daily cleanup cronjob for expired keys.</p>
+    </a>
+    <a class="card" href="RHDP_BRANDING.md">
+      <div class="card-icon">🎨</div>
+      <h3>RHDP Branding</h3>
+      <p>Customising the LiteMaaS UI with RHDP logos, login page title, and disclaimer text via the branding API.</p>
+    </a>
+    <a class="card" href="OAUTH_LOGIN.md">
+      <div class="card-icon">🔐</div>
+      <h3>OAuth / OIDC</h3>
+      <p>Configuring OpenShift OAuth or standard OIDC authentication. Covers both serviceaccount and external provider modes.</p>
+    </a>
+  </div>
+
+</div>
+
+<footer>
+  RHDP Platform Team &nbsp;·&nbsp; <a href="https://github.com/rhpds/rhpds.litemaas" style="color:#aaa">github.com/rhpds/rhpds.litemaas</a>
+</footer>
+
+</body>
+</html>

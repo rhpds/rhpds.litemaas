@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Architecture — RHDP LiteMaaS</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Red Hat Text', 'Segoe UI', sans-serif; background: #f5f5f5; color: #151515; line-height: 1.6; }
+    header { background: #cc0000; color: white; padding: 1.5rem 3rem; }
+    header h1 { font-size: 1.5rem; font-weight: 700; }
+    header p { opacity: 0.85; font-size: 0.9rem; margin-top: 0.2rem; }
+    nav { background: #151515; padding: 0 3rem; display: flex; gap: 0; }
+    nav a { color: #e0e0e0; text-decoration: none; padding: 0.85rem 1.2rem; font-size: 0.9rem; display: block; transition: background 0.15s; }
+    nav a:hover, nav a.active { background: #cc0000; color: white; }
+    .container { max-width: 1200px; margin: 2rem auto; padding: 0 2rem; }
+    .card { background: white; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+    h2 { font-size: 1.2rem; font-weight: 700; margin-bottom: 1rem; border-bottom: 2px solid #cc0000; padding-bottom: 0.4rem; }
+    h3 { font-size: 1rem; font-weight: 700; margin: 1.2rem 0 0.5rem; color: #333; }
+    .mermaid { background: white; border-radius: 8px; padding: 2rem; box-shadow: 0 1px 4px rgba(0,0,0,0.1); margin-bottom: 1.5rem; overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.88rem; margin: 0.8rem 0; }
+    th { background: #151515; color: white; padding: 0.6rem 1rem; text-align: left; font-weight: 600; }
+    td { padding: 0.55rem 1rem; border-bottom: 1px solid #e8e8e8; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafafa; }
+    .tag { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 3px; font-size: 0.72rem; font-weight: 600; }
+    .tag-green { background: #d4edda; color: #155724; }
+    .tag-blue { background: #d1ecf1; color: #0c5460; }
+    .tag-orange { background: #fff3cd; color: #856404; }
+    .tag-red { background: #f8d7da; color: #721c24; }
+    code { background: #f0f0f0; padding: 0.1rem 0.4rem; border-radius: 3px; font-size: 0.85rem; font-family: monospace; }
+    footer { background: #151515; color: #aaa; text-align: center; padding: 1.5rem; font-size: 0.85rem; margin-top: 3rem; }
+    .note { background: #fff3cd; border-left: 4px solid #f0ab00; padding: 0.8rem 1rem; border-radius: 0 6px 6px 0; margin: 0.8rem 0; font-size: 0.88rem; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>RHDP LiteMaaS — Architecture</h1>
+  <p>Production deployment on maas.redhatworkshops.io — Last updated March 2026</p>
+</header>
+
+<nav>
+  <a href="index.html">Home</a>
+  <a href="architecture.html" class="active">Architecture</a>
+  <a href="ADDING_MODELS.md">Adding Models</a>
+  <a href="ADMIN_SETUP.md">Admin Setup</a>
+  <a href="HA_DEPLOYMENT.md">HA Deployment</a>
+  <a href="INFRA_TEAM_GUIDE.md">Infra Guide</a>
+  <a href="BACKUP.md">Backup</a>
+</nav>
+
+<div class="container">
+
+  <!-- FULL ARCHITECTURE DIAGRAM -->
+  <div class="mermaid">
+graph TB
+    classDef user fill:#fce4ec,stroke:#cc0000,stroke-width:2px,color:#151515
+    classDef route fill:#e8eaf6,stroke:#3949ab,stroke-width:1px,color:#151515
+    classDef app fill:#fff8f8,stroke:#cc0000,stroke-width:1.5px,color:#151515
+    classDef db fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px,color:#151515
+    classDef model fill:#e3f2fd,stroke:#0066cc,stroke-width:1.5px,color:#151515
+    classDef init fill:#f3e5f5,stroke:#6a1b9a,stroke-width:1px,color:#151515,stroke-dasharray:4
+    classDef ops fill:#f5f5f5,stroke:#555,stroke-width:1px,color:#151515
+    classDef ext fill:#e8f5e9,stroke:#2e7d32,stroke-width:1px,stroke-dasharray:5,color:#151515
+    classDef gitops fill:#fff9c4,stroke:#f9a825,stroke-width:1.5px,color:#151515
+
+    DEV(["👨‍💻 Developers"]):::user
+    WS(["🎓 Workshop Attendees"]):::user
+    ADMIN(["🔧 Admins"]):::user
+    OAUTH["🔐 OpenShift OAuth"]:::ops
+
+    subgraph ROUTES["🌐 OpenShift Routes — maas.redhatworkshops.io"]
+        direction LR
+        R_FE["litellm-prod-frontend\nLiteMaaS UI"]:::route
+        R_BE["litellm-prod-admin\nLiteMaaS API"]:::route
+        R_LLM["litellm-prod\nLiteLLM Proxy :4000"]:::route
+    end
+
+    subgraph NS["📦 Namespace: litellm-rhpds"]
+        direction TB
+
+        subgraph APPS["Application Layer"]
+            direction LR
+            FE["🖥 litellm-frontend\n×3 replicas\nReact SPA · nginx\nv0.4.0"]:::app
+            BE["⚙️ litellm-backend\n×3 replicas\nFastify / Node.js\nv0.4.0"]:::app
+            LLM["🔀 litellm proxy\n×3 replicas\nLiteLLM custom fork\nv1.81.0-stable-custom\n/tokenize · /docling · /v1/*"]:::app
+        end
+
+        subgraph INITS["Init Containers"]
+            direction LR
+            IC1["copy-custom-logos\nRHDP branding assets"]:::init
+            IC2["wait-for-database\n+ run-migrations"]:::init
+        end
+
+        subgraph DATA["Data Layer"]
+            direction LR
+            PG_LM[("🗃 litemaas_db\nusers · api_keys\nsubscriptions · models\naudit_logs · branding")]:::db
+            PG_LL[("🗃 litellm_db\nVerificationToken\nUserTable · SpendLogs\nProxyModelTable +38")]:::db
+            REDIS[("⚡ Redis\nModel + key cache\nRate limit counters")]:::db
+        end
+    end
+
+    subgraph MODELS["📦 Namespace: llm-hosting — OpenShift AI / KServe InferenceServices"]
+        direction LR
+        subgraph CHAT["Chat Models — vLLM"]
+            MC1["granite-3-2-8b\n🗨 Chat · 🔧 Tools"]:::model
+            MC2["llama-scout-17b\n🗨 Chat · 🔧 Tools"]:::model
+            MC3["granite-4-0-h-tiny\n🗨 Chat · 🔧 Tools"]:::model
+            MC4["qwen3-14b\n🗨 Chat · 🔧 Tools"]:::model
+            MC5["deepseek-r1-14b\n🗨 Chat · 🔧 Tools"]:::model
+            MC6["codellama-7b\n💻 Code"]:::model
+            MC7["microsoft-phi-4\n🗨 Chat"]:::model
+        end
+        subgraph SPEC["Specialist Models"]
+            MS1["nomic-embed-v1-5\n🔢 Embeddings"]:::model
+            MS2["granite-docling-258m\n📄 Document Conversion\nDocling Serve"]:::model
+            MS3["llama-guard-3-1b\n🛡 Safety Classifier"]:::model
+        end
+    end
+
+    subgraph GITOPS["🔄 GitOps — AgnosticD / AgnosticV"]
+        direction LR
+        AV["agnosticv catalog\ncommon.yaml"]:::gitops
+        AGD["agnosticd\nocp4_workload_litemaas\nocp4_workload_litemaas_models"]:::gitops
+    end
+
+    subgraph OPS["🖥 Operations"]
+        direction LR
+        CRON["⏰ Bastion Cronjob\n2AM daily\nDelete expired keys\nSync api_keys table"]:::ops
+        GRAFANA["📊 Grafana\nrhoai-grafana\nGPU · vLLM · KServe\nmetrics dashboards"]:::ops
+    end
+
+    subgraph EXT["☁️ Planned — External Providers"]
+        direction LR
+        WX["IBM WatsonX\nEssentials Plan\nDev access"]:::ext
+        AWB["AWS Bedrock\nSummit + Workshops"]:::ext
+    end
+
+    DEV & ADMIN --> R_FE & R_BE
+    WS & DEV --> R_LLM
+    OAUTH -.->|authenticates| R_FE
+
+    R_FE --> FE
+    R_BE --> BE
+    R_LLM --> LLM
+
+    IC1 -.->|init| FE
+    IC2 -.->|init| BE
+
+    FE -->|API calls| R_BE
+    BE -->|inference proxy| LLM
+    BE --> PG_LM
+    BE -->|cross-reference| PG_LL
+    LLM --> PG_LL
+    LLM --> REDIS
+
+    LLM --> MC1 & MC2 & MC3 & MC4 & MC5 & MC6 & MC7
+    LLM --> MS1 & MS2 & MS3
+
+    AV -->|triggers| AGD
+    AGD -->|deploys & configures| NS
+    AGD -->|registers models| MODELS
+
+    CRON -->|delete keys| LLM
+    CRON -->|sync| PG_LM
+    GRAFANA -->|scrapes metrics| MODELS
+
+    LLM -.->|planned| WX & AWB
+
+    style ROUTES fill:#e8eaf6,stroke:#3949ab,stroke-width:1.5px
+    style NS fill:#fff8f8,stroke:#cc0000,stroke-width:2px
+    style MODELS fill:#e3f2fd,stroke:#0066cc,stroke-width:2px
+    style GITOPS fill:#fff9c4,stroke:#f9a825,stroke-width:2px
+    style OPS fill:#f5f5f5,stroke:#555,stroke-width:1.5px
+    style EXT fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px,stroke-dasharray:5
+    style APPS fill:#ffeef0,stroke:#cc0000,stroke-width:1px
+    style DATA fill:#e8f5e9,stroke:#2e7d32,stroke-width:1px
+    style INITS fill:#f8f0ff,stroke:#6a1b9a,stroke-width:1px
+    style CHAT fill:#e3f2fd,stroke:#0066cc,stroke-width:1px
+    style SPEC fill:#fff3e0,stroke:#e65100,stroke-width:1px
+  </div>
+
+  <!-- COMPONENT TABLE -->
+  <div class="card">
+    <h2>Component Reference</h2>
+
+    <h3>LiteMaaS Application (litellm-rhpds namespace)</h3>
+    <table>
+      <tr><th>Component</th><th>Image</th><th>Replicas</th><th>Resources</th><th>Purpose</th></tr>
+      <tr>
+        <td><code>litellm-frontend</code></td>
+        <td><code>quay.io/rh-aiservices-bu/litemaas-frontend:0.4.0</code></td>
+        <td><span class="tag tag-green">3</span></td>
+        <td>100m CPU / 128Mi–256Mi RAM</td>
+        <td>React SPA served via nginx. User-facing UI for model browsing, API key management, usage dashboard.</td>
+      </tr>
+      <tr>
+        <td><code>litellm-backend</code></td>
+        <td><code>quay.io/rh-aiservices-bu/litemaas-backend:0.4.0</code></td>
+        <td><span class="tag tag-green">3</span></td>
+        <td>200m CPU / 512Mi–1Gi RAM</td>
+        <td>Fastify/Node.js API. Manages users, subscriptions, API keys, model sync, usage analytics, branding.</td>
+      </tr>
+      <tr>
+        <td><code>litellm</code></td>
+        <td><code>quay.io/rh-aiservices-bu/litellm-non-root:main-v1.81.0-stable-custom</code></td>
+        <td><span class="tag tag-green">3</span></td>
+        <td>500m CPU / 1Gi–4Gi RAM</td>
+        <td>LiteLLM proxy. Routes inference requests to model backends. Custom fork adds <code>/v1/tokenize</code> and <code>/docling</code> endpoints.</td>
+      </tr>
+      <tr>
+        <td><code>litellm-postgres</code></td>
+        <td><code>postgres:16-alpine</code></td>
+        <td><span class="tag tag-blue">1</span></td>
+        <td>—</td>
+        <td>PostgreSQL 16. Hosts both <code>litemaas_db</code> (LiteMaaS tables) and <code>litellm_db</code> (LiteLLM tables) on the same instance.</td>
+      </tr>
+      <tr>
+        <td><code>litellm-redis</code></td>
+        <td><code>registry.redhat.io/rhel9/redis-7:latest</code></td>
+        <td><span class="tag tag-blue">1</span></td>
+        <td>—</td>
+        <td>Redis 7. LiteLLM uses it to cache model list and key lookups. Backend flushes cache after model CRUD so all proxy pods pick up changes immediately.</td>
+      </tr>
+    </table>
+
+    <h3>Init Containers</h3>
+    <table>
+      <tr><th>Pod</th><th>Init Container</th><th>What it does</th></tr>
+      <tr>
+        <td><code>litellm-frontend</code></td>
+        <td><code>copy-custom-logos</code></td>
+        <td>Copies RHDP-branded SVG logos into a shared volume. Patches JS bundle to replace default LiteMaaS text with RHDP branding. Nginx then serves from this volume.</td>
+      </tr>
+      <tr>
+        <td><code>litellm-backend</code></td>
+        <td><code>wait-for-database</code></td>
+        <td>Polls PostgreSQL until it accepts connections before starting the backend.</td>
+      </tr>
+      <tr>
+        <td><code>litellm-backend</code></td>
+        <td><code>run-migrations</code></td>
+        <td>Runs LiteMaaS DB schema migrations on startup. Ensures <code>litemaas_db</code> schema is up to date.</td>
+      </tr>
+    </table>
+
+    <h3>Databases (both on litellm-postgres)</h3>
+    <table>
+      <tr><th>Database</th><th>Used by</th><th>Key tables</th></tr>
+      <tr>
+        <td><code>litemaas_db</code></td>
+        <td>litellm-backend</td>
+        <td>users, api_keys, subscriptions, models, audit_logs, branding_settings, system_settings, daily_usage_cache, subscription_status_history</td>
+      </tr>
+      <tr>
+        <td><code>litellm_db</code></td>
+        <td>litellm proxy + litellm-backend (for model sync cross-reference)</td>
+        <td>LiteLLM_VerificationToken (virtual keys), LiteLLM_UserTable, LiteLLM_ProxyModelTable, LiteLLM_SpendLogs, LiteLLM_TeamTable, + 36 more</td>
+      </tr>
+    </table>
+
+    <h3>Model Servers (llm-hosting namespace — OpenShift AI / KServe)</h3>
+    <table>
+      <tr><th>Model</th><th>Type</th><th>Capabilities</th><th>Backend</th></tr>
+      <tr><td><code>granite-3-2-8b-instruct</code></td><td><span class="tag tag-blue">Chat</span></td><td>Function Calling, Tool Choice</td><td>vLLM</td></tr>
+      <tr><td><code>llama-scout-17b</code></td><td><span class="tag tag-blue">Chat</span></td><td>Function Calling</td><td>vLLM</td></tr>
+      <tr><td><code>granite-4-0-h-tiny</code></td><td><span class="tag tag-blue">Chat</span></td><td>Function Calling</td><td>vLLM</td></tr>
+      <tr><td><code>qwen3-14b</code></td><td><span class="tag tag-blue">Chat</span></td><td>Function Calling, Tool Choice</td><td>vLLM</td></tr>
+      <tr><td><code>deepseek-r1-distill-qwen-14b</code></td><td><span class="tag tag-blue">Chat</span></td><td>Function Calling, Parallel Functions, Tool Choice</td><td>vLLM</td></tr>
+      <tr><td><code>codellama-7b-instruct</code></td><td><span class="tag tag-blue">Chat</span></td><td>Code generation</td><td>vLLM</td></tr>
+      <tr><td><code>microsoft-phi-4</code></td><td><span class="tag tag-blue">Chat</span></td><td>—</td><td>vLLM</td></tr>
+      <tr><td><code>nomic-embed-text-v1-5</code></td><td><span class="tag tag-green">Embeddings</span></td><td>Text embeddings</td><td>vLLM</td></tr>
+      <tr><td><code>granite-docling-258m</code></td><td><span class="tag tag-orange">Document Conversion</span></td><td>PDF/DOCX → Markdown/JSON via <code>/docling</code></td><td>Docling Serve</td></tr>
+      <tr><td><code>llama-guard-3-1b</code></td><td><span class="tag tag-red">Safety</span></td><td>Content classification — adult, violence, dangerous info</td><td>vLLM</td></tr>
+      <tr><td><code>gpt-oss-120b</code></td><td><span class="tag tag-blue">Chat</span></td><td>Function Calling — via IBM WatsonX (external)</td><td>WatsonX</td></tr>
+    </table>
+
+    <h3>Automation (Bastion Host)</h3>
+    <table>
+      <tr><th>Script</th><th>Schedule</th><th>What it does</th></tr>
+      <tr>
+        <td><code>cleanup-litemaas-keys-litellm-rhpds.sh</code></td>
+        <td>Daily at 2 AM</td>
+        <td>Fetches all virtual keys from LiteLLM. Deletes expired keys and keys older than 30 days. After each deletion, marks the corresponding <code>api_keys</code> record in LiteMaaS as inactive. Final pass cleans any remaining orphaned LiteMaaS keys.</td>
+      </tr>
+    </table>
+
+    <h3>OpenShift Routes</h3>
+    <table>
+      <tr><th>Route</th><th>URL</th><th>Target</th><th>Purpose</th></tr>
+      <tr><td>litellm-prod-frontend</td><td>litellm-prod-frontend.apps.maas.redhatworkshops.io</td><td>litellm-frontend:8080</td><td>LiteMaaS Web UI</td></tr>
+      <tr><td>litellm-prod-admin</td><td>litellm-prod-admin.apps.maas.redhatworkshops.io</td><td>litellm-backend:8080</td><td>LiteMaaS API (backend)</td></tr>
+      <tr><td>litellm-prod</td><td>litellm-prod.apps.maas.redhatworkshops.io</td><td>litellm:4000</td><td>LiteLLM inference proxy — users call this for model requests</td></tr>
+    </table>
+  </div>
+
+  <!-- REQUEST FLOW -->
+  <div class="card">
+    <h2>Request Flow</h2>
+
+    <h3>User Inference Request (Chat / Embeddings / Tokenize)</h3>
+    <div class="mermaid">
+sequenceDiagram
+    autonumber
+    actor U as 👤 User / Lab
+    participant R as 🌐 Route
+    participant LLM as 🔀 LiteLLM Proxy
+    participant RD as ⚡ Redis
+    participant PG as 🗃 litellm_db
+    participant M as 🤖 vLLM Model
+
+    U->>R: POST /v1/chat/completions<br/>Authorization: Bearer sk-...
+    R->>LLM: forward request
+    LLM->>PG: validate virtual key<br/>(LiteLLM_VerificationToken)
+    LLM->>RD: check TPM/RPM limits
+    note over LLM,RD: Returns 429 if limit exceeded
+    LLM->>M: forward to model backend<br/>with streaming
+    M-->>LLM: stream response tokens
+    LLM->>PG: log spend<br/>(LiteLLM_SpendLogs)
+    LLM-->>U: streamed response
+    </div>
+
+    <h3>Document Conversion Request (/docling)</h3>
+    <div class="mermaid">
+sequenceDiagram
+    autonumber
+    actor U as 👤 User
+    participant LLM as 🔀 LiteLLM Proxy
+    participant PG as 🗃 litellm_db
+    participant DOC as 📄 granite-docling-258m<br/>(Docling Serve)
+
+    U->>LLM: POST /docling/v1alpha/convert/source<br/>{"model":"granite-docling-258m",<br/>"http_sources":[{"url":"..."}]}
+    LLM->>PG: validate key
+    note over LLM: Custom endpoint in<br/>rh-aiservices-bu/litellm fork
+    LLM->>DOC: POST /v1alpha/convert/source<br/>with backend API key
+    note over DOC: Downloads PDF,<br/>converts to Markdown/JSON
+    DOC-->>LLM: {"document":{"md_content":"..."}}
+    LLM-->>U: response (can be large — 300s timeout)
+    </div>
+
+    <h3>GitOps — Adding a New Model via AgnosticD</h3>
+    <div class="mermaid">
+sequenceDiagram
+    autonumber
+    actor PE as 👨‍💻 Platform Engineer
+    participant AV as 📋 AgnosticV<br/>common.yaml
+    participant AGD as 🔧 AgnosticD<br/>ocp4_workload_litemaas_models
+    participant LLM as 🔀 LiteLLM Proxy
+    participant RD as ⚡ Redis
+    participant BE as ⚙️ LiteMaaS Backend
+    participant PG_LL as 🗃 litellm_db
+    participant PG_LM as 🗃 litemaas_db
+
+    PE->>AV: add model to catalog common.yaml<br/>(model name, api_base, model_info)
+    AV->>AGD: trigger deployment
+    AGD->>LLM: POST /model/new<br/>(register model in LiteLLM)
+    LLM->>PG_LL: INSERT into LiteLLM_ProxyModelTable
+    LLM->>RD: flush model cache
+    note over BE: LITELLM_AUTO_SYNC=true<br/>runs every 60 minutes
+    BE->>LLM: GET /model/info
+    BE->>PG_LL: cross-reference LiteLLM_ProxyModelTable
+    BE->>PG_LM: UPSERT into models table<br/>sets supportsChat/Embeddings/Convert
+    note over PG_LM: Model now visible<br/>in LiteMaaS UI
+    </div>
+
+    <h3>Key Lifecycle — Creation & Cleanup</h3>
+    <div class="mermaid">
+sequenceDiagram
+    autonumber
+    actor A as 🔧 Admin
+    participant BE as ⚙️ LiteMaaS Backend
+    participant LLM as 🔀 LiteLLM
+    participant PG_LM as 🗃 litemaas_db
+    participant PG_LL as 🗃 litellm_db
+    participant CR as ⏰ Bastion Cronjob<br/>(2AM daily)
+
+    A->>BE: Create API key for user<br/>(models, TPM, RPM, budget)
+    BE->>LLM: POST /key/generate<br/>with limits
+    LLM->>PG_LL: INSERT LiteLLM_VerificationToken
+    LLM-->>BE: sk-... key
+    BE->>PG_LM: INSERT api_keys<br/>(litellm_key_alias, key_hash)
+    BE-->>A: show key once
+
+    note over CR: After 30 days or expiry
+    CR->>LLM: GET /key/list (paginated)
+    CR->>LLM: POST /key/delete (expired keys)
+    LLM->>PG_LL: DELETE from VerificationToken
+    CR->>PG_LM: UPDATE api_keys SET is_active=false<br/>WHERE litellm_key_alias=...
+    </div>
+  </div>
+
+  <div class="note">
+    📌 <strong>External services (WatsonX, Bedrock)</strong> are planned but not yet in production. When enabled, LiteLLM will route requests to them using the same virtual key authentication — users will not need to change anything.
+  </div>
+
+</div>
+
+<footer>
+  RHDP Platform Team &nbsp;·&nbsp; <a href="https://github.com/rhpds/rhpds.litemaas" style="color:#aaa">github.com/rhpds/rhpds.litemaas</a>
+</footer>
+
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'neutral', securityLevel: 'loose' });
+</script>
+
+</body>
+</html>
