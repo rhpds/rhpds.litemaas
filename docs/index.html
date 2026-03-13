@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>RHDP LiteMaaS — Documentation</title>
+  <meta name="description" content="RHDP LiteMaaS documentation hub — Model-as-a-Service for Red Hat Demo Platform. Architecture, deployment, models, operations, and troubleshooting.">
+  <link rel="canonical" href="https://rhpds.github.io/rhpds.litemaas/docs/index.html">
+  <link rel="stylesheet" href="assets/style.css">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Red Hat Text', 'Segoe UI', sans-serif; background: #f5f5f5; color: #151515; line-height: 1.6; }
@@ -43,17 +46,26 @@
 </header>
 
 <nav>
-  <a href="index.html" class="active">Home</a>
-  <a href="architecture.html">Architecture</a>
-  <a href="product/overview.html">Overview</a>
-  <a href="product/models.html">Models</a>
-  <a href="install/deployment.html">Install</a>
-  <a href="day2/operations.html">Day-2</a>
-  <a href="monitoring.html">Monitoring</a>
-  <a href="troubleshooting/common.html">Troubleshooting</a>
+  <button class="nav-hamburger" id="navToggle" aria-label="Toggle navigation">&#9776;</button>
+  <div class="nav-links" id="navLinks">
+    <a href="index.html" class="active">Home</a>
+    <a href="architecture.html">Architecture</a>
+    <a href="product/overview.html">Overview</a>
+    <a href="product/models.html">Models</a>
+    <a href="install/deployment.html">Install</a>
+    <a href="day2/operations.html">Day-2</a>
+    <a href="monitoring.html">Monitoring</a>
+    <a href="troubleshooting/common.html">Troubleshooting</a>
+  </div>
 </nav>
 
 <div class="container">
+
+  <!-- Search bar -->
+  <div class="search-wrap">
+    <input type="search" id="doc-search" placeholder="Search documentation..." aria-label="Search documentation">
+    <p class="search-no-results" id="searchNoResults">No results found.</p>
+  </div>
 
   <div class="status-bar">
     <span style="font-weight:700; font-size:0.9rem;">Production Status</span>
@@ -116,7 +128,62 @@
 
 <footer>
   RHDP Platform Team &nbsp;·&nbsp; <a href="https://github.com/rhpds/rhpds.litemaas" style="color:#aaa">github.com/rhpds/rhpds.litemaas</a>
+  &nbsp;·&nbsp; <a href="llms.txt" style="color:#aaa">llms.txt</a>
+  <span class="footer-updated" id="footerUpdated"></span>
 </footer>
+
+<button id="back-to-top" title="Back to top" aria-label="Back to top">&#8679;</button>
+
+<script>
+  // Hamburger menu
+  document.getElementById('navToggle').addEventListener('click', function() {
+    document.getElementById('navLinks').classList.toggle('open');
+  });
+
+  // Back to top
+  const btt = document.getElementById('back-to-top');
+  window.addEventListener('scroll', function() {
+    btt.classList.toggle('visible', window.scrollY > 400);
+  });
+  btt.addEventListener('click', function() {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  // Footer timestamp
+  document.getElementById('footerUpdated').textContent = 'Last updated: 2026-03-13';
+
+  // Copy buttons on code blocks
+  document.querySelectorAll('pre').forEach(function(pre) {
+    var btn = document.createElement('button');
+    btn.className = 'copy-btn';
+    btn.textContent = 'Copy';
+    btn.addEventListener('click', function() {
+      navigator.clipboard.writeText(pre.innerText).then(function() {
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(function() { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+      });
+    });
+    pre.appendChild(btn);
+  });
+
+  // Simple search across card titles and descriptions
+  var searchInput = document.getElementById('doc-search');
+  var cards = document.querySelectorAll('.card');
+  var noResults = document.getElementById('searchNoResults');
+
+  searchInput.addEventListener('input', function() {
+    var q = this.value.toLowerCase().trim();
+    var visible = 0;
+    cards.forEach(function(card) {
+      var text = card.textContent.toLowerCase();
+      var show = !q || text.includes(q);
+      card.style.display = show ? '' : 'none';
+      if (show) visible++;
+    });
+    noResults.style.display = (q && visible === 0) ? 'block' : 'none';
+  });
+</script>
 
 </body>
 </html>

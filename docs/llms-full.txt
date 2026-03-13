@@ -1,0 +1,494 @@
+RHDP LiteMaaS — Full Documentation (Plain Text for AI Ingestion)
+================================================================
+Source: https://rhpds.github.io/rhpds.litemaas/docs/
+GitHub: https://github.com/rhpds/rhpds.litemaas
+Last updated: 2026-03-13
+
+================================================================
+WHAT IS RHDP LiteMaaS?
+================================================================
+
+LiteMaaS (Model as a Service) is the AI model access platform for the Red Hat Demo Platform (RHDP).
+It provides workshop attendees, partners, and Red Hat engineers with a unified, governed interface to
+production-grade AI models hosted on OpenShift AI — without requiring each user to manage credentials,
+endpoints, or rate limits themselves.
+
+LiteMaaS wraps the open-source LiteLLM proxy with a custom subscription and key management layer
+(the LiteMaaS backend and frontend), adding per-user API key lifecycle management, subscription
+approval workflows, usage analytics, and branding — all deployed natively on OpenShift.
+
+Production deployment: The RHDP production instance runs at:
+  - litellm-prod.apps.maas.redhatworkshops.io (AI Proxy — OpenAI-compatible)
+  - litellm-prod-frontend.apps.maas.redhatworkshops.io (User Portal)
+  - litellm-prod-admin.apps.maas.redhatworkshops.io/api (Admin API)
+
+Namespace: litellm-rhpds
+Cluster: maas.redhatworkshops.io
+
+================================================================
+KEY FEATURES
+================================================================
+
+Virtual API Key Management:
+  Each user receives a personal virtual API key scoped to their subscription.
+  Keys can have per-key TPM, RPM, and budget ceilings independently of other users.
+
+Model Subscriptions:
+  Users subscribe to models they need. Admins can mark models as "restricted" requiring
+  approval before access is granted. Full audit trail on all state changes.
+
+Usage Tracking & Analytics:
+  Day-by-day incremental usage caching with multi-dimensional filtering (user, model,
+  provider, API key). Export to CSV/JSON. Admin-only system-wide view.
+
+Per-Key Rate & Budget Limits:
+  Per-user configurable TPM (tokens per minute), RPM (requests per minute), max budget,
+  budget duration, and soft budget thresholds enforced at the LiteLLM proxy layer.
+
+Chat Playground:
+  Built-in browser-based chat UI. Users can interactively test models they are subscribed
+  to without writing code.
+
+OpenShift OAuth Login:
+  Three-tier RBAC (admin / adminReadonly / user) backed by OpenShift OAuth.
+
+HA Architecture:
+  All components run with multiple replicas. LiteLLM runs 3 replicas behind Redis for
+  session and key caching. PostgreSQL 16 on a dedicated PVC.
+
+Automated Key Cleanup:
+  Daily cron job on the bastion host purges expired or stale keys (older than 30 days)
+  from LiteLLM and syncs revocation status back to the LiteMaaS database.
+
+================================================================
+THREE-LAYER ARCHITECTURE
+================================================================
+
+Layer 1 — User Portal (LiteMaaS Frontend + Backend):
+  React + PatternFly 6 frontend, Fastify backend API.
+  Handles user authentication (OpenShift OAuth), subscription management, API key lifecycle,
+  usage analytics, admin workflows, and branding.
+  Runs as litellm-frontend and litellm-backend deployments (3 replicas each).
+  Does not handle LLM inference — all model calls go through Layer 2.
+
+Layer 2 — LiteLLM Proxy:
+  Image: quay.io/rh-aiservices-bu/litellm-non-root:main-v1.81.0-stable-custom
+  Running as 3 HA replicas.
+  Handles all actual model routing, virtual key enforcement (TPM/RPM/budget), request
+  rate limiting, caching via Redis, and spend tracking.
+  Stores its state in PostgreSQL. Exposes the OpenAI-compatible API.
+
+Layer 3 — Model Serving (OpenShift AI / KServe):
+  Red Hat OpenShift AI (RHOAI) running KServe predictors in the llm-hosting namespace.
+  Models deployed as InferenceServices on GPU or CPU nodes.
+  LiteLLM calls these internal ClusterIP services directly over the cluster network.
+
+================================================================
+USER ROLE HIERARCHY
+================================================================
+
+admin:
+  - Assigned manually via promote-admin.sh or psql UPDATE
+  - Full platform control: manage users, models, budgets, subscriptions, approve restricted
+    access, view audit logs, configure branding, backup/restore
+
+adminReadonly:
+  - Manually assigned
+  - Read-only admin views: view all users, analytics, audit logs, system state
+
+user:
+  - Automatically assigned on first OAuth login
+  - Browse and subscribe to models, manage own API keys, view own usage, use Chat Playground
+
+Important: Users must log in via OAuth at least once before being promoted to admin.
+Direct database inserts break OAuth login because the OpenShift OAuth ID (UUID) is not set.
+
+================================================================
+AVAILABLE MODELS (as of v0.4.0)
+================================================================
+
+granite-3-2-8b-instruct
+  Capability: Chat
+  Runtime: vLLM on KServe
+  Context: 128K tokens
+  Description: IBM Granite 3.2 8B, general-purpose instruction-tuned. Strong reasoning and coding.
+  KServe predictor: granite-3-2-8b-instruct-predictor
+  Replicas: 1
+
+llama-scout-17b
+  Capability: Chat
+  Runtime: vLLM on KServe
+  Context: 400K tokens (MoE architecture)
+  Description: Meta Llama Scout 17B. Ideal for long-document analysis and large-context RAG.
+  KServe predictor: llama-scout-17b-predictor
+  Replicas: 2 (HA)
+
+granite-4-0-h-tiny
+  Capability: Chat
+  Runtime: vLLM on KServe
+  Description: IBM Granite 4.0 Tiny. Low-latency. Best for simple Q&A and classification.
+  KServe predictor: granite-4-0-h-tiny-predictor
+  Replicas: 1
+
+codellama-7b-instruct
+  Capability: Chat
+  Runtime: vLLM on KServe
+  Context: 16K tokens
+  Description: Meta CodeLlama 7B. Code generation, completion, debugging in Python, Java, Bash, etc.
+  KServe predictor: codellama-7b-instruct-predictor
+  Replicas: 1
+
+llama-guard-3-1b
+  Capability: Safety / Guardrails
+  Runtime: vLLM on KServe
+  Description: Meta Llama Guard 3 1B. Classifies content against 13 hazard categories.
+    Returns "safe" or "unsafe" with category labels.
+  KServe predictor: llama-guard-3-1b-predictor
+  Replicas: 1
+
+nomic-embed-text-v1-5
+  Capability: Embeddings
+  Runtime: OpenVino on KServe
+  Dimensions: 768
+  Context: 8192 tokens
+  Description: Nomic Embed Text. Supports Matryoshka representation learning.
+    Strong retrieval benchmarks. Ideal for semantic search and RAG.
+  KServe predictor: nomic-embed-text-v1-5-predictor
+  Replicas: 1
+
+granite-docling-258m
+  Capability: Document Conversion
+  Runtime: KServe (CPU)
+  Description: IBM Granite Docling 258M. Converts PDFs and Word documents to clean Markdown.
+    Handles layout analysis, table extraction, figure detection, OCR.
+  KServe predictor: granite-docling-258m-predictor
+  Replicas: 1
+
+================================================================
+API ENDPOINTS
+================================================================
+
+Base URL: https://litellm-prod.apps.maas.redhatworkshops.io
+
+Replace YOUR_API_KEY with your virtual key from the LiteMaaS portal.
+
+--- Chat Completions ---
+POST /v1/chat/completions
+
+curl -X POST https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -d '{
+    "model": "granite-3-2-8b-instruct",
+    "messages": [
+      {"role": "system", "content": "You are a helpful AI assistant."},
+      {"role": "user", "content": "Explain Kubernetes in three sentences."}
+    ],
+    "max_tokens": 256,
+    "temperature": 0.7
+  }'
+
+--- Streaming ---
+Add "stream": true to the request body.
+
+--- Embeddings ---
+POST /v1/embeddings
+
+curl -X POST https://litellm-prod.apps.maas.redhatworkshops.io/v1/embeddings \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -d '{
+    "model": "nomic-embed-text-v1-5",
+    "input": "Red Hat OpenShift is an enterprise Kubernetes platform."
+  }'
+
+--- Document Conversion (Docling) ---
+POST /docling/v1/convert/source
+
+curl -X POST https://litellm-prod.apps.maas.redhatworkshops.io/docling/v1/convert/source \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -d '{
+    "http_sources": [{"url": "https://arxiv.org/pdf/2408.09869"}],
+    "options": {"output_format": "markdown"}
+  }'
+
+--- File Upload for Conversion ---
+POST /docling/v1/convert/file
+
+curl -X POST https://litellm-prod.apps.maas.redhatworkshops.io/docling/v1/convert/file \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -F "file=@/path/to/document.pdf" \
+  -F 'options={"output_format": "markdown"}'
+
+--- Tokenize ---
+POST /v1/tokenize
+
+curl -X POST https://litellm-prod.apps.maas.redhatworkshops.io/v1/tokenize \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -d '{
+    "model": "granite-3-2-8b-instruct",
+    "messages": [{"role": "user", "content": "How many tokens is this?"}]
+  }'
+
+--- List Available Models ---
+curl https://litellm-prod.apps.maas.redhatworkshops.io/v1/models \
+  -H "Authorization: Bearer YOUR_API_KEY"
+
+================================================================
+PYTHON SDK EXAMPLE
+================================================================
+
+from openai import OpenAI
+
+client = OpenAI(
+    api_key="YOUR_API_KEY",
+    base_url="https://litellm-prod.apps.maas.redhatworkshops.io/v1"
+)
+
+response = client.chat.completions.create(
+    model="granite-3-2-8b-instruct",
+    messages=[
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "What is Red Hat OpenShift?"}
+    ]
+)
+print(response.choices[0].message.content)
+
+================================================================
+DEPLOYMENT (Ansible Collection)
+================================================================
+
+Collection: rhpds.litemaas v0.3.2
+GitHub: https://github.com/rhpds/rhpds.litemaas
+
+Install:
+  git clone https://github.com/rhpds/rhpds.litemaas.git
+  ansible-galaxy collection install . --force
+
+Deployment command:
+  ansible-playbook playbooks/deploy_litemaas_ha.yml \
+    -e ocp4_workload_litemaas_namespace=litemaas \
+    -e ocp4_workload_litemaas_oauth_enabled=true \
+    -e ocp4_workload_litemaas_branding_enabled=true \
+    -e ocp4_workload_litemaas_ha_litellm_replicas=3
+
+Deployment order:
+  Namespace -> PostgreSQL 16 (StatefulSet + PVC) -> Redis 7 -> LiteLLM Proxy (3 replicas)
+  -> LiteMaaS Backend (3 replicas) -> Branding ConfigMaps -> LiteMaaS Frontend (3 replicas)
+  -> Routes + OAuthClient
+
+Key Variables:
+  ocp4_workload_litemaas_namespace — target OpenShift namespace (default: litemaas)
+  ocp4_workload_litemaas_oauth_enabled — enable OpenShift OAuth login (default: false)
+  ocp4_workload_litemaas_ha_litellm_replicas — LiteLLM replica count (default: 3)
+  ocp4_workload_litemaas_branding_enabled — enable RHDP branding (default: true)
+  ocp4_workload_litemaas_postgres_storage_size — PVC size (default: 10Gi)
+  ocp4_workload_litemaas_ha_redis_image — Redis image (default: registry.redhat.io/rhel9/redis-7:latest)
+  ocp4_workload_litemaas_litellm_image — LiteLLM proxy image
+  ocp4_workload_litemaas_litellm_tag — LiteLLM image tag
+
+Resource Summary (HA Deployment):
+  LiteLLM proxy: 3 replicas, ~1500m CPU, ~1.5Gi memory
+  LiteMaaS backend: 3 replicas, ~300m CPU, ~768Mi memory
+  LiteMaaS frontend: 3 replicas, ~150m CPU, ~384Mi memory
+  PostgreSQL 16: 1 StatefulSet, 500m CPU, 512Mi memory, 10Gi RWO storage
+  Redis 7: 1 pod, 200m CPU, 256Mi memory
+  Total: ~2650m CPU, ~3.4Gi memory, 10Gi storage
+
+================================================================
+DAY-2 OPERATIONS
+================================================================
+
+--- Upgrading Images ---
+NS=litellm-rhpds
+NEW_VERSION=0.5.0
+
+# Update backend
+oc set image deployment/litellm-backend \
+  backend=quay.io/rh-aiservices-bu/litemaas-backend:${NEW_VERSION} \
+  -n ${NS}
+
+# Update frontend (IMPORTANT: update both main container AND init container)
+oc set image deployment/litellm-frontend \
+  frontend=quay.io/rh-aiservices-bu/litemaas-frontend:${NEW_VERSION} \
+  init-frontend=quay.io/rh-aiservices-bu/litemaas-frontend:${NEW_VERSION} \
+  -n ${NS}
+
+# Monitor rollout
+oc rollout status deployment/litellm-backend -n ${NS}
+oc rollout status deployment/litellm-frontend -n ${NS}
+
+--- Scaling ---
+# Scale LiteLLM to 5 replicas
+oc scale deployment/litellm --replicas=5 -n litellm-rhpds
+
+# Redis MUST be running for multi-replica LiteLLM
+oc get pods -n litellm-rhpds -l app=litellm-redis
+
+--- Adding Models ---
+# After adding a model in LiteLLM admin UI, sync to LiteMaaS backend DB:
+LITELLM_URL=$(oc get route litellm-prod -n litellm-rhpds -o jsonpath='https://{.spec.host}')
+LITELLM_KEY=$(oc get secret litellm-secret -n litellm-rhpds \
+  -o jsonpath='{.data.LITELLM_MASTER_KEY}' | base64 -d)
+
+ansible-playbook playbooks/manage_models.yml \
+  -e litellm_url="${LITELLM_URL}" \
+  -e litellm_master_key="${LITELLM_KEY}" \
+  -e ocp4_workload_litemaas_models_namespace=litellm-rhpds \
+  -e ocp4_workload_litemaas_models_sync_from_litellm=true \
+  -e '{"ocp4_workload_litemaas_models_list": []}'
+
+--- Key Cleanup Cronjob ---
+# Setup (run from rhpds.litemaas repo root)
+./setup-key-cleanup-cronjob.sh litellm-rhpds
+
+# Manual run
+sudo /usr/local/bin/cleanup-litemaas-keys-litellm-rhpds.sh
+
+# View logs
+sudo tail -100 /var/log/litemaas-key-cleanup.log
+
+================================================================
+MONITORING
+================================================================
+
+Grafana: https://grafana-route-llm-hosting.apps.maas.redhatworkshops.io
+  Uses reencrypt TLS. Admin credentials in grafana-admin secret in llm-hosting namespace.
+
+Get Grafana credentials:
+  oc get secret -n llm-hosting | grep grafana-admin
+  oc get secret <grafana-admin-secret> -n llm-hosting \
+    -o jsonpath='{.data.GF_SECURITY_ADMIN_PASSWORD}' | base64 -d
+
+ServiceMonitors in llm-hosting namespace (one per model predictor):
+  granite-3-2-8b-instruct-metrics — vLLM metrics
+  llama-scout-17b-metrics — vLLM metrics
+  granite-4-0-h-tiny-metrics — vLLM metrics
+  codellama-7b-instruct-metrics — vLLM metrics
+  llama-guard-3-1b-metrics — vLLM metrics
+  nomic-embed-text-v1-5-metrics — OpenVino metrics
+  granite-docling-258m-metrics — vLLM metrics
+  vllm-models — catch-all vLLM ServiceMonitor
+
+Key Metrics:
+  vllm:request_success_total — Request throughput
+  vllm:time_to_first_token_seconds_bucket — TTFT latency (P50/P95/P99)
+  vllm:num_requests_waiting — Queue depth
+  vllm:gpu_cache_usage_perc — KV cache usage
+  DCGM_FI_DEV_GPU_UTIL — GPU utilization %
+  DCGM_FI_DEV_FB_USED — GPU framebuffer memory used
+
+Healthy thresholds before a workshop:
+  TTFT P95: <15s for ≤30 users, <25s for ≤60 users, <30s for ≤120 users
+  Queue depth: <5 waiting requests
+  GPU memory: <90% framebuffer
+  KV cache utilization: <80%
+
+Benchmark Tool:
+  Role: ocp4_workload_litemaas_benchmark
+  Simulates N concurrent users asking K questions in sequence.
+  Pass/Fail criteria calculated from attendee count automatically.
+
+LiteMaaS Built-in Analytics:
+  Portal: litellm-prod-frontend.apps.maas.redhatworkshops.io -> Admin -> Analytics
+  Views: system overview, per-user, per-model, per-provider, per-API-key, export (CSV/JSON)
+
+================================================================
+COMMON TROUBLESHOOTING
+================================================================
+
+Issue 1: Models added in LiteLLM not showing in LiteMaaS
+  Root cause: LiteMaaS has its own models table. LiteLLM admin UI changes don't auto-sync.
+  Fix: Run manage_models.yml playbook with ocp4_workload_litemaas_models_sync_from_litellm=true
+  Or: Enable LITELLM_AUTO_SYNC=true on litellm-backend deployment
+
+Issue 2: Subscription fails with foreign key constraint violation
+  Root cause: subscriptions.model_id references models.id but model not in LiteMaaS DB.
+  Fix: Run sync playbook or INSERT INTO models directly as emergency fix.
+
+Issue 3: Frontend showing old version after upgrade
+  Root cause: Init container image not updated alongside main container.
+  Fix: Update BOTH containers to same tag using oc set image for both frontend and init-frontend.
+
+Issue 4: LiteLLM DB migration fails (Prisma errors, CrashLoopBackOff)
+  Root cause: Schema migration didn't complete during upgrade.
+  Fix: Scale to 1 replica, check logs, exec into pod to run Prisma migration manually.
+
+Issue 5: Key sync broken between LiteMaaS and LiteLLM
+  Root cause: Key created in LiteLLM not tracked in LiteMaaS api_keys table.
+  Fix: Run sync playbook or trigger POST /api/admin/sync-keys endpoint.
+
+Issue 6: Redis cache issues — stale model data
+  Fix: oc rollout restart deployment/litellm -n litellm-rhpds
+       oc exec -n litellm-rhpds deployment/litellm -- redis-cli FLUSHALL
+
+Issue 7: OAuth callback fails
+  Root cause: OAuthClient redirect URI mismatch or token expiry.
+  Fix: Check OAuthClient redirectURIs match current frontend route hostname.
+
+Issue 8: Model requests timing out
+  Root cause: Large context requests taking longer than route timeout.
+  Fix: Routes have 600s HAProxy timeout already set. For persistent issues, scale model replicas.
+
+Issue 9: LiteLLM returning 401 / invalid API key
+  Root cause: Key was deleted or Redis cache stale.
+  Fix: oc rollout restart deployment/litellm -n litellm-rhpds
+       Verify key exists: curl /key/info -H "Authorization: Bearer $LITELLM_MASTER_KEY"
+
+Issue 10: Pods getting OOMKilled
+  Root cause: Memory limits too low for workload.
+  Fix: oc set resources deployment/litellm --limits=memory=4Gi -n litellm-rhpds
+
+================================================================
+GitOps MODEL MANAGEMENT
+================================================================
+
+Model servers on OpenShift AI are managed via GitOps (ArgoCD). Committing a new
+InferenceService manifest to the repo automatically deploys it to the llm-hosting namespace.
+This is separate from LiteMaaS deployment.
+
+After a new model is deployed via GitOps, register it in LiteMaaS using either:
+  - LiteLLM admin UI (Models -> Add Model) then run sync playbook
+  - ocp4_workload_litemaas_models Ansible role
+  - ocp4_workload_litemaas_litellm_models variable in deploy playbook
+
+================================================================
+KEY CREATION FOR WORKSHOPS
+================================================================
+
+Collection: rhpds.litellm_virtual_keys v0.2.0
+
+The ocp4_workload_litellm_virtual_keys role creates per-user API keys automatically
+for every workshop participant. Key configuration is defined in AgnosticV common.yaml:
+
+litellm_virtual_keys_api_url: "https://litellm-prod.apps.maas.redhatworkshops.io"
+litellm_virtual_keys_admin_api_url: "https://litellm-prod-admin.apps.maas.redhatworkshops.io/api"
+litellm_virtual_keys_models:
+  - granite-3-2-8b-instruct
+litellm_virtual_keys_max_budget: 5.0
+litellm_virtual_keys_budget_duration: "30d"
+litellm_virtual_keys_tpm: 150000
+litellm_virtual_keys_rpm: 60
+
+The role validates models exist, creates a scoped sk-... key per user, sets budget
+and TPM/RPM limits, and delivers the key in lab credentials.
+
+================================================================
+BACKUP OPERATIONS
+================================================================
+
+Monthly automated pg_dump to S3 with VolumeSnapshot fallback.
+Retention: 12 months for SQL dumps.
+
+Setup backup cronjob:
+  ./setup-litemaas-backup-cronjob.sh litellm-rhpds <s3-bucket>
+
+Manual backup:
+  oc exec -n litellm-rhpds litellm-postgres-0 -- \
+    pg_dump -U litellm litellm | gzip > litellm-backup-$(date +%Y%m%d).sql.gz
+
+Restore:
+  oc exec -i -n litellm-rhpds litellm-postgres-0 -- \
+    psql -U litellm litellm < backup.sql

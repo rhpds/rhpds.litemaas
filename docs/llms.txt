@@ -1,0 +1,70 @@
+# RHDP LiteMaaS Documentation
+
+> LiteMaaS is a Model-as-a-Service platform deployed on OpenShift for Red Hat Demo Platform (RHDP). It provides workshop attendees and developers with managed access to AI/LLM models through virtual API keys, with usage tracking, rate limiting, and budget controls.
+
+## What is LiteMaaS
+
+LiteMaaS wraps LiteLLM (an open-source AI proxy) with a management layer: a React frontend portal, a Fastify backend API, and PostgreSQL for state. Model servers run on OpenShift AI (KServe). The platform is deployed using the rhpds.litemaas Ansible collection.
+
+Users never interact with model servers directly. LiteMaaS sits in between — managing who can access which models, enforcing budgets and rate limits, and providing every user a simple OpenAI-compatible API endpoint without managing any infrastructure.
+
+## Documentation
+
+- [Architecture](https://rhpds.github.io/rhpds.litemaas/docs/architecture.html): System design — 5 diagrams covering the platform overview, production deployment, GitOps for models, platform installation via Ansible, and per-workshop key creation.
+- [Product Overview](https://rhpds.github.io/rhpds.litemaas/docs/product/overview.html): What LiteMaaS does, key features, role hierarchy, and user flow.
+- [Models Reference](https://rhpds.github.io/rhpds.litemaas/docs/product/models.html): Model capability types (Chat, Embeddings, Document Conversion), API endpoints, curl and SDK examples.
+- [Deployment Guide](https://rhpds.github.io/rhpds.litemaas/docs/install/deployment.html): Prerequisites, Ansible collection variables, step-by-step deployment, post-install checklist.
+- [Day-2 Operations](https://rhpds.github.io/rhpds.litemaas/docs/day2/operations.html): Upgrading, scaling, adding models, key sync, admin operations.
+- [Grafana & Metrics](https://rhpds.github.io/rhpds.litemaas/docs/day2/grafana.html): Grafana dashboards for RHOAI, vLLM metrics, ServiceMonitors, GPU monitoring.
+- [Monitoring](https://rhpds.github.io/rhpds.litemaas/docs/monitoring.html): Grafana dashboards (vLLM, GPU, OpenVino), ServiceMonitors, benchmark tool, key cleanup cronjob.
+- [Troubleshooting](https://rhpds.github.io/rhpds.litemaas/docs/troubleshooting/common.html): 10 common issues with exact fix commands.
+
+## Key Technical Facts
+
+- Production cluster: maas.redhatworkshops.io, namespace: litellm-rhpds
+- LiteMaaS version: v0.4.0 (backend + frontend)
+- LiteLLM: custom fork quay.io/rh-aiservices-bu/litellm-non-root:main-v1.81.0-stable-custom
+- All components run at 3 replicas for HA
+- PostgreSQL 16 with 10Gi storage (litemaas_db + litellm_db on same server)
+- Model servers on OpenShift AI (KServe) in llm-hosting namespace
+- Deployment: rhpds.litemaas Ansible collection v0.3.2
+- Key creation: rhpds.litellm_virtual_keys Ansible collection v0.2.0
+- GitHub: https://github.com/rhpds/rhpds.litemaas
+- Upstream: https://github.com/rh-aiservices-bu/litemaas
+
+## Production Endpoints
+
+- AI Proxy (OpenAI-compatible): https://litellm-prod.apps.maas.redhatworkshops.io
+- User Portal: https://litellm-prod-frontend.apps.maas.redhatworkshops.io
+- Admin API: https://litellm-prod-admin.apps.maas.redhatworkshops.io/api
+- Grafana: https://grafana-route-llm-hosting.apps.maas.redhatworkshops.io
+
+## Available Models (as of v0.4.0)
+
+- granite-3-2-8b-instruct — IBM Granite 3.2 8B, Chat, 128K context, vLLM on KServe
+- llama-scout-17b — Meta Llama Scout 17B MoE, Chat, 400K context, 2 replicas
+- granite-4-0-h-tiny — IBM Granite 4.0 Tiny, Chat, low-latency
+- codellama-7b-instruct — Meta CodeLlama 7B, Chat, 16K context, code generation
+- llama-guard-3-1b — Meta Llama Guard 3 1B, Safety classification
+- nomic-embed-text-v1-5 — Nomic Embed Text, Embeddings, 768-dim, OpenVino
+- granite-docling-258m — IBM Granite Docling 258M, Document Conversion (PDF to Markdown)
+
+## Architecture Summary
+
+Three-layer architecture:
+1. User Portal — React (PatternFly 6) frontend + Fastify backend. Handles OAuth, subscriptions, key lifecycle, analytics, admin.
+2. LiteLLM Proxy — 3 HA replicas. Routes all inference calls, enforces TPM/RPM/budget, caches via Redis, tracks spend in PostgreSQL.
+3. Model Serving — OpenShift AI KServe InferenceServices in llm-hosting namespace. Managed via GitOps (ArgoCD).
+
+## Deployment Summary
+
+The rhpds.litemaas Ansible collection deploys all components in order:
+Namespace -> PostgreSQL 16 -> Redis 7 -> LiteLLM Proxy (3 replicas) -> LiteMaaS Backend (3 replicas) -> Branding ConfigMaps -> LiteMaaS Frontend (3 replicas) -> Routes + OAuthClient
+
+Key variables: ocp4_workload_litemaas_namespace, ocp4_workload_litemaas_oauth_enabled, ocp4_workload_litemaas_ha_litellm_replicas, ocp4_workload_litemaas_branding_enabled
+
+## User Role Hierarchy
+
+- admin — Full platform control (assigned via promote-admin.sh or psql)
+- adminReadonly — Read-only access to all admin views
+- user — Browse models, subscribe, manage own API keys (auto-assigned on first OAuth login)

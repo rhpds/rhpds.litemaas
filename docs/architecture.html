@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Architecture — RHDP LiteMaaS</title>
+  <meta name="description" content="RHDP LiteMaaS architecture — 5 diagrams covering platform overview, production deployment, GitOps model management, Ansible installation, and per-workshop key creation.">
+  <link rel="canonical" href="https://rhpds.github.io/rhpds.litemaas/docs/architecture.html">
+  <link rel="stylesheet" href="assets/style.css">
   <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -35,21 +38,44 @@
 </header>
 
 <nav>
-  <a href="index.html">Home</a>
-  <a href="architecture.html" class="active">Architecture</a>
-  <a href="product/overview.html">Overview</a>
-  <a href="product/models.html">Models</a>
-  <a href="install/deployment.html">Install</a>
-  <a href="day2/operations.html">Day-2</a>
-  <a href="day2/grafana.html">Grafana</a>
-  <a href="troubleshooting/common.html">Troubleshooting</a>
+  <button class="nav-hamburger" id="navToggle" aria-label="Toggle navigation">&#9776;</button>
+  <div class="nav-links" id="navLinks">
+    <a href="index.html">Home</a>
+    <a href="architecture.html" class="active">Architecture</a>
+    <a href="product/overview.html">Overview</a>
+    <a href="product/models.html">Models</a>
+    <a href="install/deployment.html">Install</a>
+    <a href="day2/operations.html">Day-2</a>
+    <a href="monitoring.html">Monitoring</a>
+    <a href="troubleshooting/common.html">Troubleshooting</a>
+  </div>
 </nav>
 
 <div class="container">
 
+  <div class="breadcrumb">
+    <a href="index.html">Home</a> <span>/</span> Architecture
+  </div>
+
+  <div class="arch-layout">
+
+  <!-- Sidebar jump-to-section (desktop only) -->
+  <nav class="arch-sidebar" aria-label="Jump to section">
+    <h4>On This Page</h4>
+    <ul>
+      <li><a href="#overview">1 — What LiteMaaS Does</a></li>
+      <li><a href="#production">2 — Production Deployment</a></li>
+      <li><a href="#gitops">3 — Model Servers / GitOps</a></li>
+      <li><a href="#install">4 — Platform Installation</a></li>
+      <li><a href="#keys">5 — Per-Workshop Key Creation</a></li>
+    </ul>
+  </nav>
+
+  <div class="arch-content">
+
   <!-- 1. OVERVIEW -->
-  <div class="card">
-    <h2>1 — What LiteMaaS Does</h2>
+  <div class="card" id="overview">
+    <h2>1 — What LiteMaaS Does <a href="#overview" class="anchor-link" aria-label="Link to this section">#</a></h2>
     <p>Users never talk to model servers directly. LiteMaaS sits in between — it manages who can access which models, enforces budgets and rate limits, and gives every user a simple OpenAI-compatible endpoint.</p>
     <div class="mermaid">
 graph LR
@@ -80,8 +106,8 @@ graph LR
   </div>
 
   <!-- 2. PRODUCTION -->
-  <div class="card">
-    <h2>2 — Production Deployment</h2>
+  <div class="card" id="production">
+    <h2>2 — Production Deployment <a href="#production" class="anchor-link" aria-label="Link to this section">#</a></h2>
     <p>All three LiteMaaS components run at 3 replicas. Both databases (LiteMaaS and LiteLLM) share one PostgreSQL server. Redis is used by the proxy for caching and rate limiting.</p>
     <div class="mermaid">
 graph TB
@@ -120,8 +146,8 @@ graph TB
   </div>
 
   <!-- 3. MODELS - GITOPS -->
-  <div class="card">
-    <h2>3 — Model Servers — GitOps</h2>
+  <div class="card" id="gitops">
+    <h2>3 — Model Servers — GitOps <a href="#gitops" class="anchor-link" aria-label="Link to this section">#</a></h2>
     <p>Model servers on OpenShift AI are managed entirely via GitOps. Committing a new InferenceService manifest to the repo automatically deploys it to the cluster. This is separate from the LiteMaaS deployment. Models can then be registered into LiteMaaS via the UI or using the <code>ocp4_workload_litemaas_models</code> role.</p>
     <div class="mermaid">
 graph LR
@@ -148,8 +174,8 @@ graph LR
   </div>
 
   <!-- 4. PLATFORM INSTALL -->
-  <div class="card">
-    <h2>4 — Platform Installation</h2>
+  <div class="card" id="install">
+    <h2>4 — Platform Installation <a href="#install" class="anchor-link" aria-label="Link to this section">#</a></h2>
     <p>Done once by the infra team. The <code>rhpds.litemaas</code> collection (v0.3.2) deploys LiteMaaS in HA mode, registers model endpoints, and sets up Grafana dashboards.</p>
     <div class="mermaid">
 graph LR
@@ -172,8 +198,8 @@ graph LR
   </div>
 
   <!-- 5. KEY CREATION -->
-  <div class="card">
-    <h2>5 — Per-Workshop Key Creation</h2>
+  <div class="card" id="keys">
+    <h2>5 — Per-Workshop Key Creation <a href="#keys" class="anchor-link" aria-label="Link to this section">#</a></h2>
     <p>Runs automatically for every workshop participant. The <code>rhpds.litellm_virtual_keys</code> collection (v0.2.0) creates a scoped API key with models, budget, and rate limits defined in the AgnosticV catalog.</p>
     <div class="mermaid">
 graph LR
@@ -202,6 +228,9 @@ graph LR
     </div>
   </div>
 
+  </div> <!-- .arch-content -->
+  </div> <!-- .arch-layout -->
+
 </div>
 
 <div class="diagram-modal" id="diagramModal">
@@ -211,7 +240,10 @@ graph LR
 
 <footer>
   RHDP Platform Team &nbsp;·&nbsp; <a href="https://github.com/rhpds/rhpds.litemaas" style="color:#aaa">github.com/rhpds/rhpds.litemaas</a>
+  <span class="footer-updated">Last updated: 2026-03-13</span>
 </footer>
+
+<button id="back-to-top" title="Back to top" aria-label="Back to top">&#8679;</button>
 
 <script>
   mermaid.initialize({ startOnLoad: true, theme: 'neutral', securityLevel: 'loose' });
@@ -236,6 +268,45 @@ graph LR
 
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') closeModal();
+  });
+
+  // Hamburger menu
+  document.getElementById('navToggle').addEventListener('click', function() {
+    document.getElementById('navLinks').classList.toggle('open');
+  });
+
+  // Back to top
+  var btt = document.getElementById('back-to-top');
+  window.addEventListener('scroll', function() {
+    btt.classList.toggle('visible', window.scrollY > 400);
+    // Sidebar active section highlight
+    var sections = document.querySelectorAll('.card[id]');
+    var links = document.querySelectorAll('.arch-sidebar a');
+    var current = '';
+    sections.forEach(function(s) {
+      if (window.scrollY >= s.offsetTop - 120) current = s.id;
+    });
+    links.forEach(function(l) {
+      l.classList.toggle('sidebar-active', l.getAttribute('href') === '#' + current);
+    });
+  });
+  btt.addEventListener('click', function() {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  // Copy buttons
+  document.querySelectorAll('pre').forEach(function(pre) {
+    var btn = document.createElement('button');
+    btn.className = 'copy-btn';
+    btn.textContent = 'Copy';
+    btn.addEventListener('click', function() {
+      navigator.clipboard.writeText(pre.innerText).then(function() {
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(function() { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+      });
+    });
+    pre.appendChild(btn);
   });
 </script>
 

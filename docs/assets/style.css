@@ -1,0 +1,334 @@
+/* ============================================================
+   RHDP LiteMaaS — Shared Documentation Stylesheet
+   Applies global UX improvements across all pages.
+   Does not conflict with existing page-specific inline styles.
+   ============================================================ */
+
+/* ---- Google Fonts (Red Hat Text) ---- */
+@import url('https://fonts.googleapis.com/css2?family=Red+Hat+Text:wght@400;500;600;700&family=Red+Hat+Mono:wght@400;500&display=swap');
+
+/* ---- Base / Reset ---- */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Red Hat Text', 'Segoe UI', system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.7;
+  background: #f5f5f5;
+  color: #151515;
+}
+
+/* ---- Sticky Navigation ---- */
+nav {
+  position: sticky !important;
+  top: 0;
+  z-index: 200;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+}
+
+/* ---- Typography improvements ---- */
+p { font-size: 1rem; line-height: 1.7; }
+
+.section p, .card p, .issue p {
+  font-size: 1rem;
+  line-height: 1.7;
+  color: #333;
+}
+
+/* ---- Heading anchor links ---- */
+.section h2,
+.section h3,
+.card h2,
+.card h3,
+.issue-title {
+  position: relative;
+}
+
+.anchor-link {
+  display: inline-block;
+  opacity: 0;
+  margin-left: 0.4rem;
+  color: #cc0000;
+  text-decoration: none;
+  font-size: 0.85em;
+  font-weight: 400;
+  transition: opacity 0.15s;
+  vertical-align: middle;
+}
+
+h2:hover .anchor-link,
+h3:hover .anchor-link {
+  opacity: 1;
+}
+
+/* ---- Code block improvements ---- */
+pre {
+  position: relative;
+  background: #1a1a2e !important;
+  color: #e0e0e0 !important;
+  border-radius: 8px !important;
+  padding: 1.2rem 1.5rem !important;
+  overflow-x: auto;
+  font-family: 'Red Hat Mono', 'Courier New', monospace;
+  font-size: 0.84rem !important;
+  line-height: 1.6;
+  border: 1px solid #2d2d50;
+}
+
+/* Copy button on code blocks */
+.copy-btn {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background: #2d2d50;
+  color: #ccc;
+  border: 1px solid #404070;
+  border-radius: 4px;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.72rem;
+  font-family: 'Red Hat Text', sans-serif;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  z-index: 10;
+}
+.copy-btn:hover { background: #cc0000; color: white; border-color: #cc0000; }
+.copy-btn.copied { background: #3e8635; color: white; border-color: #3e8635; }
+
+/* ---- Table improvements ---- */
+tr:nth-child(even) td { background: #f9f9f9; }
+tr:hover td { background: #fef5f5 !important; }
+
+/* ---- Back to Top button ---- */
+#back-to-top {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  background: #cc0000;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  font-size: 1.2rem;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s, transform 0.2s;
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  line-height: 1;
+}
+#back-to-top.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+#back-to-top:hover { transform: translateY(-2px); background: #a50000; }
+
+/* ---- Footer timestamp ---- */
+.footer-updated {
+  display: block;
+  font-size: 0.78rem;
+  color: #888;
+  margin-top: 0.3rem;
+}
+
+/* ---- Active nav highlight ---- */
+nav a.active {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 2px;
+}
+
+/* ---- Architecture sidebar (Jump to section) ---- */
+.arch-layout {
+  display: flex;
+  gap: 2rem;
+  align-items: flex-start;
+}
+
+.arch-sidebar {
+  display: none;
+  width: 200px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 60px;
+  background: white;
+  border-radius: 8px;
+  padding: 1.2rem;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+  font-size: 0.84rem;
+}
+
+.arch-sidebar h4 {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #cc0000;
+  margin-bottom: 0.8rem;
+}
+
+.arch-sidebar ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.arch-sidebar li {
+  margin-bottom: 0.5rem;
+}
+
+.arch-sidebar a {
+  color: #444;
+  text-decoration: none;
+  display: block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  transition: background 0.15s, color 0.15s;
+  line-height: 1.3;
+}
+
+.arch-sidebar a:hover {
+  background: #fef0f0;
+  color: #cc0000;
+}
+
+.arch-sidebar a.sidebar-active {
+  background: #cc0000;
+  color: white;
+}
+
+.arch-content {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (min-width: 900px) {
+  .arch-sidebar { display: block; }
+}
+
+/* ---- Index page search bar ---- */
+.search-wrap {
+  margin: 0 0 1.5rem;
+}
+
+#doc-search {
+  width: 100%;
+  padding: 0.75rem 1.2rem;
+  font-size: 1rem;
+  font-family: 'Red Hat Text', sans-serif;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  outline: none;
+  transition: border-color 0.2s;
+  background: white;
+  color: #151515;
+}
+
+#doc-search:focus { border-color: #cc0000; }
+#doc-search::placeholder { color: #999; }
+
+.search-no-results {
+  display: none;
+  color: #666;
+  font-size: 0.9rem;
+  padding: 0.5rem 0;
+}
+
+/* ---- Hamburger / Mobile nav ---- */
+.nav-hamburger {
+  display: none;
+  background: none;
+  border: none;
+  color: #e0e0e0;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0.85rem 1.2rem;
+  line-height: 1;
+}
+
+@media (max-width: 700px) {
+  nav {
+    flex-wrap: wrap;
+    padding: 0 !important;
+  }
+
+  .nav-hamburger {
+    display: block;
+    width: 100%;
+    text-align: left;
+  }
+
+  .nav-links {
+    display: none;
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .nav-links.open {
+    display: flex;
+  }
+
+  nav a,
+  .nav-group > a {
+    padding: 0.75rem 1.2rem !important;
+    border-top: 1px solid #2a2a2a;
+  }
+
+  .nav-dropdown {
+    position: static !important;
+    display: none;
+    background: #111 !important;
+    box-shadow: none !important;
+    min-width: unset !important;
+  }
+
+  .nav-group:hover .nav-dropdown,
+  .nav-group.open .nav-dropdown {
+    display: block;
+  }
+
+  .nav-group > a::after {
+    float: right;
+  }
+
+  .container {
+    padding: 0 1rem !important;
+  }
+
+  header {
+    padding: 1.2rem 1.5rem !important;
+  }
+
+  h1.page-title { font-size: 1.4rem; }
+}
+
+/* ---- Card hover (keep existing, ensure consistent) ---- */
+.card {
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+
+.card:hover {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  transform: translateY(-2px);
+}
+
+/* ---- Breadcrumbs ---- */
+.breadcrumb {
+  font-size: 0.84rem;
+  color: #666;
+  margin-bottom: 1.5rem;
+}
+
+.breadcrumb a {
+  color: #cc0000;
+  text-decoration: none;
+}
+
+.breadcrumb a:hover { text-decoration: underline; }
+.breadcrumb span { color: #999; margin: 0 0.3rem; }

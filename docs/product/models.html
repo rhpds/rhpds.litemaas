@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>LiteMaaS — Models Reference</title>
+  <meta name="description" content="RHDP LiteMaaS models reference — Chat, Embeddings, Tokenize, Document Conversion, and Safety models. API endpoints, curl examples, Python and Node.js SDK integration.">
+  <link rel="canonical" href="https://rhpds.github.io/rhpds.litemaas/docs/product/models.html">
+  <link rel="stylesheet" href="../assets/style.css">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Red Hat Text', 'Segoe UI', sans-serif; background: #f5f5f5; color: #151515; line-height: 1.6; }
@@ -550,7 +553,43 @@ curl https://litellm-prod.apps.maas.redhatworkshops.io/model/info \
 
 <footer>
   <p>RHDP LiteMaaS Documentation &mdash; Red Hat Demo Platform &mdash; maas.redhatworkshops.io</p>
+  <span class="footer-updated">Last updated: 2026-03-13</span>
 </footer>
 
+<button id="back-to-top" title="Back to top" aria-label="Back to top">&#8679;</button>
+
+<script>
+  document.querySelectorAll('.nav-group > a').forEach(function(a) {
+    a.addEventListener('click', function(e) {
+      if (window.innerWidth <= 700) {
+        var grp = this.closest('.nav-group');
+        e.preventDefault();
+        grp.classList.toggle('open');
+      }
+    });
+  });
+  var btt = document.getElementById('back-to-top');
+  window.addEventListener('scroll', function() {
+    btt.classList.toggle('visible', window.scrollY > 400);
+  });
+  btt.addEventListener('click', function() { window.scrollTo({ top: 0, behavior: 'smooth' }); });
+  document.querySelectorAll('pre').forEach(function(pre) {
+    var btn = document.createElement('button');
+    btn.className = 'copy-btn'; btn.textContent = 'Copy';
+    btn.addEventListener('click', function() {
+      navigator.clipboard.writeText(pre.innerText).then(function() {
+        btn.textContent = 'Copied!'; btn.classList.add('copied');
+        setTimeout(function() { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+      });
+    });
+    pre.appendChild(btn);
+  });
+  document.querySelectorAll('.section h2, .section h3').forEach(function(h) {
+    if (!h.id) h.id = h.textContent.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    var a = document.createElement('a');
+    a.className = 'anchor-link'; a.href = '#' + h.id; a.textContent = '#'; a.setAttribute('aria-label', 'Link to section');
+    h.appendChild(a);
+  });
+</script>
 </body>
 </html>
