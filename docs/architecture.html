@@ -147,39 +147,58 @@ graph LR
     </div>
   </div>
 
-  <!-- 4. ANSIBLE -->
+  <!-- 4. PLATFORM INSTALL -->
   <div class="card">
-    <h2>4 — LiteMaaS & Keys — Ansible via Babylon</h2>
-    <p>The LiteMaaS platform is deployed by Ansible using two separate collections. Babylon reads the AgnosticV catalog and runs the roles automatically when a lab is ordered.</p>
+    <h2>4 — Platform Installation — rhpds.litemaas collection</h2>
+    <p>Done once by the infra team. Deploys LiteMaaS onto the cluster, registers model endpoints, and sets up Grafana dashboards.</p>
     <div class="mermaid">
 graph LR
-    USER["👤 RHDP User\norders lab"]
-    AV["📋 AgnosticV\ncatalog definition"]
-    BAB["⚙️ Babylon"]
+    INFRA["👷 Infra Team\none-time setup"]
 
-    subgraph C1["rhpds.litemaas collection"]
-        R1["ocp4_workload_litemaas\ndeploys platform"]
-        R3["ocp4_workload_rhoai_metrics\ndeploys Grafana"]
-    end
-
-    subgraph C2["rhpds.litellm_virtual_keys collection"]
-        K1["ocp4_workload_litellm_virtual_keys\ncreates one API key per participant\nwith models · budget · rate limits"]
+    subgraph C1["rhpds.litemaas Ansible Collection"]
+        R1["ocp4_workload_litemaas\ndeploys LiteMaaS platform"]
+        R2["ocp4_workload_litemaas_models\nregisters model endpoints"]
+        R3["ocp4_workload_rhoai_metrics\ndeploys Grafana dashboards"]
     end
 
     OCP["☁️ OpenShift\nlitellm-rhpds"]
 
-    USER --> BAB
-    AV -->|defines what to run| BAB
-    BAB --> R1 & R3
-    BAB --> K1
-    R1 & R3 --> OCP
-    K1 -->|sk-... key delivered\nto participant| OCP
+    INFRA --> R1 & R2 & R3
+    R1 & R2 & R3 --> OCP
 
     style C1 fill:#fff9c4,stroke:#f9a825,stroke-width:2px
+    style INFRA fill:#e8eaf6,stroke:#3949ab,stroke-width:1px
+    </div>
+  </div>
+
+  <!-- 5. KEY CREATION -->
+  <div class="card">
+    <h2>5 — Per-Workshop Key Creation — rhpds.litellm_virtual_keys collection</h2>
+    <p>Runs automatically for every workshop. When a participant orders a lab, Babylon reads the AgnosticV catalog and runs the key creation role — no manual steps needed.</p>
+    <div class="mermaid">
+graph LR
+    USER["👤 Workshop Participant\norders lab from catalog"]
+    AV["📋 AgnosticV\ndefines models, budget,\nduration for this workshop"]
+    BAB["⚙️ Babylon\norchestration engine"]
+
+    subgraph C2["rhpds.litellm_virtual_keys Ansible Collection"]
+        K1["ocp4_workload_litellm_virtual_keys\ncreates one API key per participant\nscoped to workshop models\nwith budget and rate limits"]
+    end
+
+    LM["🔀 LiteMaaS API"]
+    KEY["🔑 sk-... virtual key\ndelivered in lab credentials"]
+
+    USER --> BAB
+    AV -->|defines what to run| BAB
+    BAB --> K1
+    K1 -->|POST /key/generate| LM
+    LM --> KEY
+
     style C2 fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
     style BAB fill:#e8eaf6,stroke:#3949ab,stroke-width:1px
     style USER fill:#fce4ec,stroke:#cc0000,stroke-width:1px
     style AV fill:#fff3e0,stroke:#e65100,stroke-width:1px
+    style KEY fill:#fff9c4,stroke:#f9a825,stroke-width:2px
     </div>
   </div>
 
