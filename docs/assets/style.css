@@ -363,14 +363,34 @@ nav a.active {
 .page-nav .pn-next { margin-left: auto; text-align: right; }
 .page-nav .pn-prev { margin-right: auto; text-align: left; }
 
-/* ---- Card hover (keep existing, ensure consistent) ---- */
-.card {
+/* ---- Card hover (only on clickable index cards, not content cards) ---- */
+a.card {
   transition: box-shadow 0.2s, transform 0.2s;
 }
 
-.card:hover {
+a.card:hover {
   box-shadow: 0 4px 16px rgba(0,0,0,0.15);
   transform: translateY(-2px);
+}
+
+/* Diagrams inside cards must be clickable without card interfering */
+.card .mermaid {
+  cursor: zoom-in;
+  position: relative;
+}
+
+.card .mermaid:hover::after {
+  content: "🔍 Click to expand";
+  position: absolute;
+  top: 0.4rem;
+  right: 0.6rem;
+  background: rgba(0,0,0,0.55);
+  color: white;
+  font-size: 0.72rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 3px;
+  pointer-events: none;
+  z-index: 10;
 }
 
 /* ---- Breadcrumbs ---- */
