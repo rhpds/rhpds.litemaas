@@ -149,19 +149,19 @@ graph LR
 
   <!-- 4. PLATFORM INSTALL -->
   <div class="card">
-    <h2>4 — Platform Installation — rhpds.litemaas collection</h2>
-    <p>Done once by the infra team. Deploys LiteMaaS onto the cluster, registers model endpoints, and sets up Grafana dashboards.</p>
+    <h2>4 — Platform Installation</h2>
+    <p>Done once by the infra team. The <code>rhpds.litemaas</code> collection (v0.3.2) deploys LiteMaaS in HA mode, registers model endpoints, and sets up Grafana dashboards.</p>
     <div class="mermaid">
 graph LR
     INFRA["👷 Infra Team\none-time setup"]
 
-    subgraph C1["rhpds.litemaas Ansible Collection"]
-        R1["ocp4_workload_litemaas\ndeploys LiteMaaS platform"]
-        R2["ocp4_workload_litemaas_models\nregisters model endpoints"]
-        R3["ocp4_workload_rhoai_metrics\ndeploys Grafana dashboards"]
+    subgraph C1["rhpds.litemaas  v0.3.2"]
+        R1["ocp4_workload_litemaas\n— deploys Frontend · Backend\n— LiteLLM Proxy · PostgreSQL · Redis\n— 3 replicas HA"]
+        R2["ocp4_workload_litemaas_models\n— registers model endpoints\n— syncs to LiteMaaS DB"]
+        R3["ocp4_workload_rhoai_metrics\n— Grafana Operator v5\n— ServiceMonitors per model\n— GPU + vLLM dashboards"]
     end
 
-    OCP["☁️ OpenShift\nlitellm-rhpds"]
+    OCP["☁️ OpenShift\nnamespace: litellm-rhpds"]
 
     INFRA --> R1 & R2 & R3
     R1 & R2 & R3 --> OCP
@@ -173,26 +173,26 @@ graph LR
 
   <!-- 5. KEY CREATION -->
   <div class="card">
-    <h2>5 — Per-Workshop Key Creation — rhpds.litellm_virtual_keys collection</h2>
-    <p>Runs automatically for every workshop. When a participant orders a lab, Babylon reads the AgnosticV catalog and runs the key creation role — no manual steps needed.</p>
+    <h2>5 — Per-Workshop Key Creation</h2>
+    <p>Runs automatically for every workshop participant. The <code>rhpds.litellm_virtual_keys</code> collection (v0.2.0) creates a scoped API key with models, budget, and rate limits defined in the AgnosticV catalog.</p>
     <div class="mermaid">
 graph LR
     USER["👤 Workshop Participant\norders lab from catalog"]
-    AV["📋 AgnosticV\ndefines models, budget,\nduration for this workshop"]
-    BAB["⚙️ Babylon\norchestration engine"]
+    AV["📋 AgnosticV\ndefines: models · budget\nduration · rate limits"]
+    BAB["⚙️ Babylon"]
 
-    subgraph C2["rhpds.litellm_virtual_keys Ansible Collection"]
-        K1["ocp4_workload_litellm_virtual_keys\ncreates one API key per participant\nscoped to workshop models\nwith budget and rate limits"]
+    subgraph C2["rhpds.litellm_virtual_keys  v0.2.0"]
+        K1["ocp4_workload_litellm_bastion_profile\n— configures bastion access"]
+        K2["ocp4_workload_litellm_virtual_keys\n— validates models exist\n— creates sk-... key per user\n— sets budget + TPM/RPM limits\n— delivers key in lab credentials"]
     end
 
-    LM["🔀 LiteMaaS API"]
-    KEY["🔑 sk-... virtual key\ndelivered in lab credentials"]
+    LM["🔀 LiteMaaS\nPOST /key/generate"]
+    KEY["🔑 sk-... virtual key"]
 
     USER --> BAB
     AV -->|defines what to run| BAB
-    BAB --> K1
-    K1 -->|POST /key/generate| LM
-    LM --> KEY
+    BAB --> K1 --> K2
+    K2 --> LM --> KEY
 
     style C2 fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
     style BAB fill:#e8eaf6,stroke:#3949ab,stroke-width:1px
