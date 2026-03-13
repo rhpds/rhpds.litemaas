@@ -120,6 +120,36 @@ oc exec -n llm-hosting \
       <div class="metric"><strong>Power Draw</strong>Current Watts<code>DCGM_FI_DEV_POWER_USAGE</code></div>
     </div>
 
+    <h3>Dashboard Details</h3>
+    <p>Dashboards are bundled in the <code>ocp4_workload_rhoai_metrics</code> role under <code>files/grafana/</code> — no external downloads. Three dashboards are deployed:</p>
+    <table>
+      <tr><th>Dashboard</th><th>What it shows</th><th>Data source</th></tr>
+      <tr>
+        <td><strong>vLLM Model Performance</strong></td>
+        <td>Per-model throughput (req/s), Time to First Token (P50/P95/P99), scheduler queue depth, KV cache utilization, prompt/completion token histograms, generation tokens/sec</td>
+        <td>vLLM <code>/metrics</code> on port 8080 via ServiceMonitor</td>
+      </tr>
+      <tr>
+        <td><strong>GPU Node Overview</strong></td>
+        <td>Per-GPU utilization %, framebuffer memory used/free, temperature, power draw, NVLink bandwidth, PCIe throughput — across all model serving nodes</td>
+        <td>NVIDIA DCGM Exporter on port 9400</td>
+      </tr>
+      <tr>
+        <td><strong>OpenVino Server</strong></td>
+        <td>Inference request count, request duration histogram, in-flight requests — for CPU-based models (e.g. Nomic embeddings)</td>
+        <td>OpenVino Model Server <code>/metrics</code> on port 8080</td>
+      </tr>
+    </table>
+
+    <h3>Key Metrics to Watch Before a Workshop</h3>
+    <table>
+      <tr><th>Metric</th><th>Healthy range</th><th>Action if outside</th></tr>
+      <tr><td>TTFT P95</td><td>&lt;15s (≤30 users), &lt;30s (≤60 users), &lt;60s (120+)</td><td>Run benchmark, reduce attendees or add replicas</td></tr>
+      <tr><td>Queue depth</td><td>&lt;5 waiting requests</td><td>Scale model predictor replicas</td></tr>
+      <tr><td>GPU memory used</td><td>&lt;90% framebuffer</td><td>Reduce model context length or scale</td></tr>
+      <tr><td>KV cache utilization</td><td>&lt;80%</td><td>Reduce concurrent requests or max tokens</td></tr>
+    </table>
+
     <h3>Deploying the Monitoring Stack</h3>
     <p>Deployed via the <code>ocp4_workload_rhoai_metrics</code> role in the <code>rhpds.litemaas</code> collection.</p>
     <pre><span class="c"># Deploy Grafana + ServiceMonitors to llm-hosting namespace</span>
@@ -151,6 +181,67 @@ ansible-playbook playbooks/deploy_rhoai_metrics.yml \
 
     <h3>Caching</h3>
     <p>Historical data (past days) is cached permanently. Current day is refreshed every 5 minutes. Use <strong>Refresh Today</strong> in the UI to force an immediate update.</p>
+  </div>
+
+  <!-- Benchmark -->
+  <div class="card">
+    <h2>Benchmark — Pre-Event Capacity Validation</h2>
+    <p>The <code>ocp4_workload_litemaas_benchmark</code> role (in <code>rhpds.litemaas</code>) runs a multi-turn conversation load test against LiteMaaS. Use it before Summit or large workshops to verify the platform can handle the expected load. Results are published as an HTML report on an OpenShift route.</p>
+
+    <h3>What It Tests</h3>
+    <p>Simulates N concurrent users each asking K questions in sequence. Each turn uses the same seed document — this tests prefix caching effectiveness (the speedup ratio). Reports P50/P95/P99 Time to First Token and requests per second.</p>
+
+    <h3>Pass/Fail Criteria (auto-calculated by attendee count)</h3>
+    <table>
+      <tr><th>Attendees</th><th>P95 PASS</th><th>P95 WARN</th><th>P95 FAIL</th></tr>
+      <tr><td>5–29 users</td><td>&lt; 15s</td><td>15–30s</td><td>&gt; 30s</td></tr>
+      <tr><td>30–59 users</td><td>&lt; 25s</td><td>25–50s</td><td>&gt; 50s</td></tr>
+      <tr><td>60–119 users</td><td>&lt; 30s</td><td>30–60s</td><td>&gt; 60s</td></tr>
+      <tr><td>120+ users</td><td>&lt; 60s</td><td>60–120s</td><td>&gt; 120s</td></tr>
+    </table>
+
+    <h3>Cache Performance</h3>
+    <table>
+      <tr><th>Speedup ratio</th><th>Cache status</th><th>Meaning</th></tr>
+      <tr><td>&gt; 2.5x</td><td>EXCELLENT</td><td>Later turns significantly faster than first — prefix caching working well</td></tr>
+      <tr><td>1.5–2.5x</td><td>GOOD</td><td>Acceptable for workshops</td></tr>
+      <tr><td>&lt; 1.5x</td><td>POOR</td><td>Check if model supports prefix caching</td></tr>
+    </table>
+
+    <h3>MCP / Tool Calling Multiplier</h3>
+    <p>LibreChat/MCP workshops apply a <strong>3× multiplier</strong> to question count — each user question may trigger 2–3 AI calls (tool invocation, result processing, response). Enable this with <code>benchmark_model_supports_mcp: true</code>.</p>
+
+    <h3>Running a Benchmark</h3>
+    <pre><span class="c"># Example: test 60 attendees, 10 questions each, granite model</span>
+<span class="c"># Run from the RHDP catalog: Tests → LiteMaaS Benchmark CI</span>
+<span class="c"># Key parameters in AgnosticV common.yaml:</span>
+
+benchmark_conversations_count: 60    <span class="c"># simulated users (min 5, max 200)</span>
+benchmark_sessions_count: 1          <span class="c"># back-to-back sessions</span>
+benchmark_turns_count: 10            <span class="c"># questions per user (min 5, max 50)</span>
+benchmark_model_supports_mcp: false  <span class="c"># true = applies 3x multiplier</span>
+benchmark_model_granite_3_2_8b: true <span class="c"># select which model to test</span></pre>
+
+    <h3>Interpreting Results</h3>
+    <p>The benchmark deploys an HTML report to an OpenShift route. The report shows:</p>
+    <ul style="margin:0.5rem 0 0 1.5rem; font-size:0.9rem; color:#444;">
+      <li>Overall PASS / WARN / FAIL status with colour coding</li>
+      <li>P50, P95, P99 Time to First Token in milliseconds</li>
+      <li>Speedup ratio (cache effectiveness)</li>
+      <li>Total requests, RPS, test duration</li>
+      <li>Full raw benchmark output</li>
+    </ul>
+    <pre><span class="c"># Get the report URL after benchmark completes</span>
+oc get route benchmark-report -n &lt;guid&gt; -o jsonpath='{.spec.host}'</pre>
+
+    <h3>Parallel Workers (auto-calculated)</h3>
+    <table>
+      <tr><th>Attendees</th><th>Parallel workers</th></tr>
+      <tr><td>1–30</td><td>2</td></tr>
+      <tr><td>31–60</td><td>4</td></tr>
+      <tr><td>61–100</td><td>8</td></tr>
+      <tr><td>101+</td><td>16</td></tr>
+    </table>
   </div>
 
   <!-- Key cleanup cronjob -->
