@@ -63,6 +63,7 @@
   <!-- DIAGRAM 1: High-level overview -->
   <div class="card">
     <h2>Overview — Three Layers</h2>
+    <p style="color:#555; font-size:0.9rem; margin-bottom:1rem;">LiteMaaS sits between users and AI model servers. Users interact with the portal or call the API directly — they never talk to models directly. The AI proxy handles routing, authentication, and rate limiting transparently.</p>
     <div class="mermaid">
 graph LR
     U["👤 Users\n(developers, workshop attendees, admins)"]
@@ -96,6 +97,7 @@ graph LR
   <!-- DIAGRAM 2: Production deployment -->
   <div class="card">
     <h2>Production Deployment — litellm-rhpds namespace</h2>
+    <p style="color:#555; font-size:0.9rem; margin-bottom:1rem;">All three application components run at 3 replicas for high availability. PostgreSQL holds both the LiteMaaS management data and the AI proxy state in separate databases on the same server. Redis is used by the proxy for caching and rate limiting, and is flushed by the backend whenever models change.</p>
     <div class="mermaid">
 graph TB
     subgraph EXT["External access — maas.redhatworkshops.io"]
@@ -133,6 +135,7 @@ graph TB
   <!-- DIAGRAM 3: GitOps -->
   <div class="card">
     <h2>GitOps — How Deployments & Models are Managed</h2>
+    <p style="color:#555; font-size:0.9rem; margin-bottom:1rem;">RHDP uses AgnosticV to define what gets deployed and AgnosticD to execute it. The <code>rhpds.litemaas</code> Ansible collection contains three roles — one deploys the platform, one registers models into it, and one sets up Grafana dashboards for monitoring the model servers.</p>
     <div class="mermaid">
 graph LR
     AV["📋 AgnosticV\ncatalog common.yaml\n(what to deploy)"]
@@ -288,6 +291,7 @@ curl -X PATCH "$ADMIN_URL/api/v1/branding" \
     <h2>Request Flow</h2>
 
     <h3>User Inference Request (Chat / Embeddings / Tokenize)</h3>
+    <p style="color:#555; font-size:0.88rem; margin-bottom:0.8rem;">Every model call goes through the AI proxy — the user's virtual key is validated, rate limits checked, and the request forwarded to the model. Spend is logged after each call so usage tracking and budget enforcement stay accurate.</p>
     <div class="mermaid">
 sequenceDiagram
     autonumber
@@ -310,6 +314,7 @@ sequenceDiagram
     </div>
 
     <h3>Document Conversion Request (/docling)</h3>
+    <p style="color:#555; font-size:0.88rem; margin-bottom:0.8rem;">Document conversion uses the same virtual key as chat — but routes to a specialist model that converts PDFs and documents into clean markdown. Large documents can take up to 5 minutes, so the route has an extended timeout configured.</p>
     <div class="mermaid">
 sequenceDiagram
     autonumber
@@ -328,6 +333,7 @@ sequenceDiagram
     </div>
 
     <h3>GitOps — Adding a New Model via AgnosticD</h3>
+    <p style="color:#555; font-size:0.88rem; margin-bottom:0.8rem;">When a new model is added via the catalog, AgnosticD registers it in the AI proxy and the backend automatically syncs it into the LiteMaaS database — setting the correct capability labels so users see the right badges in the portal.</p>
     <div class="mermaid">
 sequenceDiagram
     autonumber
@@ -353,6 +359,7 @@ sequenceDiagram
     </div>
 
     <h3>Key Lifecycle — Creation & Cleanup</h3>
+    <p style="color:#555; font-size:0.88rem; margin-bottom:0.8rem;">When an admin creates a key it lands in both the AI proxy (for enforcement) and LiteMaaS (for display). A daily cronjob on the bastion host deletes expired keys from both places, keeping the databases clean.</p>
     <div class="mermaid">
 sequenceDiagram
     autonumber
