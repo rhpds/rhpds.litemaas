@@ -472,6 +472,29 @@ sequenceDiagram
     a.className = 'anchor-link'; a.href = '#' + h.id; a.textContent = '#'; a.setAttribute('aria-label', 'Link to section');
     h.appendChild(a);
   });
+  // Diagram click to expand
+  document.addEventListener('click', function(e) {
+    var diagram = e.target.closest('.mermaid');
+    if (diagram && !e.target.closest('#diagramModal')) {
+      var modal = document.getElementById('diagramModal');
+      var inner = document.getElementById('diagramModalInner');
+      inner.innerHTML = diagram.innerHTML;
+      modal.classList.add('open');
+    }
+  });
+  function closeModal() {
+    document.getElementById('diagramModal').classList.remove('open');
+  }
+  document.getElementById('diagramModal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+  });
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeModal();
+  });
 </script>
+<div class="diagram-modal" id="diagramModal">
+  <button class="diagram-modal-close" onclick="closeModal()">✕</button>
+  <div class="diagram-modal-inner" id="diagramModalInner"></div>
+</div>
 </body>
 </html>
