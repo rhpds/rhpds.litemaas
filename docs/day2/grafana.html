@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LiteMaaS — Grafana &amp; RHOAI Metrics</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Red Hat Text', 'Segoe UI', sans-serif; background: #f5f5f5; color: #151515; line-height: 1.6; }
+    header { background: #cc0000; color: white; padding: 1.5rem 3rem; display: flex; align-items: center; gap: 1.5rem; }
+    header h1 { font-size: 1.5rem; font-weight: 700; }
+    header p { opacity: 0.85; font-size: 0.9rem; margin-top: 0.2rem; }
+    nav { background: #151515; padding: 0 3rem; display: flex; gap: 0; flex-wrap: wrap; }
+    nav a { color: #e0e0e0; text-decoration: none; padding: 0.85rem 1.2rem; font-size: 0.9rem; display: block; transition: background 0.15s; }
+    nav a:hover, nav a.active { background: #cc0000; color: white; }
+    nav .nav-group { position: relative; }
+    nav .nav-group:hover .nav-dropdown { display: block; }
+    .nav-dropdown { display: none; position: absolute; top: 100%; left: 0; background: #1f1f1f; min-width: 200px; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+    .nav-dropdown a { display: block; padding: 0.7rem 1.2rem; border-bottom: 1px solid #333; }
+    .container { max-width: 1100px; margin: 2rem auto; padding: 0 2rem; }
+    .breadcrumb { font-size: 0.82rem; color: #666; margin-bottom: 1.5rem; }
+    .breadcrumb a { color: #cc0000; text-decoration: none; }
+    .breadcrumb a:hover { text-decoration: underline; }
+    h1.page-title { font-size: 1.8rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .page-subtitle { color: #555; margin-bottom: 2rem; font-size: 1rem; }
+    .section { background: white; border-radius: 8px; padding: 2rem; margin-bottom: 1.5rem; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+    .section h2 { font-size: 1.2rem; font-weight: 700; margin-bottom: 1rem; color: #151515; border-bottom: 2px solid #cc0000; padding-bottom: 0.5rem; }
+    .section h3 { font-size: 1rem; font-weight: 700; margin: 1.4rem 0 0.5rem; color: #333; }
+    .section h4 { font-size: 0.92rem; font-weight: 700; margin: 1rem 0 0.4rem; color: #444; }
+    .section p { margin-bottom: 0.8rem; color: #333; font-size: 0.92rem; }
+    .section ul, .section ol { padding-left: 1.5rem; margin-bottom: 0.8rem; }
+    .section li { margin-bottom: 0.4rem; color: #333; font-size: 0.92rem; }
+    pre { background: #1e1e1e; color: #d4d4d4; padding: 1.2rem 1.5rem; border-radius: 6px; overflow-x: auto; font-size: 0.82rem; line-height: 1.5; margin: 0.8rem 0; }
+    pre .comment { color: #6a9955; }
+    pre .string { color: #ce9178; }
+    pre .keyword { color: #569cd6; }
+    code { font-family: 'Courier New', monospace; font-size: 0.85em; background: #f0f0f0; padding: 0.1em 0.3em; border-radius: 3px; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.86rem; }
+    th { background: #151515; color: white; padding: 0.6rem 0.8rem; text-align: left; font-weight: 600; }
+    td { padding: 0.6rem 0.8rem; border-bottom: 1px solid #e8e8e8; vertical-align: top; }
+    tr:nth-child(even) { background: #f9f9f9; }
+    td code { background: #f0f0f0; padding: 0.1em 0.3em; border-radius: 3px; font-size: 0.82rem; }
+    .info-box { background: #e8f4fd; border-left: 4px solid #0066cc; padding: 1rem 1.5rem; border-radius: 0 6px 6px 0; margin: 1rem 0; }
+    .info-box p { margin: 0; font-size: 0.88rem; color: #004080; }
+    .warn-box { background: #fff8e1; border-left: 4px solid #f0a500; padding: 1rem 1.5rem; border-radius: 0 6px 6px 0; margin: 1rem 0; }
+    .warn-box p { margin: 0; font-size: 0.88rem; color: #5d3900; }
+    .metric-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; margin-top: 1rem; }
+    .metric-card { background: #f9f9f9; border-radius: 6px; padding: 1.2rem; border-left: 3px solid #0066cc; }
+    .metric-card h4 { font-size: 0.9rem; font-weight: 700; margin-bottom: 0.4rem; }
+    .metric-card code { font-size: 0.8rem; display: block; background: #1e1e1e; color: #d4d4d4; padding: 0.3rem 0.6rem; border-radius: 3px; margin-top: 0.4rem; }
+    .mermaid { margin: 1.5rem 0; background: #f9f9f9; border-radius: 8px; padding: 1rem; }
+    footer { background: #151515; color: #aaa; text-align: center; padding: 1.5rem; font-size: 0.85rem; margin-top: 3rem; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>RHDP LiteMaaS</h1>
+    <p>Model as a Service for Red Hat Demo Platform</p>
+  </div>
+</header>
+
+<nav>
+  <a href="../index.html">Home</a>
+  <a href="../architecture.html">Architecture</a>
+  <div class="nav-group">
+    <a href="../product/overview.html">Product ▾</a>
+    <div class="nav-dropdown">
+      <a href="../product/overview.html">Overview</a>
+      <a href="../product/models.html">Models Reference</a>
+    </div>
+  </div>
+  <div class="nav-group">
+    <a href="../install/deployment.html">Install ▾</a>
+    <div class="nav-dropdown">
+      <a href="../install/deployment.html">Deployment Guide</a>
+    </div>
+  </div>
+  <div class="nav-group">
+    <a href="operations.html" class="active">Day-2 ▾</a>
+    <div class="nav-dropdown">
+      <a href="operations.html">Operations</a>
+      <a href="grafana.html" class="active">Grafana / Metrics</a>
+    </div>
+  </div>
+  <div class="nav-group">
+    <a href="../troubleshooting/common.html">Troubleshooting ▾</a>
+    <div class="nav-dropdown">
+      <a href="../troubleshooting/common.html">Common Issues</a>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+
+  <div class="breadcrumb">
+    <a href="../index.html">Home</a> / <a href="operations.html">Day-2</a> / Grafana &amp; RHOAI Metrics
+  </div>
+
+  <h1 class="page-title">Grafana &amp; RHOAI Metrics</h1>
+  <p class="page-subtitle">Infrastructure observability for LiteMaaS — model serving metrics, GPU utilization, vLLM performance, and Grafana dashboards.</p>
+
+  <!-- Overview -->
+  <div class="section">
+    <h2>Overview</h2>
+    <p>
+      LiteMaaS observability is implemented at two levels:
+    </p>
+    <ol>
+      <li>
+        <strong>Application metrics (LiteMaaS built-in):</strong> The LiteMaaS backend provides usage analytics
+        per user, per model, and per API key through its admin UI. This data comes from LiteLLM's
+        <code>LiteLLM_SpendLogs</code> table and is aggregated with intelligent day-by-day caching.
+      </li>
+      <li>
+        <strong>Infrastructure metrics (RHOAI + Grafana):</strong> The <code>ocp4_workload_rhoai_metrics</code>
+        Ansible role deploys Grafana operator and dashboards to monitor the underlying model serving infrastructure —
+        vLLM queue depth, request rates, GPU utilization, DCGM exporter metrics, and OpenVino throughput.
+        This is deployed in the <code>llm-hosting</code> namespace.
+      </li>
+    </ol>
+
+    <div class="mermaid">
+graph LR
+    A[LiteLLM Proxy] -->|spend logs| B[PostgreSQL]
+    B --> C[LiteMaaS Backend]
+    C --> D[Admin Usage Dashboard<br/>per user / model / key]
+
+    E[vLLM Predictors] -->|/metrics port 8080| F[ServiceMonitor]
+    G[OpenVino Predictors] -->|/metrics port 8080| F
+    H[DCGM Exporter] -->|port 9400| F
+    F --> I[OpenShift UWM<br/>Prometheus]
+    I --> J[Grafana<br/>llm-hosting ns]
+    J --> K[vLLM Dashboard]
+    J --> L[GPU Dashboard]
+    J --> M[OpenVino Dashboard]
+
+    style D fill:#f0f4ff,stroke:#0066cc
+    style J fill:#f9a825,stroke:#f9a825,color:#000
+    </div>
+  </div>
+
+  <!-- Production Grafana -->
+  <div class="section">
+    <h2>Production Grafana Instance</h2>
+    <p>
+      Grafana is deployed in the <code>llm-hosting</code> namespace by the <code>ocp4_workload_rhoai_metrics</code> role.
+      The production deployment has been running for 94 days.
+    </p>
+
+    <h3>Running Components (from oc get pods -n llm-hosting)</h3>
+    <table>
+      <thead><tr><th>Pod</th><th>Status</th><th>Containers</th><th>Role</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>grafana-deployment-*</code></td>
+          <td>Running (94d)</td>
+          <td>2/2</td>
+          <td>Grafana server + sidecar dashboard loader</td>
+        </tr>
+        <tr>
+          <td><code>grafana-operator-controller-manager-v5-*</code></td>
+          <td>Running (85d)</td>
+          <td>1/1</td>
+          <td>Grafana Operator v5 controller</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>Access Grafana</h3>
+    <pre><span class="comment"># Get the Grafana route</span>
+oc get route -n llm-hosting | grep grafana
+
+<span class="comment"># Or check all services and find the grafana service</span>
+oc get svc -n llm-hosting | grep grafana
+
+<span class="comment"># Grafana service is on port 3000</span>
+<span class="comment"># Service: grafana-service (ClusterIP 172.30.169.229) ports: 9091/TCP, 3000/TCP</span>
+<span class="comment"># The route should be exposed at a hostname in llm-hosting namespace</span>
+oc get route -n llm-hosting</pre>
+
+    <div class="info-box">
+      <p>
+        The Grafana operator version 5 channel is used (<code>ocp4_workload_rhoai_metrics_grafana_operator_channel: "v5"</code>).
+        The Grafana instance name is <code>rhoai-grafana</code>.
+        Grafana uses OpenShift user workload monitoring (UWM) as its Prometheus data source.
+      </p>
+    </div>
+  </div>
+
+  <!-- Role Configuration -->
+  <div class="section">
+    <h2>RHOAI Metrics Role Configuration</h2>
+    <p>
+      The <code>ocp4_workload_rhoai_metrics</code> role handles everything from enabling user workload monitoring
+      to deploying dashboards. Key defaults from <code>roles/ocp4_workload_rhoai_metrics/defaults/main.yml</code>:
+    </p>
+
+    <table>
+      <thead><tr><th>Variable</th><th>Default</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>ocp4_workload_rhoai_metrics_enable_uwm</code></td><td><code>true</code></td><td>Enable OpenShift User Workload Monitoring (required for Grafana data source)</td></tr>
+        <tr><td><code>ocp4_workload_rhoai_metrics_uwm_retention</code></td><td><code>7d</code></td><td>Prometheus data retention period</td></tr>
+        <tr><td><code>ocp4_workload_rhoai_metrics_enable_kserve</code></td><td><code>true</code></td><td>Enable ServiceMonitors for KServe InferenceServices</td></tr>
+        <tr><td><code>ocp4_workload_rhoai_metrics_kserve_namespace</code></td><td><code>redhat-ods-applications</code></td><td>KServe control plane namespace</td></tr>
+        <tr><td><code>ocp4_workload_rhoai_metrics_scrape_interval</code></td><td><code>30s</code></td><td>Prometheus scrape interval for model endpoints</td></tr>
+        <tr><td><code>ocp4_workload_rhoai_metrics_scrape_timeout</code></td><td><code>10s</code></td><td>Prometheus scrape timeout</td></tr>
+        <tr><td><code>ocp4_workload_rhoai_metrics_vllm_port</code></td><td><code>8080</code></td><td>vLLM metrics port</td></tr>
+        <tr><td><code>ocp4_workload_rhoai_metrics_vllm_path</code></td><td><code>/metrics</code></td><td>vLLM metrics endpoint path</td></tr>
+        <tr><td><code>ocp4_workload_rhoai_metrics_openvino_port</code></td><td><code>8080</code></td><td>OpenVino metrics port</td></tr>
+        <tr><td><code>ocp4_workload_rhoai_metrics_enable_gpu</code></td><td><code>true</code></td><td>Enable NVIDIA DCGM Exporter metrics collection</td></tr>
+        <tr><td><code>ocp4_workload_rhoai_metrics_gpu_operator_namespace</code></td><td><code>nvidia-gpu-operator</code></td><td>GPU Operator namespace</td></tr>
+        <tr><td><code>ocp4_workload_rhoai_metrics_dcgm_port</code></td><td><code>9400</code></td><td>DCGM Exporter metrics port</td></tr>
+        <tr><td><code>ocp4_workload_rhoai_metrics_install_grafana_operator</code></td><td><code>true</code></td><td>Install Grafana Operator if not present</td></tr>
+        <tr><td><code>ocp4_workload_rhoai_metrics_grafana_operator_channel</code></td><td><code>v5</code></td><td>Grafana Operator OLM channel</td></tr>
+        <tr><td><code>ocp4_workload_rhoai_metrics_grafana_instance_name</code></td><td><code>rhoai-grafana</code></td><td>Name of the GrafanaInstance custom resource</td></tr>
+        <tr><td><code>ocp4_workload_rhoai_metrics_grafana_overlay</code></td><td><code>overlays/grafana-uwm-user-app</code></td><td>Kustomize overlay for dashboard deployment</td></tr>
+        <tr><td><code>ocp4_workload_rhoai_metrics_runtimes</code></td><td><code>[vllm, openvino]</code></td><td>Model runtimes to create ServiceMonitors for</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Deploy the Metrics Role</h3>
+    <pre><span class="comment"># Deploy RHOAI metrics and Grafana dashboards</span>
+ansible-playbook playbooks/deploy_rhoai_metrics.yml \
+  -e ocp4_workload_rhoai_metrics_namespace=llm-hosting \
+  -e ocp4_workload_rhoai_metrics_enable_gpu=true
+
+<span class="comment"># Monitor specific models only</span>
+ansible-playbook playbooks/deploy_rhoai_metrics.yml \
+  -e ocp4_workload_rhoai_metrics_namespace=llm-hosting \
+  -e '{"ocp4_workload_rhoai_metrics_models": ["llama-scout-17b", "granite-3-2-8b-instruct"]}'</pre>
+  </div>
+
+  <!-- Dashboards -->
+  <div class="section">
+    <h2>Grafana Dashboards</h2>
+    <p>
+      Dashboards are bundled directly in the role's <code>files/grafana/</code> directory — no external git clone
+      is needed. They are deployed via Kustomize using the <code>grafana-uwm-user-app</code> overlay.
+    </p>
+
+    <h3>vLLM Performance Dashboard</h3>
+    <p>Monitors all vLLM-based KServe predictors in the <code>llm-hosting</code> namespace.</p>
+    <div class="metric-grid">
+      <div class="metric-card">
+        <h4>Request Throughput</h4>
+        <p>Requests per second per model</p>
+        <code>rate(vllm:request_success_total[5m])</code>
+      </div>
+      <div class="metric-card">
+        <h4>Time to First Token (TTFT)</h4>
+        <p>Latency for first token generation</p>
+        <code>vllm:time_to_first_token_seconds_bucket</code>
+      </div>
+      <div class="metric-card">
+        <h4>Tokens Per Second</h4>
+        <p>Generation throughput</p>
+        <code>rate(vllm:generation_tokens_total[5m])</code>
+      </div>
+      <div class="metric-card">
+        <h4>Queue Depth</h4>
+        <p>Requests waiting in vLLM scheduler queue</p>
+        <code>vllm:num_requests_waiting</code>
+      </div>
+      <div class="metric-card">
+        <h4>KV Cache Utilization</h4>
+        <p>GPU memory used for key/value cache</p>
+        <code>vllm:gpu_cache_usage_perc</code>
+      </div>
+      <div class="metric-card">
+        <h4>Prompt Token Length</h4>
+        <p>Distribution of input token counts</p>
+        <code>vllm:request_prompt_tokens_bucket</code>
+      </div>
+    </div>
+
+    <h3>GPU Dashboard (DCGM Exporter)</h3>
+    <p>Monitors NVIDIA GPU resources across all model serving nodes.</p>
+    <div class="metric-grid">
+      <div class="metric-card">
+        <h4>GPU Utilization</h4>
+        <p>Percentage of time GPU is executing kernels</p>
+        <code>DCGM_FI_DEV_GPU_UTIL</code>
+      </div>
+      <div class="metric-card">
+        <h4>GPU Memory Used</h4>
+        <p>Framebuffer memory in use</p>
+        <code>DCGM_FI_DEV_FB_USED</code>
+      </div>
+      <div class="metric-card">
+        <h4>GPU Temperature</h4>
+        <p>Device temperature in Celsius</p>
+        <code>DCGM_FI_DEV_GPU_TEMP</code>
+      </div>
+      <div class="metric-card">
+        <h4>Power Draw</h4>
+        <p>Current power consumption in Watts</p>
+        <code>DCGM_FI_DEV_POWER_USAGE</code>
+      </div>
+      <div class="metric-card">
+        <h4>NVLink Bandwidth</h4>
+        <p>Multi-GPU communication bandwidth</p>
+        <code>DCGM_FI_DEV_NVLINK_BANDWIDTH_TOTAL</code>
+      </div>
+      <div class="metric-card">
+        <h4>PCIe Throughput</h4>
+        <p>Data transfer rate over PCIe bus</p>
+        <code>DCGM_FI_DEV_PCIE_TX_THROUGHPUT</code>
+      </div>
+    </div>
+
+    <h3>OpenVino Dashboard</h3>
+    <p>Monitors OpenVino Model Server predictors (used for nomic-embed-text-v1-5 and similar CPU-based models).</p>
+    <div class="metric-grid">
+      <div class="metric-card">
+        <h4>Inference Requests</h4>
+        <p>Total inference requests served</p>
+        <code>ovms_requests_success</code>
+      </div>
+      <div class="metric-card">
+        <h4>Inference Duration</h4>
+        <p>Request processing time histogram</p>
+        <code>ovms_request_time_us_bucket</code>
+      </div>
+      <div class="metric-card">
+        <h4>Current Requests</h4>
+        <p>In-flight requests being processed</p>
+        <code>ovms_current_requests</code>
+      </div>
+    </div>
+  </div>
+
+  <!-- ServiceMonitors -->
+  <div class="section">
+    <h2>ServiceMonitors — How Metrics are Scraped</h2>
+    <p>
+      The role creates Prometheus ServiceMonitor resources that tell the OpenShift User Workload Monitoring (UWM)
+      Prometheus instance how to scrape metrics from each model predictor service.
+    </p>
+
+    <p>Production services with metrics endpoints in <code>llm-hosting</code>:</p>
+    <table>
+      <thead><tr><th>Service</th><th>Metrics Port</th><th>Runtime</th><th>ClusterIP</th></tr></thead>
+      <tbody>
+        <tr><td><code>granite-3-2-8b-instruct-metrics</code></td><td>8080</td><td>vLLM</td><td>172.30.63.126</td></tr>
+        <tr><td><code>granite-4-0-h-tiny-metrics</code></td><td>8080</td><td>vLLM</td><td>172.30.203.138</td></tr>
+        <tr><td><code>codellama-7b-instruct-metrics</code></td><td>8080</td><td>vLLM</td><td>172.30.54.173</td></tr>
+        <tr><td><code>llama-guard-3-1b-metrics</code></td><td>8080</td><td>vLLM</td><td>172.30.56.6</td></tr>
+        <tr><td><code>llama-scout-17b-metrics</code></td><td>8080</td><td>vLLM</td><td>172.30.32.164</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Verify ServiceMonitors are Working</h3>
+    <pre><span class="comment"># List ServiceMonitors</span>
+oc get servicemonitor -n llm-hosting
+
+<span class="comment"># Check Prometheus can reach them</span>
+<span class="comment"># In OpenShift UWM, targets are listed in the monitoring console</span>
+<span class="comment"># Platform: Observe → Targets → filter by llm-hosting namespace</span>
+
+<span class="comment"># Test a metrics endpoint directly</span>
+oc exec -n llm-hosting \
+  $(oc get pods -n llm-hosting -l app=granite-3-2-8b-instruct -o name | head -1) -- \
+  curl -s http://localhost:8080/metrics | head -20</pre>
+  </div>
+
+  <!-- UWM -->
+  <div class="section">
+    <h2>OpenShift User Workload Monitoring</h2>
+    <p>
+      User Workload Monitoring (UWM) must be enabled for Grafana to have a Prometheus data source for model metrics.
+      The role enables it automatically if <code>ocp4_workload_rhoai_metrics_enable_uwm: true</code>.
+    </p>
+
+    <h3>Verify UWM is Enabled</h3>
+    <pre><span class="comment"># Check the cluster monitoring config</span>
+oc get configmap cluster-monitoring-config \
+  -n openshift-monitoring -o yaml | grep enableUserWorkload
+
+<span class="comment"># Expected output</span>
+<span class="comment"># enableUserWorkload: true</span>
+
+<span class="comment"># Check UWM pods are running</span>
+oc get pods -n openshift-user-workload-monitoring</pre>
+
+    <h3>Configure Prometheus Retention</h3>
+    <pre><span class="comment"># The role sets retention to 7d via ConfigMap patch</span>
+<span class="comment"># To change it manually:</span>
+oc edit configmap user-workload-monitoring-config \
+  -n openshift-user-workload-monitoring</pre>
+
+    <h3>Add Grafana Data Source Pointing to UWM Prometheus</h3>
+    <pre><span class="comment"># The role creates a GrafanaDataSource CR automatically</span>
+<span class="comment"># Verify it exists:</span>
+oc get grafanadatasource -n llm-hosting
+
+<span class="comment"># If missing, the role's UWM overlay creates it pointing to:</span>
+<span class="comment"># https://thanos-querier.openshift-monitoring.svc.cluster.local:9091</span></pre>
+  </div>
+
+  <!-- Accessing Grafana -->
+  <div class="section">
+    <h2>Accessing Grafana</h2>
+
+    <h3>Find the Grafana URL</h3>
+    <pre><span class="comment"># Look for a route in llm-hosting namespace</span>
+oc get routes -n llm-hosting
+
+<span class="comment"># Or port-forward to access locally</span>
+oc port-forward svc/grafana-service 3000:3000 -n llm-hosting &
+open http://localhost:3000</pre>
+
+    <h3>Authentication</h3>
+    <p>
+      The Grafana instance deployed by the role uses basic authentication by default. The admin credentials
+      are set in the GrafanaInstance custom resource. Check the Grafana secret:
+    </p>
+    <pre><span class="comment"># Get Grafana admin credentials</span>
+oc get secret -n llm-hosting | grep grafana
+
+<span class="comment"># Retrieve the secret (name may vary)</span>
+oc get secret rhoai-grafana-admin-credentials -n llm-hosting \
+  -o jsonpath='{.data.GF_SECURITY_ADMIN_USER}' | base64 -d
+oc get secret rhoai-grafana-admin-credentials -n llm-hosting \
+  -o jsonpath='{.data.GF_SECURITY_ADMIN_PASSWORD}' | base64 -d</pre>
+
+    <h3>Dashboard Navigation</h3>
+    <p>After logging in, navigate to <strong>Dashboards → Browse</strong>. Dashboards deployed by the role appear in the <code>RHOAI Monitoring</code> folder:</p>
+    <ul>
+      <li><strong>vLLM Model Performance</strong> — per-model throughput, latency, queue depth, KV cache</li>
+      <li><strong>GPU Node Overview</strong> — cluster-wide GPU utilization, memory, temperature</li>
+      <li><strong>OpenVino Server</strong> — CPU-based model serving metrics</li>
+    </ul>
+  </div>
+
+  <!-- LiteMaaS Built-in Analytics -->
+  <div class="section">
+    <h2>LiteMaaS Built-in Usage Analytics</h2>
+    <p>
+      Separately from Grafana, the LiteMaaS admin portal provides application-level analytics: per-user spend,
+      per-model call counts, per-API-key usage, and trend analysis. This data comes from LiteLLM's spend logs.
+    </p>
+
+    <h3>Access Admin Analytics</h3>
+    <ol>
+      <li>Log in to the LiteMaaS frontend: <code>https://litellm-prod-frontend.apps.maas.redhatworkshops.io</code></li>
+      <li>Navigate to <strong>Admin → Analytics</strong></li>
+      <li>Filter by: date range, user, model, provider, or API key</li>
+      <li>Export to CSV or JSON using the export button</li>
+    </ol>
+
+    <h3>Analytics Caching Architecture</h3>
+    <p>The backend uses intelligent day-by-day incremental caching to minimize database load:</p>
+    <ul>
+      <li><strong>Historical data (past days):</strong> Cached permanently — exact numbers won't change</li>
+      <li><strong>Current day:</strong> 5-minute cache TTL — refreshed frequently to show near-real-time data</li>
+      <li><strong>Cache storage:</strong> In-process memory with React Query on the frontend</li>
+    </ul>
+
+    <h3>LiteLLM Admin Portal Spend Tracking</h3>
+    <p>The LiteLLM admin UI also provides spend tracking directly against the <code>LiteLLM_SpendLogs</code> table:</p>
+    <pre><span class="comment"># Access LiteLLM admin portal</span>
+<span class="comment"># URL: https://litellm-prod.apps.maas.redhatworkshops.io</span>
+<span class="comment"># Navigate to: Usage tab → Spend Logs</span>
+
+<span class="comment"># Or query directly via API</span>
+LITELLM_KEY=$(oc get secret litellm-secret -n litellm-rhpds \
+  -o jsonpath='{.data.LITELLM_MASTER_KEY}' | base64 -d)
+ROUTE=$(oc get route litellm-prod -n litellm-rhpds -o jsonpath='{.spec.host}')
+
+<span class="comment"># Get spend per key</span>
+curl "https://$ROUTE/spend/keys" \
+  -H "Authorization: Bearer $LITELLM_KEY" | jq '.'
+
+<span class="comment"># Get spend per model</span>
+curl "https://$ROUTE/spend/models" \
+  -H "Authorization: Bearer $LITELLM_KEY" | jq '.'</pre>
+  </div>
+
+</div>
+
+<footer>
+  <p>RHDP LiteMaaS Documentation &mdash; Red Hat Demo Platform &mdash; maas.redhatworkshops.io</p>
+</footer>
+
+<script>mermaid.initialize({ startOnLoad: true, theme: 'neutral' });</script>
+</body>
+</html>

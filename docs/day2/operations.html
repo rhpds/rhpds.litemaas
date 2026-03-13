@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LiteMaaS — Day-2 Operations</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Red Hat Text', 'Segoe UI', sans-serif; background: #f5f5f5; color: #151515; line-height: 1.6; }
+    header { background: #cc0000; color: white; padding: 1.5rem 3rem; display: flex; align-items: center; gap: 1.5rem; }
+    header h1 { font-size: 1.5rem; font-weight: 700; }
+    header p { opacity: 0.85; font-size: 0.9rem; margin-top: 0.2rem; }
+    nav { background: #151515; padding: 0 3rem; display: flex; gap: 0; flex-wrap: wrap; }
+    nav a { color: #e0e0e0; text-decoration: none; padding: 0.85rem 1.2rem; font-size: 0.9rem; display: block; transition: background 0.15s; }
+    nav a:hover, nav a.active { background: #cc0000; color: white; }
+    nav .nav-group { position: relative; }
+    nav .nav-group:hover .nav-dropdown { display: block; }
+    .nav-dropdown { display: none; position: absolute; top: 100%; left: 0; background: #1f1f1f; min-width: 200px; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+    .nav-dropdown a { display: block; padding: 0.7rem 1.2rem; border-bottom: 1px solid #333; }
+    .container { max-width: 1100px; margin: 2rem auto; padding: 0 2rem; }
+    .breadcrumb { font-size: 0.82rem; color: #666; margin-bottom: 1.5rem; }
+    .breadcrumb a { color: #cc0000; text-decoration: none; }
+    .breadcrumb a:hover { text-decoration: underline; }
+    h1.page-title { font-size: 1.8rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .page-subtitle { color: #555; margin-bottom: 2rem; font-size: 1rem; }
+    .section { background: white; border-radius: 8px; padding: 2rem; margin-bottom: 1.5rem; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+    .section h2 { font-size: 1.2rem; font-weight: 700; margin-bottom: 1rem; color: #151515; border-bottom: 2px solid #cc0000; padding-bottom: 0.5rem; }
+    .section h3 { font-size: 1rem; font-weight: 700; margin: 1.4rem 0 0.5rem; color: #333; }
+    .section h4 { font-size: 0.92rem; font-weight: 700; margin: 1rem 0 0.4rem; color: #444; }
+    .section p { margin-bottom: 0.8rem; color: #333; font-size: 0.92rem; }
+    .section ul, .section ol { padding-left: 1.5rem; margin-bottom: 0.8rem; }
+    .section li { margin-bottom: 0.4rem; color: #333; font-size: 0.92rem; }
+    pre { background: #1e1e1e; color: #d4d4d4; padding: 1.2rem 1.5rem; border-radius: 6px; overflow-x: auto; font-size: 0.82rem; line-height: 1.5; margin: 0.8rem 0; }
+    pre .comment { color: #6a9955; }
+    pre .string { color: #ce9178; }
+    pre .keyword { color: #569cd6; }
+    pre .var { color: #9cdcfe; }
+    code { font-family: 'Courier New', monospace; font-size: 0.85em; background: #f0f0f0; padding: 0.1em 0.3em; border-radius: 3px; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.86rem; }
+    th { background: #151515; color: white; padding: 0.6rem 0.8rem; text-align: left; font-weight: 600; }
+    td { padding: 0.6rem 0.8rem; border-bottom: 1px solid #e8e8e8; vertical-align: top; }
+    tr:nth-child(even) { background: #f9f9f9; }
+    td code { background: #f0f0f0; padding: 0.1em 0.3em; border-radius: 3px; font-size: 0.82rem; }
+    .info-box { background: #e8f4fd; border-left: 4px solid #0066cc; padding: 1rem 1.5rem; border-radius: 0 6px 6px 0; margin: 1rem 0; }
+    .info-box p { margin: 0; font-size: 0.88rem; color: #004080; }
+    .warn-box { background: #fff8e1; border-left: 4px solid #f0a500; padding: 1rem 1.5rem; border-radius: 0 6px 6px 0; margin: 1rem 0; }
+    .warn-box p { margin: 0; font-size: 0.88rem; color: #5d3900; }
+    .danger-box { background: #fce8e8; border-left: 4px solid #cc0000; padding: 1rem 1.5rem; border-radius: 0 6px 6px 0; margin: 1rem 0; }
+    .danger-box p { margin: 0; font-size: 0.88rem; color: #7a0000; }
+    .toc { background: #f9f9f9; border: 1px solid #e0e0e0; border-radius: 8px; padding: 1.2rem 1.5rem; margin-bottom: 2rem; }
+    .toc h3 { font-size: 0.9rem; font-weight: 700; margin-bottom: 0.8rem; }
+    .toc ul { padding-left: 1.2rem; margin: 0; }
+    .toc li { margin-bottom: 0.3rem; }
+    .toc a { color: #cc0000; text-decoration: none; font-size: 0.88rem; }
+    .toc a:hover { text-decoration: underline; }
+    footer { background: #151515; color: #aaa; text-align: center; padding: 1.5rem; font-size: 0.85rem; margin-top: 3rem; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>RHDP LiteMaaS</h1>
+    <p>Model as a Service for Red Hat Demo Platform</p>
+  </div>
+</header>
+
+<nav>
+  <a href="../index.html">Home</a>
+  <a href="../architecture.html">Architecture</a>
+  <div class="nav-group">
+    <a href="../product/overview.html">Product ▾</a>
+    <div class="nav-dropdown">
+      <a href="../product/overview.html">Overview</a>
+      <a href="../product/models.html">Models Reference</a>
+    </div>
+  </div>
+  <div class="nav-group">
+    <a href="../install/deployment.html">Install ▾</a>
+    <div class="nav-dropdown">
+      <a href="../install/deployment.html">Deployment Guide</a>
+    </div>
+  </div>
+  <div class="nav-group">
+    <a href="operations.html" class="active">Day-2 ▾</a>
+    <div class="nav-dropdown">
+      <a href="operations.html" class="active">Operations</a>
+      <a href="grafana.html">Grafana / Metrics</a>
+    </div>
+  </div>
+  <div class="nav-group">
+    <a href="../troubleshooting/common.html">Troubleshooting ▾</a>
+    <div class="nav-dropdown">
+      <a href="../troubleshooting/common.html">Common Issues</a>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+
+  <div class="breadcrumb">
+    <a href="../index.html">Home</a> / <a href="operations.html">Day-2</a> / Operations
+  </div>
+
+  <h1 class="page-title">Day-2 Operations</h1>
+  <p class="page-subtitle">Upgrading, scaling, model management, key cleanup, and database synchronization for a running LiteMaaS deployment.</p>
+
+  <div class="toc">
+    <h3>On This Page</h3>
+    <ul>
+      <li><a href="#upgrading">Upgrading LiteLLM and LiteMaaS Images</a></li>
+      <li><a href="#scaling">Scaling Replicas</a></li>
+      <li><a href="#key-cleanup">Key Cleanup Cronjob</a></li>
+      <li><a href="#adding-models">Adding Models</a></li>
+      <li><a href="#auto-sync">LITELLM_AUTO_SYNC</a></li>
+      <li><a href="#db-sync">DB Sync Between LiteMaaS and LiteLLM</a></li>
+      <li><a href="#admin-mgmt">Admin User Management</a></li>
+      <li><a href="#backup">Backup Operations</a></li>
+      <li><a href="#quick-ref">Quick Reference Commands</a></li>
+    </ul>
+  </div>
+
+  <!-- Upgrading -->
+  <div class="section" id="upgrading">
+    <h2>Upgrading LiteLLM and LiteMaaS Images</h2>
+    <p>
+      In production, upgrades are handled by updating the deployment image tags. LiteMaaS uses rolling deployments —
+      pods are replaced one at a time, so the service remains available during upgrades.
+    </p>
+
+    <h3>Current Production Images (from oc get deployment -n litellm-rhpds -o wide)</h3>
+    <table>
+      <thead><tr><th>Deployment</th><th>Current Image</th><th>Version</th></tr></thead>
+      <tbody>
+        <tr><td><code>litellm</code></td><td><code>quay.io/rh-aiservices-bu/litellm-non-root</code></td><td><code>main-v1.81.0-stable-custom</code></td></tr>
+        <tr><td><code>litellm-backend</code></td><td><code>quay.io/rh-aiservices-bu/litemaas-backend</code></td><td><code>0.4.0</code></td></tr>
+        <tr><td><code>litellm-frontend</code></td><td><code>quay.io/rh-aiservices-bu/litemaas-frontend</code></td><td><code>0.4.0</code></td></tr>
+        <tr><td><code>litellm-redis</code></td><td><code>registry.redhat.io/rhel9/redis-7</code></td><td><code>latest</code></td></tr>
+      </tbody>
+    </table>
+
+    <h3>Upgrade LiteMaaS Backend/Frontend</h3>
+    <pre><span class="comment"># Set namespace variable</span>
+NS=litellm-rhpds
+NEW_VERSION=0.5.0
+
+<span class="comment"># Update backend image</span>
+oc set image deployment/litellm-backend \
+  backend=quay.io/rh-aiservices-bu/litemaas-backend:${NEW_VERSION} \
+  -n ${NS}
+
+<span class="comment"># Update frontend image</span>
+oc set image deployment/litellm-frontend \
+  frontend=quay.io/rh-aiservices-bu/litemaas-frontend:${NEW_VERSION} \
+  -n ${NS}
+
+<span class="comment"># Monitor rollout</span>
+oc rollout status deployment/litellm-backend -n ${NS}
+oc rollout status deployment/litellm-frontend -n ${NS}</pre>
+
+    <div class="warn-box">
+      <p>
+        <strong>Frontend version mismatch:</strong> If the frontend shows a stale version after upgrade, check
+        that the init container image (if used for static asset injection) matches the new frontend tag.
+        A mismatch between the main container and init container is a common cause of version confusion.
+        See <a href="../troubleshooting/common.html">Troubleshooting</a> for the fix.
+      </p>
+    </div>
+
+    <h3>Upgrade LiteLLM Proxy</h3>
+    <pre><span class="comment"># Before upgrading LiteLLM, take a database backup</span>
+oc exec -n ${NS} litellm-postgres-0 -- \
+  pg_dump -U litellm litellm | gzip > /tmp/litellm-pre-upgrade.sql.gz
+
+<span class="comment"># Update LiteLLM image</span>
+NEW_LITELLM_TAG=main-v1.85.0-stable-custom
+oc set image deployment/litellm \
+  litellm=quay.io/rh-aiservices-bu/litellm-non-root:${NEW_LITELLM_TAG} \
+  -n ${NS}
+
+<span class="comment"># Watch the rollout -- LiteLLM runs DB migrations on startup</span>
+oc rollout status deployment/litellm -n ${NS}
+
+<span class="comment"># Check logs for migration output</span>
+oc logs -n ${NS} deployment/litellm --tail=50 | grep -i migrat</pre>
+
+    <h3>Upgrade via Ansible (Re-deploy)</h3>
+    <pre><span class="comment"># Override image tags in your vars file, then re-run the playbook</span>
+ansible-playbook playbooks/deploy_litemaas_ha.yml \
+  -e ocp4_workload_litemaas_namespace=litellm-rhpds \
+  -e ocp4_workload_litemaas_litellm_tag=main-v1.85.0-stable-custom \
+  -e ocp4_workload_litemaas_version=0.5.0</pre>
+  </div>
+
+  <!-- Scaling -->
+  <div class="section" id="scaling">
+    <h2>Scaling Replicas</h2>
+    <p>All three main deployments (LiteLLM, Backend, Frontend) support horizontal scaling. Scaling is stateless for Backend and Frontend; LiteLLM uses Redis for shared session state across replicas.</p>
+
+    <h3>Scale LiteLLM (the most common scale target)</h3>
+    <pre><span class="comment"># Scale LiteLLM to 5 replicas</span>
+oc scale deployment/litellm --replicas=5 -n litellm-rhpds
+
+<span class="comment"># Or via patch</span>
+oc patch deployment/litellm -n litellm-rhpds \
+  --type=json -p='[{"op":"replace","path":"/spec/replicas","value":5}]'
+
+<span class="comment"># Verify</span>
+oc get deployment/litellm -n litellm-rhpds</pre>
+
+    <h3>Scale Backend and Frontend</h3>
+    <pre>oc scale deployment/litellm-backend --replicas=3 -n litellm-rhpds
+oc scale deployment/litellm-frontend --replicas=3 -n litellm-rhpds</pre>
+
+    <h3>Check Current Scale</h3>
+    <pre>oc get deployments -n litellm-rhpds -o wide</pre>
+
+    <div class="info-box">
+      <p>
+        <strong>Redis is required for multi-replica LiteLLM.</strong> Without Redis, each LiteLLM pod has its own
+        in-memory session cache. Key validation will be inconsistent across replicas if Redis is not running.
+        Verify Redis is healthy before scaling LiteLLM beyond 1 replica:
+        <code>oc get pods -n litellm-rhpds -l app=litellm-redis</code>
+      </p>
+    </div>
+  </div>
+
+  <!-- Key Cleanup -->
+  <div class="section" id="key-cleanup">
+    <h2>Key Cleanup Cronjob</h2>
+    <p>
+      In a production deployment, virtual API keys accumulate over time. Workshop participants receive 30-day keys,
+      and after the workshop ends, those keys remain in LiteLLM's database consuming storage and complicating admin
+      views. The key cleanup cronjob handles this automatically.
+    </p>
+
+    <h3>What the Cronjob Does</h3>
+    <ol>
+      <li>Runs daily at 2 AM on the bastion host</li>
+      <li>Fetches all virtual keys from the LiteLLM API (with pagination, 100 keys per page)</li>
+      <li>Identifies keys that match either deletion condition:
+        <ul>
+          <li>Keys where <code>expires</code> timestamp is in the past (expired keys)</li>
+          <li>Keys created more than 30 days ago (calculated from <code>expires - duration</code> metadata)</li>
+        </ul>
+      </li>
+      <li>Deletes each matching key via <code>POST /key/delete</code></li>
+      <li>For each deleted key: syncs the <code>api_keys</code> table in LiteMaaS PostgreSQL to mark it inactive with <code>revoked_at</code> timestamp and <code>sync_status='error'</code></li>
+      <li>Final pass: marks any remaining LiteMaaS <code>api_keys</code> records inactive if their corresponding <code>LiteLLM_VerificationToken</code> no longer exists</li>
+      <li>All output is written to <code>/var/log/litemaas-key-cleanup.log</code> with logrotate (30-day retention)</li>
+    </ol>
+
+    <h3>Setup</h3>
+    <pre><span class="comment"># Run from the rhpds.litemaas repository root</span>
+<span class="comment"># Detects whether running on bastion (direct write) or workstation (SSH)</span>
+./setup-key-cleanup-cronjob.sh litellm-rhpds</pre>
+
+    <p>The script creates:</p>
+    <ul>
+      <li><code>/usr/local/bin/cleanup-litemaas-keys-litellm-rhpds.sh</code> — the cleanup script</li>
+      <li>A root crontab entry: <code>0 2 * * * /usr/local/bin/cleanup-litemaas-keys-litellm-rhpds.sh</code></li>
+      <li><code>/etc/logrotate.d/litemaas-key-cleanup-litellm-rhpds</code> — logrotate config</li>
+    </ul>
+
+    <h3>Manual Test Run</h3>
+    <pre><span class="comment"># Run manually (dry-run not supported — this will actually delete keys)</span>
+sudo /usr/local/bin/cleanup-litemaas-keys-litellm-rhpds.sh
+
+<span class="comment"># Tail the log</span>
+sudo tail -f /var/log/litemaas-key-cleanup.log
+
+<span class="comment"># Verify cronjob is installed</span>
+sudo crontab -l | grep cleanup-litemaas</pre>
+
+    <h3>Remove the Cronjob</h3>
+    <pre>sudo crontab -l | grep -v cleanup-litemaas-keys-litellm-rhpds.sh | sudo crontab -
+sudo rm /usr/local/bin/cleanup-litemaas-keys-litellm-rhpds.sh</pre>
+  </div>
+
+  <!-- Adding Models -->
+  <div class="section" id="adding-models">
+    <h2>Adding Models</h2>
+    <p>Models must be registered in <strong>two places</strong>: the LiteLLM proxy (which handles actual inference routing) and the LiteMaaS backend database (which powers the user-facing model catalog). Failing to sync both causes the "subscription foreign key violation" error.</p>
+
+    <h3>Method 1: LiteLLM Admin UI + Manual Sync (Quick)</h3>
+    <ol>
+      <li>Log in to the LiteLLM admin UI at the API route URL (e.g., <code>https://litellm-prod.apps.maas.redhatworkshops.io</code>)</li>
+      <li>Navigate to <strong>Models → Add Model</strong></li>
+      <li>Fill in:
+        <ul>
+          <li><strong>Provider:</strong> OpenAI-Compatible (for RHOAI KServe models)</li>
+          <li><strong>Model Name:</strong> e.g., <code>llama-3-1-70b-instruct</code></li>
+          <li><strong>API Base:</strong> Internal KServe service URL, e.g., <code>http://llama-3-1-70b-predictor.llm-hosting.svc.cluster.local/v1</code></li>
+          <li><strong>API Key:</strong> Service account token or <code>sk-placeholder</code> if no auth required</li>
+        </ul>
+      </li>
+      <li>Click <strong>Test Connect</strong>, then <strong>Add Model</strong></li>
+      <li>Run the sync playbook to push the model to LiteMaaS backend DB</li>
+    </ol>
+    <pre><span class="comment"># After adding via UI, sync to LiteMaaS backend database</span>
+LITELLM_URL=$(oc get route litellm-prod -n litellm-rhpds \
+  -o jsonpath='https://{.spec.host}')
+LITELLM_KEY=$(oc get secret litellm-secret -n litellm-rhpds \
+  -o jsonpath='{.data.LITELLM_MASTER_KEY}' | base64 -d)
+
+ansible-playbook playbooks/manage_models.yml \
+  -e litellm_url="${LITELLM_URL}" \
+  -e litellm_master_key="${LITELLM_KEY}" \
+  -e ocp4_workload_litemaas_models_namespace=litellm-rhpds \
+  -e ocp4_workload_litemaas_models_sync_from_litellm=true \
+  -e '{"ocp4_workload_litemaas_models_list": []}'</pre>
+
+    <h3>Method 2: Ansible Playbook (Full)</h3>
+    <pre><span class="comment"># Create a model config file</span>
+cat > new-model.yml &lt;&lt;'EOF'
+litellm_url: "https://litellm-prod.apps.maas.redhatworkshops.io"
+litellm_master_key: "sk-xxxxx"
+ocp4_workload_litemaas_models_namespace: "litellm-rhpds"
+ocp4_workload_litemaas_models_backend_enabled: true
+ocp4_workload_litemaas_models_list:
+  - model_name: "llama-3-1-70b-instruct"
+    litellm_model: "openai/llama-3-1-70b-instruct"
+    api_base: "http://llama-3-1-70b-predictor.llm-hosting.svc.cluster.local/v1"
+    api_key: "sk-placeholder"
+    display_name: "Llama 3.1 70B Instruct"
+    description: "Meta Llama 3.1 70B instruction-tuned model"
+    provider: "openshift-ai"
+    category: "chat"
+    context_length: 131072
+    rpm: 30
+    tpm: 500000
+EOF
+
+ansible-playbook playbooks/manage_models.yml -e @new-model.yml</pre>
+
+    <h3>Verify Model Registration</h3>
+    <pre><span class="comment"># Check LiteLLM has the model</span>
+curl -X GET "${LITELLM_URL}/model/info" \
+  -H "Authorization: Bearer ${LITELLM_KEY}" | \
+  jq '.data[] | select(.model_name == "llama-3-1-70b-instruct") | .model_name'
+
+<span class="comment"># Check LiteMaaS backend DB has the model</span>
+oc exec -n litellm-rhpds litellm-postgres-0 -- \
+  psql -U litellm -d litellm -c \
+  "SELECT id, name, provider, availability FROM models WHERE id = 'llama-3-1-70b-instruct';"</pre>
+
+    <h3>Model Parameters Reference</h3>
+    <table>
+      <thead><tr><th>Parameter</th><th>Required</th><th>Default</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>model_name</code></td><td>Yes</td><td>—</td><td>Unique identifier passed to LiteLLM and used as model ID</td></tr>
+        <tr><td><code>litellm_model</code></td><td>Yes</td><td>—</td><td>LiteLLM model format: <code>openai/model-id</code> for OpenAI-compatible endpoints</td></tr>
+        <tr><td><code>api_base</code></td><td>Yes</td><td>—</td><td>Inference endpoint URL. Use internal ClusterIP for KServe models.</td></tr>
+        <tr><td><code>api_key</code></td><td>Yes</td><td>—</td><td>Auth token. Use <code>sk-placeholder</code> if the endpoint requires no auth.</td></tr>
+        <tr><td><code>display_name</code></td><td>No</td><td>model_name</td><td>Human-readable name shown in LiteMaaS UI</td></tr>
+        <tr><td><code>provider</code></td><td>No</td><td>openshift-ai</td><td>Provider label (informational)</td></tr>
+        <tr><td><code>category</code></td><td>No</td><td>general</td><td>Type: <code>chat</code>, <code>code</code>, <code>general</code>, <code>embeddings</code></td></tr>
+        <tr><td><code>context_length</code></td><td>No</td><td>null</td><td>Context window in tokens (display only)</td></tr>
+        <tr><td><code>rpm</code></td><td>No</td><td>null</td><td>Requests per minute limit enforced by LiteLLM</td></tr>
+        <tr><td><code>tpm</code></td><td>No</td><td>null</td><td>Tokens per minute limit enforced by LiteLLM</td></tr>
+        <tr><td><code>supports_streaming</code></td><td>No</td><td>true</td><td>Enable streaming responses</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- AUTO_SYNC -->
+  <div class="section" id="auto-sync">
+    <h2>LITELLM_AUTO_SYNC</h2>
+    <p>
+      The <code>LITELLM_AUTO_SYNC</code> environment variable controls whether the LiteMaaS backend automatically
+      synchronizes its model database from LiteLLM on startup and at periodic intervals. When enabled, the backend
+      pulls the current model list from LiteLLM and updates its own <code>models</code> table accordingly.
+    </p>
+
+    <h3>Check Current Setting</h3>
+    <pre>oc exec -n litellm-rhpds deployment/litellm-backend -- \
+  sh -c 'echo LITELLM_AUTO_SYNC=$LITELLM_AUTO_SYNC'</pre>
+
+    <h3>Enable Auto-Sync</h3>
+    <pre><span class="comment"># Set env var on the backend deployment</span>
+oc set env deployment/litellm-backend \
+  LITELLM_AUTO_SYNC=true \
+  -n litellm-rhpds
+
+<span class="comment"># Restart to apply</span>
+oc rollout restart deployment/litellm-backend -n litellm-rhpds</pre>
+
+    <h3>When to Use Auto-Sync</h3>
+    <table>
+      <thead><tr><th>Scenario</th><th>Recommendation</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Models added only via Ansible playbook</td>
+          <td>Auto-sync unnecessary — playbook handles both LiteLLM and backend DB</td>
+        </tr>
+        <tr>
+          <td>Models frequently added/removed via LiteLLM admin UI</td>
+          <td>Enable auto-sync to avoid running the sync playbook after each change</td>
+        </tr>
+        <tr>
+          <td>Production with tight change control</td>
+          <td>Disable auto-sync, use explicit sync playbook so changes are deliberate</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="warn-box">
+      <p>
+        <strong>Auto-sync and model deletion:</strong> If a model is deleted from LiteLLM and auto-sync is enabled,
+        the backend will remove it from its database too — which will cascade-delete user subscriptions to that model.
+        Be cautious about deleting models from LiteLLM when users have active subscriptions.
+      </p>
+    </div>
+  </div>
+
+  <!-- DB Sync -->
+  <div class="section" id="db-sync">
+    <h2>DB Sync Between LiteMaaS and LiteLLM</h2>
+    <p>
+      LiteMaaS maintains its own database tables (users, subscriptions, api_keys, models) that must stay in sync
+      with LiteLLM's <code>LiteLLM_VerificationToken</code> and <code>LiteLLM_ModelTable</code> tables.
+      Divergence between the two databases is the root cause of most operational issues.
+    </p>
+
+    <h3>Understanding the Two Databases</h3>
+    <p>Both LiteMaaS backend and LiteLLM proxy connect to the <strong>same PostgreSQL instance</strong> (<code>litellm-postgres-0</code>), but use different schemas/tables:</p>
+    <table>
+      <thead><tr><th>Table</th><th>Owner</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td><code>users</code></td><td>LiteMaaS backend</td><td>User accounts, roles, OAuth IDs</td></tr>
+        <tr><td><code>models</code></td><td>LiteMaaS backend</td><td>Model catalog with capability metadata</td></tr>
+        <tr><td><code>subscriptions</code></td><td>LiteMaaS backend</td><td>User-to-model subscription records</td></tr>
+        <tr><td><code>api_keys</code></td><td>LiteMaaS backend</td><td>Virtual key tracking with LiteLLM alias references</td></tr>
+        <tr><td><code>LiteLLM_VerificationToken</code></td><td>LiteLLM proxy</td><td>The actual virtual key records with spend/limits</td></tr>
+        <tr><td><code>LiteLLM_ModelTable</code></td><td>LiteLLM proxy</td><td>LiteLLM's internal model registry</td></tr>
+        <tr><td><code>LiteLLM_SpendLogs</code></td><td>LiteLLM proxy</td><td>Per-request spend audit trail</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Check for Orphaned Keys (LiteMaaS keys with no LiteLLM record)</h3>
+    <pre>oc exec -n litellm-rhpds litellm-postgres-0 -- \
+  psql -U litellm -d litellm -c "
+SELECT ak.id, ak.litellm_key_alias, ak.is_active, ak.created_at
+FROM api_keys ak
+WHERE ak.is_active = true
+  AND ak.litellm_key_alias IS NOT NULL
+  AND NOT EXISTS (
+    SELECT 1 FROM \"LiteLLM_VerificationToken\" lv
+    WHERE lv.key_alias = ak.litellm_key_alias
+  )
+LIMIT 20;"</pre>
+
+    <h3>Fix Orphaned Keys</h3>
+    <pre><span class="comment"># Mark orphaned LiteMaaS keys as inactive</span>
+oc exec -n litellm-rhpds litellm-postgres-0 -- \
+  psql -U litellm -d litellm -c "
+UPDATE api_keys
+SET is_active = false,
+    revoked_at = NOW(),
+    sync_status = 'error',
+    sync_error = 'Key not found in LiteLLM - manual cleanup',
+    updated_at = NOW()
+WHERE is_active = true
+  AND litellm_key_alias IS NOT NULL
+  AND NOT EXISTS (
+    SELECT 1 FROM \"LiteLLM_VerificationToken\" lv
+    WHERE lv.key_alias = api_keys.litellm_key_alias
+  );"</pre>
+
+    <h3>Check for Models in LiteLLM but Not in LiteMaaS</h3>
+    <pre><span class="comment"># List LiteLLM models missing from LiteMaaS models table</span>
+curl -X GET "${LITELLM_URL}/model/info" \
+  -H "Authorization: Bearer ${LITELLM_KEY}" | \
+  jq '.data[].model_name' | sort > /tmp/litellm-models.txt
+
+oc exec -n litellm-rhpds litellm-postgres-0 -- \
+  psql -U litellm -d litellm -t -c "SELECT id FROM models;" | \
+  sort > /tmp/litemaas-models.txt
+
+<span class="comment"># Show models in LiteLLM but not in LiteMaaS</span>
+diff /tmp/litellm-models.txt /tmp/litemaas-models.txt</pre>
+
+    <h3>Trigger Manual Sync</h3>
+    <pre><span class="comment"># Backend exposes a sync endpoint (admin auth required)</span>
+ADMIN_KEY=$(oc get secret backend-secret -n litellm-rhpds \
+  -o jsonpath='{.data.ADMIN_API_KEY}' | base64 -d)
+BACKEND_URL=$(oc get route litellm-prod-admin -n litellm-rhpds \
+  -o jsonpath='https://{.spec.host}')
+
+curl -X POST "${BACKEND_URL}/api/admin/sync-models" \
+  -H "Authorization: Bearer ${ADMIN_KEY}"</pre>
+  </div>
+
+  <!-- Admin Management -->
+  <div class="section" id="admin-mgmt">
+    <h2>Admin User Management</h2>
+
+    <h3>Promote a User to Admin</h3>
+    <p>The user must have logged in via OAuth at least once before being promoted.</p>
+    <pre><span class="comment"># Using the helper script (recommended)</span>
+./promote-admin.sh litellm-rhpds user@redhat.com
+
+<span class="comment"># Or directly via psql</span>
+oc exec -n litellm-rhpds \
+  $(oc get pods -n litellm-rhpds -l app=litellm-postgres -o name | head -1) -- \
+  psql -U litellm -d litellm -c \
+  "UPDATE users SET roles = ARRAY['admin', 'user'] WHERE email = 'user@redhat.com';"
+
+<span class="comment"># Verify</span>
+oc exec -n litellm-rhpds litellm-postgres-0 -- \
+  psql -U litellm -d litellm -c \
+  "SELECT username, email, roles FROM users WHERE 'admin' = ANY(roles);"</pre>
+
+    <h3>Retrieve Credentials</h3>
+    <pre><span class="comment"># LiteMaaS admin API key</span>
+oc get secret backend-secret -n litellm-rhpds \
+  -o jsonpath='{.data.ADMIN_API_KEY}' | base64 -d
+
+<span class="comment"># LiteLLM master key</span>
+oc get secret litellm-secret -n litellm-rhpds \
+  -o jsonpath='{.data.LITELLM_MASTER_KEY}' | base64 -d
+
+<span class="comment"># JWT secret (for session debugging)</span>
+oc get secret backend-secret -n litellm-rhpds \
+  -o jsonpath='{.data.JWT_SECRET}' | base64 -d</pre>
+  </div>
+
+  <!-- Backup -->
+  <div class="section" id="backup">
+    <h2>Backup Operations</h2>
+
+    <h3>Setup Automated Monthly Backup</h3>
+    <pre><span class="comment"># Requires S3 bucket with IAM role attached to bastion EC2 instance</span>
+./setup-litemaas-backup-cronjob.sh litellm-rhpds maas-db-backup</pre>
+
+    <h3>Manual Database Backup</h3>
+    <pre><span class="comment"># Backup LiteMaaS + LiteLLM shared database</span>
+oc exec -n litellm-rhpds litellm-postgres-0 -- \
+  pg_dump -U litellm litellm | gzip > litellm-backup-$(date +%Y%m%d).sql.gz
+
+<span class="comment"># Upload to S3</span>
+aws s3 cp litellm-backup-$(date +%Y%m%d).sql.gz \
+  s3://maas-db-backup/litemaas-backups/</pre>
+
+    <h3>List and Verify Backups</h3>
+    <pre>aws s3 ls s3://maas-db-backup/litemaas-backups/ --human-readable | sort -r</pre>
+  </div>
+
+  <!-- Quick Reference -->
+  <div class="section" id="quick-ref">
+    <h2>Quick Reference Commands</h2>
+    <pre><span class="comment"># Namespace shortcut</span>
+NS=litellm-rhpds
+
+<span class="comment"># Get all pod status</span>
+oc get pods -n $NS
+
+<span class="comment"># Get all routes</span>
+oc get routes -n $NS
+
+<span class="comment"># Tail LiteLLM logs (model routing)</span>
+oc logs -n $NS deployment/litellm -f --tail=100
+
+<span class="comment"># Tail LiteMaaS backend logs (subscription/key ops)</span>
+oc logs -n $NS deployment/litellm-backend -f --tail=100
+
+<span class="comment"># Tail frontend logs</span>
+oc logs -n $NS deployment/litellm-frontend -f --tail=100
+
+<span class="comment"># Health check</span>
+ROUTE=$(oc get route litellm-prod -n $NS -o jsonpath='{.spec.host}')
+curl -sk https://$ROUTE/health/livenessz
+
+<span class="comment"># List all virtual keys (paginated)</span>
+LITELLM_KEY=$(oc get secret litellm-secret -n $NS \
+  -o jsonpath='{.data.LITELLM_MASTER_KEY}' | base64 -d)
+curl "https://$ROUTE/key/list?return_full_object=true&size=100&page=1" \
+  -H "Authorization: Bearer $LITELLM_KEY" | jq '.keys | length'
+
+<span class="comment"># Count active subscriptions in LiteMaaS DB</span>
+oc exec -n $NS litellm-postgres-0 -- \
+  psql -U litellm -d litellm -c \
+  "SELECT COUNT(*) FROM subscriptions WHERE status = 'active';"
+
+<span class="comment"># Force Redis cache flush (after model changes)</span>
+REDIS_POD=$(oc get pods -n $NS -l app=litellm-redis -o name | head -1)
+oc exec -n $NS $REDIS_POD -- redis-cli FLUSHALL
+
+<span class="comment"># Restart all LiteMaaS components (in order)</span>
+oc rollout restart deployment/litellm-backend -n $NS
+oc rollout restart deployment/litellm -n $NS
+oc rollout restart deployment/litellm-frontend -n $NS</pre>
+  </div>
+
+</div>
+
+<footer>
+  <p>RHDP LiteMaaS Documentation &mdash; Red Hat Demo Platform &mdash; maas.redhatworkshops.io</p>
+</footer>
+
+</body>
+</html>

@@ -18,7 +18,12 @@
     .card { background: white; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
     h2 { font-size: 1.2rem; font-weight: 700; margin-bottom: 1rem; border-bottom: 2px solid #cc0000; padding-bottom: 0.4rem; }
     h3 { font-size: 1rem; font-weight: 700; margin: 1.2rem 0 0.5rem; color: #333; }
-    .mermaid { background: white; border-radius: 8px; padding: 2rem; box-shadow: 0 1px 4px rgba(0,0,0,0.1); margin-bottom: 1.5rem; overflow-x: auto; }
+    .mermaid { background: white; border-radius: 8px; padding: 2rem; box-shadow: 0 1px 4px rgba(0,0,0,0.1); margin-bottom: 1.5rem; overflow-x: auto; cursor: zoom-in; position: relative; }
+    .mermaid:hover::after { content: "🔍 Click to expand"; position: absolute; top: 0.5rem; right: 0.8rem; background: rgba(0,0,0,0.6); color: white; font-size: 0.72rem; padding: 0.2rem 0.5rem; border-radius: 3px; }
+    .diagram-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000; overflow: auto; padding: 2rem; cursor: zoom-out; }
+    .diagram-modal.open { display: flex; align-items: flex-start; justify-content: center; }
+    .diagram-modal-inner { background: white; border-radius: 12px; padding: 2rem; max-width: 95vw; width: 100%; }
+    .diagram-modal-close { position: fixed; top: 1rem; right: 1.5rem; color: white; font-size: 1.5rem; cursor: pointer; background: none; border: none; padding: 0.5rem; z-index: 1001; }
     table { width: 100%; border-collapse: collapse; font-size: 0.88rem; margin: 0.8rem 0; }
     th { background: #151515; color: white; padding: 0.6rem 1rem; text-align: left; font-weight: 600; }
     td { padding: 0.55rem 1rem; border-bottom: 1px solid #e8e8e8; }
@@ -401,8 +406,36 @@ sequenceDiagram
   RHDP Platform Team &nbsp;·&nbsp; <a href="https://github.com/rhpds/rhpds.litemaas" style="color:#aaa">github.com/rhpds/rhpds.litemaas</a>
 </footer>
 
+<div class="diagram-modal" id="diagramModal">
+  <button class="diagram-modal-close" onclick="closeModal()">✕</button>
+  <div class="diagram-modal-inner" id="diagramModalInner"></div>
+</div>
+
 <script>
   mermaid.initialize({ startOnLoad: true, theme: 'neutral', securityLevel: 'loose' });
+
+  // Click to expand diagrams
+  document.addEventListener('click', function(e) {
+    const diagram = e.target.closest('.mermaid');
+    if (diagram && !e.target.closest('#diagramModal')) {
+      const modal = document.getElementById('diagramModal');
+      const inner = document.getElementById('diagramModalInner');
+      inner.innerHTML = diagram.innerHTML;
+      modal.classList.add('open');
+    }
+  });
+
+  function closeModal() {
+    document.getElementById('diagramModal').classList.remove('open');
+  }
+
+  document.getElementById('diagramModal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+  });
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeModal();
+  });
 </script>
 
 </body>

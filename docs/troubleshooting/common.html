@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LiteMaaS — Troubleshooting Common Issues</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Red Hat Text', 'Segoe UI', sans-serif; background: #f5f5f5; color: #151515; line-height: 1.6; }
+    header { background: #cc0000; color: white; padding: 1.5rem 3rem; display: flex; align-items: center; gap: 1.5rem; }
+    header h1 { font-size: 1.5rem; font-weight: 700; }
+    header p { opacity: 0.85; font-size: 0.9rem; margin-top: 0.2rem; }
+    nav { background: #151515; padding: 0 3rem; display: flex; gap: 0; flex-wrap: wrap; }
+    nav a { color: #e0e0e0; text-decoration: none; padding: 0.85rem 1.2rem; font-size: 0.9rem; display: block; transition: background 0.15s; }
+    nav a:hover, nav a.active { background: #cc0000; color: white; }
+    nav .nav-group { position: relative; }
+    nav .nav-group:hover .nav-dropdown { display: block; }
+    .nav-dropdown { display: none; position: absolute; top: 100%; left: 0; background: #1f1f1f; min-width: 200px; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+    .nav-dropdown a { display: block; padding: 0.7rem 1.2rem; border-bottom: 1px solid #333; }
+    .container { max-width: 1100px; margin: 2rem auto; padding: 0 2rem; }
+    .breadcrumb { font-size: 0.82rem; color: #666; margin-bottom: 1.5rem; }
+    .breadcrumb a { color: #cc0000; text-decoration: none; }
+    .breadcrumb a:hover { text-decoration: underline; }
+    h1.page-title { font-size: 1.8rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .page-subtitle { color: #555; margin-bottom: 2rem; font-size: 1rem; }
+    .issue { background: white; border-radius: 8px; padding: 2rem; margin-bottom: 1.5rem; box-shadow: 0 1px 4px rgba(0,0,0,0.1); border-left: 4px solid #cc0000; }
+    .issue-header { display: flex; align-items: flex-start; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
+    .issue-num { background: #cc0000; color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem; flex-shrink: 0; margin-top: 0.1rem; }
+    .issue-title { font-size: 1.15rem; font-weight: 700; }
+    .symptom { background: #fce8e8; border-radius: 6px; padding: 0.8rem 1.2rem; margin-bottom: 1rem; font-size: 0.88rem; }
+    .symptom strong { display: block; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; color: #7a0000; margin-bottom: 0.2rem; }
+    .root-cause { background: #fff8e1; border-radius: 6px; padding: 0.8rem 1.2rem; margin-bottom: 1rem; font-size: 0.88rem; }
+    .root-cause strong { display: block; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; color: #5d3900; margin-bottom: 0.2rem; }
+    h3.fix-label { font-size: 0.88rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #3e8635; margin: 1rem 0 0.5rem; }
+    pre { background: #1e1e1e; color: #d4d4d4; padding: 1.2rem 1.5rem; border-radius: 6px; overflow-x: auto; font-size: 0.82rem; line-height: 1.5; margin: 0.8rem 0; }
+    pre .comment { color: #6a9955; }
+    pre .string { color: #ce9178; }
+    pre .keyword { color: #569cd6; }
+    code { font-family: 'Courier New', monospace; font-size: 0.85em; background: #f0f0f0; padding: 0.1em 0.3em; border-radius: 3px; }
+    .info-box { background: #e8f4fd; border-left: 4px solid #0066cc; padding: 1rem 1.5rem; border-radius: 0 6px 6px 0; margin: 1rem 0; }
+    .info-box p { margin: 0; font-size: 0.88rem; color: #004080; }
+    .warn-box { background: #fff8e1; border-left: 4px solid #f0a500; padding: 1rem 1.5rem; border-radius: 0 6px 6px 0; margin: 1rem 0; }
+    .warn-box p { margin: 0; font-size: 0.88rem; color: #5d3900; }
+    .toc { background: white; border: 1px solid #e0e0e0; border-radius: 8px; padding: 1.5rem; margin-bottom: 2rem; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+    .toc h3 { font-size: 0.95rem; font-weight: 700; margin-bottom: 0.8rem; }
+    .toc ol { padding-left: 1.5rem; }
+    .toc li { margin-bottom: 0.4rem; }
+    .toc a { color: #cc0000; text-decoration: none; font-size: 0.88rem; }
+    .toc a:hover { text-decoration: underline; }
+    .section { background: white; border-radius: 8px; padding: 2rem; margin-bottom: 1.5rem; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+    .section h2 { font-size: 1.2rem; font-weight: 700; margin-bottom: 1rem; color: #151515; border-bottom: 2px solid #cc0000; padding-bottom: 0.5rem; }
+    .section p { margin-bottom: 0.8rem; color: #333; font-size: 0.92rem; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.86rem; }
+    th { background: #151515; color: white; padding: 0.6rem 0.8rem; text-align: left; font-weight: 600; }
+    td { padding: 0.6rem 0.8rem; border-bottom: 1px solid #e8e8e8; vertical-align: top; }
+    tr:nth-child(even) { background: #f9f9f9; }
+    td code { background: #f0f0f0; padding: 0.1em 0.3em; border-radius: 3px; font-size: 0.82rem; }
+    footer { background: #151515; color: #aaa; text-align: center; padding: 1.5rem; font-size: 0.85rem; margin-top: 3rem; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>RHDP LiteMaaS</h1>
+    <p>Model as a Service for Red Hat Demo Platform</p>
+  </div>
+</header>
+
+<nav>
+  <a href="../index.html">Home</a>
+  <a href="../architecture.html">Architecture</a>
+  <div class="nav-group">
+    <a href="../product/overview.html">Product ▾</a>
+    <div class="nav-dropdown">
+      <a href="../product/overview.html">Overview</a>
+      <a href="../product/models.html">Models Reference</a>
+    </div>
+  </div>
+  <div class="nav-group">
+    <a href="../install/deployment.html">Install ▾</a>
+    <div class="nav-dropdown">
+      <a href="../install/deployment.html">Deployment Guide</a>
+    </div>
+  </div>
+  <div class="nav-group">
+    <a href="../day2/operations.html">Day-2 ▾</a>
+    <div class="nav-dropdown">
+      <a href="../day2/operations.html">Operations</a>
+      <a href="../day2/grafana.html">Grafana / Metrics</a>
+    </div>
+  </div>
+  <div class="nav-group">
+    <a href="common.html" class="active">Troubleshooting ▾</a>
+    <div class="nav-dropdown">
+      <a href="common.html" class="active">Common Issues</a>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+
+  <div class="breadcrumb">
+    <a href="../index.html">Home</a> / <a href="common.html">Troubleshooting</a> / Common Issues
+  </div>
+
+  <h1 class="page-title">Common Issues</h1>
+  <p class="page-subtitle">Exact symptoms, root causes, and fix commands for the most frequently encountered LiteMaaS problems.</p>
+
+  <div class="toc">
+    <h3>Issue Index</h3>
+    <ol>
+      <li><a href="#model-sync">Model sync not working (models added in LiteLLM but not showing in LiteMaaS)</a></li>
+      <li><a href="#subscription-failure">Subscription failures — foreign key constraint violation</a></li>
+      <li><a href="#frontend-old-version">Frontend showing old version (init container image mismatch)</a></li>
+      <li><a href="#litellm-db-migration">LiteLLM DB migration fails or schema is out of date</a></li>
+      <li><a href="#key-sync">Key sync between LiteMaaS and LiteLLM broken</a></li>
+      <li><a href="#redis-cache">Redis cache issues — stale model data after changes</a></li>
+      <li><a href="#oauth-callback">OAuth callback fails — users cannot log in</a></li>
+      <li><a href="#model-timeout">Model requests timing out (large context, long inference)</a></li>
+      <li><a href="#litellm-key-error">LiteLLM returning 401 / invalid API key</a></li>
+      <li><a href="#pod-oom">Pods getting OOMKilled</a></li>
+    </ol>
+  </div>
+
+  <!-- Issue 1: Model Sync -->
+  <div class="issue" id="model-sync">
+    <div class="issue-header">
+      <div class="issue-num">1</div>
+      <div class="issue-title">Model sync not working — models added in LiteLLM but not showing in LiteMaaS</div>
+    </div>
+
+    <div class="symptom">
+      <strong>Symptoms</strong>
+      Model appears in the LiteLLM admin UI under Models, and <code>curl /v1/models</code> with master key shows it.
+      However, the LiteMaaS frontend model catalog does not show the new model.
+      Users trying to subscribe get a 404 or the model is absent from the dropdown.
+    </div>
+
+    <div class="root-cause">
+      <strong>Root Cause</strong>
+      LiteMaaS backend maintains its own <code>models</code> table in PostgreSQL. Models added via the LiteLLM admin UI
+      are stored in LiteLLM's internal <code>LiteLLM_ModelTable</code> only. The two databases must be explicitly synced.
+    </div>
+
+    <h3 class="fix-label">Fix — Run the Sync Playbook</h3>
+    <pre><span class="comment"># Get credentials</span>
+NS=litellm-rhpds
+LITELLM_URL=$(oc get route litellm-prod -n $NS -o jsonpath='https://{.spec.host}')
+LITELLM_KEY=$(oc get secret litellm-secret -n $NS \
+  -o jsonpath='{.data.LITELLM_MASTER_KEY}' | base64 -d)
+
+<span class="comment"># Run the model sync playbook</span>
+ansible-playbook playbooks/manage_models.yml \
+  -e litellm_url="${LITELLM_URL}" \
+  -e litellm_master_key="${LITELLM_KEY}" \
+  -e ocp4_workload_litemaas_models_namespace="${NS}" \
+  -e ocp4_workload_litemaas_models_sync_from_litellm=true \
+  -e '{"ocp4_workload_litemaas_models_list": []}'</pre>
+
+    <h3 class="fix-label">Fix — Via Admin API Sync Endpoint</h3>
+    <pre><span class="comment"># If the backend exposes a sync endpoint:</span>
+ADMIN_KEY=$(oc get secret backend-secret -n $NS \
+  -o jsonpath='{.data.ADMIN_API_KEY}' | base64 -d)
+BACKEND_URL=$(oc get route litellm-prod-admin -n $NS \
+  -o jsonpath='https://{.spec.host}')
+
+curl -X POST "${BACKEND_URL}/api/admin/sync-models" \
+  -H "Authorization: Bearer ${ADMIN_KEY}" \
+  -H "Content-Type: application/json"</pre>
+
+    <h3 class="fix-label">Fix — Enable Auto-Sync for Ongoing Changes</h3>
+    <pre>oc set env deployment/litellm-backend LITELLM_AUTO_SYNC=true -n $NS
+oc rollout restart deployment/litellm-backend -n $NS</pre>
+
+    <h3 class="fix-label">Verify</h3>
+    <pre><span class="comment"># Model should now appear in backend DB</span>
+oc exec -n $NS litellm-postgres-0 -- \
+  psql -U litellm -d litellm -c "SELECT id, name FROM models;" | grep your-model-name</pre>
+  </div>
+
+  <!-- Issue 2: Subscription Failure -->
+  <div class="issue" id="subscription-failure">
+    <div class="issue-header">
+      <div class="issue-num">2</div>
+      <div class="issue-title">Subscription failures — foreign key constraint violation</div>
+    </div>
+
+    <div class="symptom">
+      <strong>Symptoms</strong>
+      User can log in, can see models listed in the catalog, but when clicking "Subscribe" they receive an error.
+      Backend logs show: <code>foreign key constraint "subscriptions_model_id_fkey"</code> or
+      <code>violates foreign key constraint "subscriptions_model_id_fkey"</code>.
+    </div>
+
+    <div class="root-cause">
+      <strong>Root Cause</strong>
+      The <code>subscriptions</code> table has a foreign key reference to <code>models.id</code>.
+      The model exists in LiteLLM's database but not in LiteMaaS's <code>models</code> table.
+      This happens when models are added directly via the LiteLLM admin UI without running the sync playbook.
+    </div>
+
+    <h3 class="fix-label">Diagnose</h3>
+    <pre><span class="comment"># Check if model exists in LiteMaaS models table</span>
+NS=litellm-rhpds
+MODEL_ID=your-model-name
+
+oc exec -n $NS litellm-postgres-0 -- \
+  psql -U litellm -d litellm -c \
+  "SELECT id, name, provider FROM models WHERE id = '${MODEL_ID}';"
+<span class="comment"># If 0 rows returned, the model is not in LiteMaaS DB</span>
+
+<span class="comment"># Check LiteLLM has it</span>
+LITELLM_KEY=$(oc get secret litellm-secret -n $NS \
+  -o jsonpath='{.data.LITELLM_MASTER_KEY}' | base64 -d)
+ROUTE=$(oc get route litellm-prod -n $NS -o jsonpath='{.spec.host}')
+curl -s "https://$ROUTE/model/info" \
+  -H "Authorization: Bearer $LITELLM_KEY" | \
+  jq ".data[] | select(.model_name == \"${MODEL_ID}\")"</pre>
+
+    <h3 class="fix-label">Fix — Sync Model to LiteMaaS DB</h3>
+    <pre><span class="comment"># Option 1: Run sync playbook (syncs ALL models)</span>
+ansible-playbook playbooks/manage_models.yml \
+  -e litellm_url="https://$ROUTE" \
+  -e litellm_master_key="${LITELLM_KEY}" \
+  -e ocp4_workload_litemaas_models_namespace="${NS}" \
+  -e ocp4_workload_litemaas_models_sync_from_litellm=true \
+  -e '{"ocp4_workload_litemaas_models_list": []}'
+
+<span class="comment"># Option 2: Insert directly (for emergency fix)</span>
+oc exec -n $NS litellm-postgres-0 -- \
+  psql -U litellm -d litellm -c \
+  "INSERT INTO models (id, name, display_name, provider, availability, created_at, updated_at)
+   VALUES ('${MODEL_ID}', '${MODEL_ID}', '${MODEL_ID}', 'openshift-ai', 'available', NOW(), NOW())
+   ON CONFLICT (id) DO NOTHING;"</pre>
+  </div>
+
+  <!-- Issue 3: Frontend Old Version -->
+  <div class="issue" id="frontend-old-version">
+    <div class="issue-header">
+      <div class="issue-num">3</div>
+      <div class="issue-title">Frontend showing old version after upgrade</div>
+    </div>
+
+    <div class="symptom">
+      <strong>Symptoms</strong>
+      After updating the frontend image tag, the LiteMaaS portal still shows the old version number in the footer.
+      <code>oc get deployment/litellm-frontend -o yaml</code> shows the new image tag, but the running pods still
+      serve old content. Hard refresh (Ctrl+Shift+F5) does not help.
+    </div>
+
+    <div class="root-cause">
+      <strong>Root Cause</strong>
+      The frontend deployment uses an init container to inject static assets into a shared volume. If the init
+      container image tag is different from the main container image tag (e.g., the main container was updated
+      but the init container was not, or vice versa), the init container will inject old assets even though the
+      main container image is new. The main Nginx container only serves what the init container placed in the volume.
+    </div>
+
+    <h3 class="fix-label">Diagnose</h3>
+    <pre><span class="comment"># Check both the main container and init container image tags</span>
+NS=litellm-rhpds
+
+oc get deployment/litellm-frontend -n $NS \
+  -o jsonpath='{.spec.template.spec.containers[*].image}'
+echo ""
+oc get deployment/litellm-frontend -n $NS \
+  -o jsonpath='{.spec.template.spec.initContainers[*].image}'
+echo ""
+
+<span class="comment"># They must match for the correct version to be served</span></pre>
+
+    <h3 class="fix-label">Fix — Update Both Container Images Together</h3>
+    <pre>NS=litellm-rhpds
+NEW_TAG=0.5.0
+IMAGE=quay.io/rh-aiservices-bu/litemaas-frontend
+
+<span class="comment"># Update the main container</span>
+oc set image deployment/litellm-frontend \
+  frontend=${IMAGE}:${NEW_TAG} \
+  -n $NS
+
+<span class="comment"># Update the init container (if present)</span>
+oc set image deployment/litellm-frontend \
+  init-frontend=${IMAGE}:${NEW_TAG} \
+  -n $NS
+
+<span class="comment"># Force a rollout to apply changes</span>
+oc rollout restart deployment/litellm-frontend -n $NS
+oc rollout status deployment/litellm-frontend -n $NS
+
+<span class="comment"># Verify running pod is using new image</span>
+oc get pods -n $NS -l app=litellm-frontend \
+  -o jsonpath='{.items[0].spec.initContainers[*].image}'</pre>
+
+    <h3 class="fix-label">Prevention</h3>
+    <p>Always update init container and main container to the same tag simultaneously. When using Ansible, the role handles both; when patching manually, update both in a single <code>oc set image</code> call or via a single deployment patch.</p>
+  </div>
+
+  <!-- Issue 4: DB Migration -->
+  <div class="issue" id="litellm-db-migration">
+    <div class="issue-header">
+      <div class="issue-num">4</div>
+      <div class="issue-title">LiteLLM DB migration fails or schema is out of date</div>
+    </div>
+
+    <div class="symptom">
+      <strong>Symptoms</strong>
+      LiteLLM pods are in CrashLoopBackOff or restart repeatedly after an upgrade.
+      Logs show Prisma-related errors: <code>Table 'LiteLLM_VerificationToken' doesn't exist</code>,
+      <code>column does not exist</code>, or <code>The column 'LiteLLM_XXX.field' does not exist</code>.
+      Alternatively, LiteLLM starts but key operations fail with database errors.
+    </div>
+
+    <div class="root-cause">
+      <strong>Root Cause</strong>
+      LiteLLM uses Prisma ORM with schema migrations. When upgrading between minor/major LiteLLM versions,
+      new columns or tables may be added. The migration sometimes fails if the database is locked, if the
+      previous migration was incomplete, or if the container hit a startup timeout before migration finished.
+    </div>
+
+    <h3 class="fix-label">Diagnose</h3>
+    <pre><span class="comment"># Check LiteLLM startup logs for migration output</span>
+NS=litellm-rhpds
+LITELLM_POD=$(oc get pods -n $NS -l app=litellm \
+  -o jsonpath='{.items[0].metadata.name}')
+
+oc logs -n $NS $LITELLM_POD | grep -iE "migrat|prisma|error|schema"
+
+<span class="comment"># Check the PostgreSQL migration history table</span>
+oc exec -n $NS litellm-postgres-0 -- \
+  psql -U litellm -d litellm -c \
+  "SELECT * FROM \"_prisma_migrations\" ORDER BY finished_at DESC LIMIT 10;"</pre>
+
+    <h3 class="fix-label">Fix — Trigger Manual Migration</h3>
+    <pre><span class="comment"># Scale down LiteLLM to 1 replica to avoid concurrent migration attempts</span>
+oc scale deployment/litellm --replicas=1 -n $NS
+
+<span class="comment"># Wait for the single pod to start</span>
+oc rollout status deployment/litellm -n $NS
+
+<span class="comment"># Check if migration ran successfully</span>
+oc logs -n $NS deployment/litellm --tail=100 | grep -i migrat
+
+<span class="comment"># If migration still fails, exec into the pod and run it manually</span>
+LITELLM_POD=$(oc get pods -n $NS -l app=litellm \
+  -o jsonpath='{.items[0].metadata.name}')
+
+oc exec -n $NS $LITELLM_POD -- \
+  python -c "
+import litellm
+from litellm.proxy.proxy_server import ProxyStartupEvent
+import asyncio
+asyncio.run(ProxyStartupEvent.run_migrations())
+"
+
+<span class="comment"># Scale back to 3 replicas after migration succeeds</span>
+oc scale deployment/litellm --replicas=3 -n $NS</pre>
+
+    <h3 class="fix-label">Fix — Reset Migration State (Last Resort)</h3>
+    <div class="warn-box"><p><strong>Warning:</strong> Only use this if migration is stuck on a specific migration that has already been applied to the database. This marks the failed migration as applied without re-running it. Take a full database backup first.</p></div>
+    <pre><span class="comment"># Mark a failed migration as applied (replace with actual migration name from logs)</span>
+oc exec -n $NS litellm-postgres-0 -- \
+  psql -U litellm -d litellm -c \
+  "UPDATE \"_prisma_migrations\" \
+   SET finished_at = NOW(), applied_steps_count = 1 \
+   WHERE migration_name = '20240101000000_add_some_column' \
+   AND finished_at IS NULL;"
+
+<span class="comment"># Restart LiteLLM</span>
+oc rollout restart deployment/litellm -n $NS</pre>
+  </div>
+
+  <!-- Issue 5: Key Sync -->
+  <div class="issue" id="key-sync">
+    <div class="issue-header">
+      <div class="issue-num">5</div>
+      <div class="issue-title">Key sync between LiteMaaS and LiteLLM broken</div>
+    </div>
+
+    <div class="symptom">
+      <strong>Symptoms</strong>
+      User created an API key in LiteMaaS portal (shows as Active in the portal), but requests to LiteLLM
+      return <code>401 Unauthorized</code> or <code>Invalid API key</code>. Alternatively, a key shows as revoked
+      in the portal but still works when used against the LiteLLM endpoint. The <code>sync_status</code> column
+      in the <code>api_keys</code> table shows <code>'error'</code>.
+    </div>
+
+    <div class="root-cause">
+      <strong>Root Cause</strong>
+      The LiteMaaS backend creates keys in LiteLLM via the <code>/key/generate</code> API, then stores the returned
+      key token and alias in its own <code>api_keys</code> table. If the LiteLLM API call succeeded but the database
+      write failed (or vice versa), the two systems are out of sync. Also happens when keys are deleted directly
+      in LiteLLM's admin UI without going through LiteMaaS's key management flow.
+    </div>
+
+    <h3 class="fix-label">Diagnose — Find Keys with Sync Errors</h3>
+    <pre>NS=litellm-rhpds
+
+<span class="comment"># List all keys with sync errors</span>
+oc exec -n $NS litellm-postgres-0 -- \
+  psql -U litellm -d litellm -c \
+  "SELECT id, user_id, litellm_key_alias, is_active, sync_status, sync_error
+   FROM api_keys
+   WHERE sync_status = 'error' OR sync_status = 'pending'
+   ORDER BY updated_at DESC
+   LIMIT 20;"
+
+<span class="comment"># Find LiteMaaS-active keys that don't exist in LiteLLM</span>
+oc exec -n $NS litellm-postgres-0 -- \
+  psql -U litellm -d litellm -c \
+  "SELECT ak.id, ak.litellm_key_alias, ak.is_active
+   FROM api_keys ak
+   WHERE ak.is_active = true
+     AND ak.litellm_key_alias IS NOT NULL
+     AND NOT EXISTS (
+       SELECT 1 FROM \"LiteLLM_VerificationToken\" lv
+       WHERE lv.key_alias = ak.litellm_key_alias
+     );"</pre>
+
+    <h3 class="fix-label">Fix — Mark Orphaned LiteMaaS Keys as Inactive</h3>
+    <pre><span class="comment"># Mark all LiteMaaS keys inactive if they have no LiteLLM counterpart</span>
+oc exec -n $NS litellm-postgres-0 -- \
+  psql -U litellm -d litellm -c \
+  "UPDATE api_keys
+   SET is_active = false,
+       revoked_at = NOW(),
+       sync_status = 'error',
+       sync_error = 'Key not found in LiteLLM - manual cleanup',
+       updated_at = NOW()
+   WHERE is_active = true
+     AND litellm_key_alias IS NOT NULL
+     AND NOT EXISTS (
+       SELECT 1 FROM \"LiteLLM_VerificationToken\" lv
+       WHERE lv.key_alias = api_keys.litellm_key_alias
+     );"</pre>
+
+    <h3 class="fix-label">Fix — Re-sync a Specific Key</h3>
+    <pre><span class="comment"># If a key exists in LiteLLM but not tracked in LiteMaaS,</span>
+<span class="comment"># the user should revoke the old key and create a new one via the portal.</span>
+<span class="comment"># The new key creation will go through the proper sync flow.</span>
+
+<span class="comment"># Alternatively, delete the orphaned LiteLLM key:</span>
+LITELLM_KEY=$(oc get secret litellm-secret -n $NS \
+  -o jsonpath='{.data.LITELLM_MASTER_KEY}' | base64 -d)
+ROUTE=$(oc get route litellm-prod -n $NS -o jsonpath='{.spec.host}')
+
+curl -X POST "https://$ROUTE/key/delete" \
+  -H "Authorization: Bearer $LITELLM_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"keys": ["sk-the-orphaned-key-token"]}'</pre>
+
+    <h3 class="fix-label">Fix — Run the Key Cleanup Cronjob Immediately</h3>
+    <pre><span class="comment"># The cleanup cron handles orphaned keys automatically</span>
+<span class="comment"># Run it manually for immediate effect</span>
+sudo /usr/local/bin/cleanup-litemaas-keys-litellm-rhpds.sh
+sudo tail -50 /var/log/litemaas-key-cleanup.log</pre>
+  </div>
+
+  <!-- Issue 6: Redis Cache -->
+  <div class="issue" id="redis-cache">
+    <div class="issue-header">
+      <div class="issue-num">6</div>
+      <div class="issue-title">Redis cache issues — stale model data after model changes</div>
+    </div>
+
+    <div class="symptom">
+      <strong>Symptoms</strong>
+      After adding, removing, or updating a model in LiteLLM, the LiteLLM proxy continues to serve stale model
+      information for several minutes. In multi-replica deployments, different LiteLLM pods may return different
+      model lists. The LiteMaaS backend cache may also show outdated model data immediately after a change.
+    </div>
+
+    <div class="root-cause">
+      <strong>Root Cause</strong>
+      LiteLLM maintains an in-memory cache of model configurations and virtual key data, synchronized via Redis
+      in multi-replica deployments. If Redis is down, each pod maintains its own independent cache. If Redis is
+      running but the cache is stale, a TTL-based expiry or an explicit flush is needed.
+    </div>
+
+    <h3 class="fix-label">Diagnose</h3>
+    <pre>NS=litellm-rhpds
+
+<span class="comment"># Check Redis is running</span>
+oc get pods -n $NS -l app=litellm-redis
+
+<span class="comment"># Check Redis memory usage and key count</span>
+REDIS_POD=$(oc get pods -n $NS -l app=litellm-redis -o name | head -1)
+oc exec -n $NS $REDIS_POD -- redis-cli INFO memory | grep used_memory_human
+oc exec -n $NS $REDIS_POD -- redis-cli DBSIZE
+
+<span class="comment"># Check if LiteLLM pods can reach Redis</span>
+LITELLM_POD=$(oc get pods -n $NS -l app=litellm \
+  -o jsonpath='{.items[0].metadata.name}')
+oc exec -n $NS $LITELLM_POD -- \
+  sh -c 'echo REDIS_HOST=$REDIS_HOST REDIS_PORT=$REDIS_PORT'</pre>
+
+    <h3 class="fix-label">Fix — Flush the Redis Cache</h3>
+    <pre><span class="comment"># Flush all Redis keys (forces LiteLLM pods to reload from DB)</span>
+<span class="comment"># WARNING: This briefly increases DB load as all pods reload their caches</span>
+REDIS_POD=$(oc get pods -n $NS -l app=litellm-redis -o name | head -1)
+oc exec -n $NS $REDIS_POD -- redis-cli FLUSHALL
+
+<span class="comment"># Verify flush</span>
+oc exec -n $NS $REDIS_POD -- redis-cli DBSIZE
+<span class="comment"># Should return: 0</span></pre>
+
+    <h3 class="fix-label">Fix — Restart LiteLLM Pods (Forces Cache Reload)</h3>
+    <pre><span class="comment"># Rolling restart — no downtime</span>
+oc rollout restart deployment/litellm -n $NS
+oc rollout status deployment/litellm -n $NS</pre>
+
+    <h3 class="fix-label">Fix — Redis Pod Down (Restart Redis)</h3>
+    <pre><span class="comment"># If Redis pod is in error state</span>
+oc delete pod -n $NS -l app=litellm-redis
+<span class="comment"># The deployment controller will create a new pod automatically</span>
+
+<span class="comment"># If Redis deployment is misconfigured, check logs</span>
+oc logs -n $NS deployment/litellm-redis --tail=50</pre>
+  </div>
+
+  <!-- Issue 7: OAuth -->
+  <div class="issue" id="oauth-callback">
+    <div class="issue-header">
+      <div class="issue-num">7</div>
+      <div class="issue-title">OAuth callback fails — users cannot log in</div>
+    </div>
+
+    <div class="symptom">
+      <strong>Symptoms</strong>
+      Users click "Login" on the LiteMaaS frontend, are redirected to the OpenShift OAuth page, authenticate
+      successfully, but then see a generic error page or are redirected back to the frontend with an error.
+      Backend logs show: <code>invalid_grant</code>, <code>redirect_uri_mismatch</code>, or
+      <code>oauth_id not found</code>.
+    </div>
+
+    <div class="root-cause">
+      <strong>Root Cause (most common):</strong> The OAuthClient's <code>redirectURIs</code> list does not include
+      the actual route hostname. This happens when route hostnames change (e.g., after cluster migration) or when
+      the OAuthClient was created with old hostnames. Secondary cause: users were directly inserted into the database
+      before logging in via OAuth, so their <code>oauth_id</code> is null.
+    </div>
+
+    <h3 class="fix-label">Diagnose — Check OAuthClient Redirect URIs</h3>
+    <pre>NS=litellm-rhpds
+
+<span class="comment"># Get the OAuthClient configuration</span>
+oc get oauthclient $NS -o yaml | grep -A 20 redirectURIs
+
+<span class="comment"># Get current route hostnames</span>
+oc get routes -n $NS -o jsonpath='{range .items[*]}{.spec.host}{"\n"}{end}'
+
+<span class="comment"># The OAuthClient redirectURIs must include:</span>
+<span class="comment"># https://&lt;api-route&gt;/api/auth/callback</span>
+<span class="comment"># https://&lt;frontend-route&gt;/api/auth/callback</span></pre>
+
+    <h3 class="fix-label">Fix — Update OAuthClient Redirect URIs</h3>
+    <pre>NS=litellm-rhpds
+API_ROUTE=$(oc get route litellm-prod -n $NS -o jsonpath='{.spec.host}')
+FRONTEND_ROUTE=$(oc get route litellm-prod-frontend -n $NS -o jsonpath='{.spec.host}')
+
+<span class="comment"># Patch the OAuthClient</span>
+oc patch oauthclient $NS --type=merge -p \
+  "{\"redirectURIs\": [
+    \"https://${API_ROUTE}/api/auth/callback\",
+    \"https://${FRONTEND_ROUTE}/api/auth/callback\"
+  ]}"
+
+<span class="comment"># Verify</span>
+oc get oauthclient $NS -o jsonpath='{.redirectURIs}'</pre>
+
+    <h3 class="fix-label">Fix — User oauth_id Mismatch (after migration or manual insert)</h3>
+    <pre><span class="comment"># LiteMaaS v0.2.1+ has email fallback: it looks up by email if oauth_id doesn't match</span>
+<span class="comment"># and auto-updates the oauth_id. No manual fix needed for v0.2.1+.</span>
+<span class="comment"># For older versions, update oauth_id manually:</span>
+
+<span class="comment"># Get the OpenShift user's UID (this is the oauth_id)</span>
+oc get user user@redhat.com -o jsonpath='{.metadata.uid}'
+
+<span class="comment"># Update the oauth_id in LiteMaaS DB</span>
+oc exec -n $NS litellm-postgres-0 -- \
+  psql -U litellm -d litellm -c \
+  "UPDATE users SET oauth_id = 'the-openshift-user-uid-here' \
+   WHERE email = 'user@redhat.com';"</pre>
+  </div>
+
+  <!-- Issue 8: Model Timeout -->
+  <div class="issue" id="model-timeout">
+    <div class="issue-header">
+      <div class="issue-num">8</div>
+      <div class="issue-title">Model requests timing out (large context, long inference)</div>
+    </div>
+
+    <div class="symptom">
+      <strong>Symptoms</strong>
+      Requests to models with large context windows (especially Llama Scout 17B with 400K context) return a
+      <code>504 Gateway Timeout</code> before the model finishes generating. The LiteLLM proxy returns
+      <code>TimeoutError</code> in logs. Streaming requests are cut off mid-response.
+    </div>
+
+    <div class="root-cause">
+      <strong>Root Cause</strong>
+      HAProxy (OpenShift's default ingress controller) has a default timeout of 30 seconds or less for backend
+      connections. Long inference requests — especially with large context windows — exceed this timeout.
+    </div>
+
+    <h3 class="fix-label">Fix — Set HAProxy Timeout on Routes</h3>
+    <pre>NS=litellm-rhpds
+
+<span class="comment"># Add 600-second timeout annotation to the LiteLLM API route</span>
+oc annotate route litellm-prod -n $NS \
+  haproxy.router.openshift.io/timeout=600s --overwrite
+
+<span class="comment"># Also apply to backend and frontend routes if needed</span>
+oc annotate route litellm-prod-admin -n $NS \
+  haproxy.router.openshift.io/timeout=600s --overwrite
+oc annotate route litellm-prod-frontend -n $NS \
+  haproxy.router.openshift.io/timeout=600s --overwrite
+
+<span class="comment"># Verify</span>
+oc get route litellm-prod -n $NS \
+  -o jsonpath='{.metadata.annotations.haproxy\.router\.openshift\.io/timeout}'</pre>
+
+    <div class="info-box">
+      <p>
+        The production RHDP deployment already has this annotation applied on all routes.
+        If you re-deploy or the routes are recreated, re-apply the annotation. Consider adding it to the
+        deployment playbook via the route template to make it permanent.
+      </p>
+    </div>
+  </div>
+
+  <!-- Issue 9: LiteLLM 401 -->
+  <div class="issue" id="litellm-key-error">
+    <div class="issue-header">
+      <div class="issue-num">9</div>
+      <div class="issue-title">LiteLLM returning 401 / invalid API key</div>
+    </div>
+
+    <div class="symptom">
+      <strong>Symptoms</strong>
+      API calls with a previously working key start returning <code>{"error": {"message": "Invalid API Key"}}</code>
+      with HTTP 401. The key appears active in the LiteMaaS portal. Using the master key works fine.
+    </div>
+
+    <h3 class="fix-label">Diagnose</h3>
+    <pre>NS=litellm-rhpds
+LITELLM_KEY=$(oc get secret litellm-secret -n $NS \
+  -o jsonpath='{.data.LITELLM_MASTER_KEY}' | base64 -d)
+ROUTE=$(oc get route litellm-prod -n $NS -o jsonpath='{.spec.host}')
+
+<span class="comment"># Check if the key exists in LiteLLM</span>
+curl "https://$ROUTE/key/info?key=sk-the-user-key-here" \
+  -H "Authorization: Bearer $LITELLM_KEY" | jq '.'
+
+<span class="comment"># Check key in LiteMaaS DB</span>
+oc exec -n $NS litellm-postgres-0 -- \
+  psql -U litellm -d litellm -c \
+  "SELECT id, is_active, sync_status, revoked_at, litellm_key_alias
+   FROM api_keys
+   WHERE litellm_key_alias = 'key-alias-here';"</pre>
+
+    <h3 class="fix-label">Fix — Key Budget Exhausted</h3>
+    <pre><span class="comment"># Check if the key hit its budget limit</span>
+curl "https://$ROUTE/key/info?key=sk-the-user-key-here" \
+  -H "Authorization: Bearer $LITELLM_KEY" | \
+  jq '.info | {max_budget, spend, budget_reset_at}'
+
+<span class="comment"># If spent >= max_budget, reset the spend or increase the budget</span>
+curl -X POST "https://$ROUTE/key/update" \
+  -H "Authorization: Bearer $LITELLM_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"key": "sk-the-user-key-here", "max_budget": 200}'</pre>
+
+    <h3 class="fix-label">Fix — Redis Cache Has Stale Key State</h3>
+    <pre><span class="comment"># Flush Redis so LiteLLM reloads all key data from PostgreSQL</span>
+REDIS_POD=$(oc get pods -n $NS -l app=litellm-redis -o name | head -1)
+oc exec -n $NS $REDIS_POD -- redis-cli FLUSHALL</pre>
+  </div>
+
+  <!-- Issue 10: OOMKilled -->
+  <div class="issue" id="pod-oom">
+    <div class="issue-header">
+      <div class="issue-num">10</div>
+      <div class="issue-title">Pods getting OOMKilled</div>
+    </div>
+
+    <div class="symptom">
+      <strong>Symptoms</strong>
+      LiteLLM pods show <code>OOMKilled</code> as the last termination reason. <code>oc describe pod</code> shows
+      <code>exit code: 137</code>. The pod restarts and the cycle repeats, especially under high concurrent load.
+    </div>
+
+    <h3 class="fix-label">Diagnose</h3>
+    <pre>NS=litellm-rhpds
+
+<span class="comment"># Check OOM history</span>
+oc describe pods -n $NS -l app=litellm | grep -A 5 "Last State\|OOMKilled"
+
+<span class="comment"># Check current resource limits</span>
+oc get deployment/litellm -n $NS \
+  -o jsonpath='{.spec.template.spec.containers[0].resources}' | jq .</pre>
+
+    <h3 class="fix-label">Fix — Increase Memory Limits</h3>
+    <pre><span class="comment"># Increase LiteLLM memory limit to 4Gi</span>
+oc set resources deployment/litellm \
+  --limits=memory=4Gi,cpu=2000m \
+  --requests=memory=1Gi,cpu=500m \
+  -n $NS
+
+<span class="comment"># Or patch directly</span>
+oc patch deployment/litellm -n $NS --type=json -p='[
+  {
+    "op": "replace",
+    "path": "/spec/template/spec/containers/0/resources/limits/memory",
+    "value": "4Gi"
+  }
+]'
+
+oc rollout status deployment/litellm -n $NS</pre>
+
+    <div class="info-box">
+      <p>
+        LiteLLM's memory usage grows with the number of concurrent requests and the size of model response payloads.
+        Llama Scout 17B with 400K context can produce very large responses. For production at scale, 2-4 Gi per
+        LiteLLM replica is recommended. Also consider reducing concurrent request limits via LiteLLM's
+        <code>max_parallel_requests</code> configuration.
+      </p>
+    </div>
+  </div>
+
+  <!-- General Diagnostic Commands -->
+  <div class="section">
+    <h2>General Diagnostic Commands</h2>
+    <pre>NS=litellm-rhpds
+
+<span class="comment"># Full cluster state</span>
+oc get all -n $NS
+
+<span class="comment"># Pod events (shows crash reasons, scheduling issues)</span>
+oc get events -n $NS --sort-by='.lastTimestamp' | tail -30
+
+<span class="comment"># LiteLLM proxy health</span>
+ROUTE=$(oc get route litellm-prod -n $NS -o jsonpath='{.spec.host}')
+curl -sk "https://$ROUTE/health/livenessz"
+curl -sk "https://$ROUTE/health/readyz"
+
+<span class="comment"># LiteLLM request logs (last 5 minutes)</span>
+oc logs -n $NS deployment/litellm --since=5m | grep -E "ERROR|WARN|Exception"
+
+<span class="comment"># Backend API logs</span>
+oc logs -n $NS deployment/litellm-backend --since=5m | grep -E "error|warn|Error"
+
+<span class="comment"># Database connectivity check (from backend pod)</span>
+oc exec -n $NS deployment/litellm-backend -- \
+  sh -c 'echo "DB: $DATABASE_URL" | sed "s/:.*@/:REDACTED@/"'
+
+<span class="comment"># Check PostgreSQL is accepting connections</span>
+oc exec -n $NS litellm-postgres-0 -- \
+  psql -U litellm -d litellm -c "SELECT 1 as connected;"
+
+<span class="comment"># Redis connectivity (from LiteLLM pod)</span>
+LITELLM_POD=$(oc get pods -n $NS -l app=litellm \
+  -o jsonpath='{.items[0].metadata.name}')
+oc exec -n $NS $LITELLM_POD -- \
+  sh -c 'redis-cli -h $REDIS_HOST ping 2>/dev/null || echo "Redis not reachable"'</pre>
+  </div>
+
+</div>
+
+<footer>
+  <p>RHDP LiteMaaS Documentation &mdash; Red Hat Demo Platform &mdash; maas.redhatworkshops.io</p>
+</footer>
+
+</body>
+</html>

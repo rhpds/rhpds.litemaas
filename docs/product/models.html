@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LiteMaaS — Models Reference</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Red Hat Text', 'Segoe UI', sans-serif; background: #f5f5f5; color: #151515; line-height: 1.6; }
+    header { background: #cc0000; color: white; padding: 1.5rem 3rem; display: flex; align-items: center; gap: 1.5rem; }
+    header h1 { font-size: 1.5rem; font-weight: 700; }
+    header p { opacity: 0.85; font-size: 0.9rem; margin-top: 0.2rem; }
+    nav { background: #151515; padding: 0 3rem; display: flex; gap: 0; flex-wrap: wrap; }
+    nav a { color: #e0e0e0; text-decoration: none; padding: 0.85rem 1.2rem; font-size: 0.9rem; display: block; transition: background 0.15s; }
+    nav a:hover, nav a.active { background: #cc0000; color: white; }
+    nav .nav-group { position: relative; }
+    nav .nav-group:hover .nav-dropdown { display: block; }
+    .nav-dropdown { display: none; position: absolute; top: 100%; left: 0; background: #1f1f1f; min-width: 200px; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+    .nav-dropdown a { display: block; padding: 0.7rem 1.2rem; border-bottom: 1px solid #333; }
+    .container { max-width: 1100px; margin: 2rem auto; padding: 0 2rem; }
+    .breadcrumb { font-size: 0.82rem; color: #666; margin-bottom: 1.5rem; }
+    .breadcrumb a { color: #cc0000; text-decoration: none; }
+    .breadcrumb a:hover { text-decoration: underline; }
+    h1.page-title { font-size: 1.8rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .page-subtitle { color: #555; margin-bottom: 2rem; font-size: 1rem; }
+    .section { background: white; border-radius: 8px; padding: 2rem; margin-bottom: 1.5rem; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+    .section h2 { font-size: 1.2rem; font-weight: 700; margin-bottom: 1rem; color: #151515; border-bottom: 2px solid #cc0000; padding-bottom: 0.5rem; }
+    .section h3 { font-size: 1rem; font-weight: 700; margin: 1.4rem 0 0.5rem; color: #333; }
+    .section p { margin-bottom: 0.8rem; color: #333; font-size: 0.92rem; }
+    .badge { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 3px; font-size: 0.72rem; font-weight: 600; margin: 0.15rem; vertical-align: middle; }
+    .badge-blue { background: #d1ecf1; color: #0c5460; }
+    .badge-green { background: #d4edda; color: #155724; }
+    .badge-orange { background: #fff3cd; color: #856404; }
+    .badge-red { background: #f8d7da; color: #721c24; }
+    .badge-purple { background: #e2d9f3; color: #4a235a; }
+    .badge-gray { background: #e8e8e8; color: #444; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.86rem; }
+    th { background: #151515; color: white; padding: 0.6rem 0.8rem; text-align: left; font-weight: 600; }
+    td { padding: 0.6rem 0.8rem; border-bottom: 1px solid #e8e8e8; vertical-align: top; }
+    tr:nth-child(even) { background: #f9f9f9; }
+    td code, th code { font-family: 'Courier New', monospace; font-size: 0.82rem; }
+    pre { background: #1e1e1e; color: #d4d4d4; padding: 1.2rem 1.5rem; border-radius: 6px; overflow-x: auto; font-size: 0.82rem; line-height: 1.5; margin: 0.8rem 0; }
+    pre .comment { color: #6a9955; }
+    pre .string { color: #ce9178; }
+    pre .keyword { color: #569cd6; }
+    .model-card { border: 1px solid #e0e0e0; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; }
+    .model-card-header { display: flex; align-items: flex-start; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
+    .model-card-header h3 { font-size: 1.05rem; font-weight: 700; margin: 0; }
+    .model-meta { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.5rem; margin-bottom: 1rem; font-size: 0.82rem; }
+    .model-meta-item { background: #f5f5f5; padding: 0.4rem 0.7rem; border-radius: 4px; }
+    .model-meta-item strong { display: block; font-size: 0.72rem; color: #666; text-transform: uppercase; letter-spacing: 0.03em; }
+    .status-running { color: #3e8635; font-weight: 600; }
+    .status-pending { color: #856404; font-weight: 600; }
+    .info-box { background: #e8f4fd; border-left: 4px solid #0066cc; padding: 1rem 1.5rem; border-radius: 0 6px 6px 0; margin: 1rem 0; }
+    .info-box p { margin: 0; font-size: 0.88rem; color: #004080; }
+    .warn-box { background: #fff8e1; border-left: 4px solid #f0a500; padding: 1rem 1.5rem; border-radius: 0 6px 6px 0; margin: 1rem 0; }
+    .warn-box p { margin: 0; font-size: 0.88rem; color: #5d3900; }
+    .tabs { display: flex; border-bottom: 2px solid #e0e0e0; margin-bottom: 0; }
+    .tab { padding: 0.6rem 1.2rem; cursor: pointer; font-size: 0.88rem; border-bottom: 2px solid transparent; margin-bottom: -2px; color: #555; }
+    .tab.active { border-bottom-color: #cc0000; color: #cc0000; font-weight: 600; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    footer { background: #151515; color: #aaa; text-align: center; padding: 1.5rem; font-size: 0.85rem; margin-top: 3rem; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>RHDP LiteMaaS</h1>
+    <p>Model as a Service for Red Hat Demo Platform</p>
+  </div>
+</header>
+
+<nav>
+  <a href="../index.html">Home</a>
+  <a href="../architecture.html">Architecture</a>
+  <div class="nav-group">
+    <a href="overview.html" class="active">Product ▾</a>
+    <div class="nav-dropdown">
+      <a href="overview.html">Overview</a>
+      <a href="models.html" class="active">Models Reference</a>
+    </div>
+  </div>
+  <div class="nav-group">
+    <a href="../install/deployment.html">Install ▾</a>
+    <div class="nav-dropdown">
+      <a href="../install/deployment.html">Deployment Guide</a>
+    </div>
+  </div>
+  <div class="nav-group">
+    <a href="../day2/operations.html">Day-2 ▾</a>
+    <div class="nav-dropdown">
+      <a href="../day2/operations.html">Operations</a>
+      <a href="../day2/grafana.html">Grafana / Metrics</a>
+    </div>
+  </div>
+  <div class="nav-group">
+    <a href="../troubleshooting/common.html">Troubleshooting ▾</a>
+    <div class="nav-dropdown">
+      <a href="../troubleshooting/common.html">Common Issues</a>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+
+  <div class="breadcrumb">
+    <a href="../index.html">Home</a> / <a href="overview.html">Product</a> / Models Reference
+  </div>
+
+  <h1 class="page-title">Models Reference</h1>
+  <p class="page-subtitle">All production models on maas.redhatworkshops.io — capabilities, endpoints, and curl examples.</p>
+
+  <div class="info-box">
+    <p>
+      <strong>API base URL:</strong> <code>https://litellm-prod.apps.maas.redhatworkshops.io</code> &mdash;
+      All endpoints below are relative to this base. Replace <code>YOUR_API_KEY</code> with your virtual key from the LiteMaaS portal.
+      Model names listed here are the LiteMaaS proxy names (what you pass to the <code>model</code> field).
+    </p>
+  </div>
+
+  <!-- Production Status Table -->
+  <div class="section">
+    <h2>Production Model Inventory</h2>
+    <p>Sourced from <code>oc get pods -n llm-hosting</code> and <code>oc get svc -n llm-hosting</code> — current as of deployment.</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Model Name (LiteMaaS)</th>
+          <th>KServe Predictor</th>
+          <th>Capability</th>
+          <th>Status</th>
+          <th>Replicas</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>granite-3-2-8b-instruct</code></td>
+          <td><code>granite-3-2-8b-instruct-predictor</code></td>
+          <td><span class="badge badge-blue">Chat</span></td>
+          <td class="status-running">Running</td>
+          <td>1 (2/2 containers)</td>
+        </tr>
+        <tr>
+          <td><code>llama-scout-17b</code></td>
+          <td><code>llama-scout-17b-predictor</code></td>
+          <td><span class="badge badge-blue">Chat</span></td>
+          <td class="status-running">Running</td>
+          <td>2 (scaled for load)</td>
+        </tr>
+        <tr>
+          <td><code>granite-4-0-h-tiny</code></td>
+          <td><code>granite-4-0-h-tiny-predictor</code></td>
+          <td><span class="badge badge-blue">Chat</span></td>
+          <td class="status-running">Running</td>
+          <td>1</td>
+        </tr>
+        <tr>
+          <td><code>codellama-7b-instruct</code></td>
+          <td><code>codellama-7b-instruct-predictor</code></td>
+          <td><span class="badge badge-blue">Chat</span></td>
+          <td class="status-running">Running</td>
+          <td>1</td>
+        </tr>
+        <tr>
+          <td><code>llama-guard-3-1b</code></td>
+          <td><code>llama-guard-3-1b-predictor</code></td>
+          <td><span class="badge badge-purple">Safety</span></td>
+          <td class="status-running">Running</td>
+          <td>1 (2/2 containers)</td>
+        </tr>
+        <tr>
+          <td><code>nomic-embed-text-v1-5</code></td>
+          <td><code>nomic-embed-text-v1-5-predictor</code></td>
+          <td><span class="badge badge-green">Embeddings</span></td>
+          <td class="status-running">Running</td>
+          <td>1</td>
+        </tr>
+        <tr>
+          <td><code>granite-docling-258m</code></td>
+          <td><code>granite-docling-258m-predictor</code></td>
+          <td><span class="badge badge-orange">Docling</span></td>
+          <td class="status-running">Running</td>
+          <td>1 (1 pending scale-up)</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="warn-box">
+      <p>
+        <strong>granite-8b-code-instruct-128k</strong> is registered in LiteLLM via the
+        <code>granite-8b-code-instruct-128k-predictor-lb</code> ClusterIP service (LoadBalancer on port 8080).
+        It may be available depending on current GPU allocation. Check the LiteMaaS portal for live model availability.
+      </p>
+    </div>
+  </div>
+
+  <!-- Chat Models -->
+  <div class="section">
+    <h2>Chat Models — <code>/v1/chat/completions</code></h2>
+    <p>Chat models follow the OpenAI Chat Completions API exactly. All support streaming via <code>"stream": true</code>.</p>
+
+    <!-- Granite 3.2 8B -->
+    <div class="model-card">
+      <div class="model-card-header">
+        <div>
+          <h3>IBM Granite 3.2 8B Instruct <span class="badge badge-blue">Chat</span></h3>
+          <p style="color:#555; font-size:0.85rem; margin-top:0.3rem;">General-purpose instruction-tuned model from IBM Research. Strong reasoning, coding, and multilingual capabilities. 128K context window.</p>
+        </div>
+      </div>
+      <div class="model-meta">
+        <div class="model-meta-item"><strong>Model ID</strong>granite-3-2-8b-instruct</div>
+        <div class="model-meta-item"><strong>Parameters</strong>8B</div>
+        <div class="model-meta-item"><strong>Context</strong>128K tokens</div>
+        <div class="model-meta-item"><strong>Runtime</strong>vLLM on KServe</div>
+        <div class="model-meta-item"><strong>Internal SVC</strong>granite-3-2-8b-instruct-predictor</div>
+      </div>
+      <pre><span class="comment"># Basic chat completion</span>
+curl -X POST https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -d '{
+    <span class="string">"model"</span>: <span class="string">"granite-3-2-8b-instruct"</span>,
+    <span class="string">"messages"</span>: [
+      {<span class="string">"role"</span>: <span class="string">"system"</span>, <span class="string">"content"</span>: <span class="string">"You are a helpful AI assistant."</span>},
+      {<span class="string">"role"</span>: <span class="string">"user"</span>, <span class="string">"content"</span>: <span class="string">"Explain Kubernetes in three sentences."</span>}
+    ],
+    <span class="string">"max_tokens"</span>: 256,
+    <span class="string">"temperature"</span>: 0.7
+  }'</pre>
+      <pre><span class="comment"># Streaming response</span>
+curl -X POST https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -d '{
+    <span class="string">"model"</span>: <span class="string">"granite-3-2-8b-instruct"</span>,
+    <span class="string">"messages"</span>: [{<span class="string">"role"</span>: <span class="string">"user"</span>, <span class="string">"content"</span>: <span class="string">"Write a Python function to reverse a string"</span>}],
+    <span class="string">"stream"</span>: true
+  }'</pre>
+    </div>
+
+    <!-- Llama Scout 17B -->
+    <div class="model-card">
+      <div class="model-card-header">
+        <div>
+          <h3>Meta Llama Scout 17B <span class="badge badge-blue">Chat</span></h3>
+          <p style="color:#555; font-size:0.85rem; margin-top:0.3rem;">Meta's Scout model with an exceptionally large 400K token context window. Ideal for long-document analysis, extended conversations, and retrieval-augmented generation with large corpora. Runs 2 replicas.</p>
+        </div>
+      </div>
+      <div class="model-meta">
+        <div class="model-meta-item"><strong>Model ID</strong>llama-scout-17b</div>
+        <div class="model-meta-item"><strong>Parameters</strong>17B (MoE architecture)</div>
+        <div class="model-meta-item"><strong>Context</strong>400K tokens</div>
+        <div class="model-meta-item"><strong>Runtime</strong>vLLM on KServe</div>
+        <div class="model-meta-item"><strong>Replicas</strong>2 (HA)</div>
+      </div>
+      <pre><span class="comment"># Long-context document analysis</span>
+curl -X POST https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -d '{
+    <span class="string">"model"</span>: <span class="string">"llama-scout-17b"</span>,
+    <span class="string">"messages"</span>: [
+      {<span class="string">"role"</span>: <span class="string">"system"</span>, <span class="string">"content"</span>: <span class="string">"Analyze the provided document and summarize key points."</span>},
+      {<span class="string">"role"</span>: <span class="string">"user"</span>, <span class="string">"content"</span>: <span class="string">"[Your long document text here...]"</span>}
+    ],
+    <span class="string">"max_tokens"</span>: 1024
+  }'</pre>
+      <div class="info-box"><p><strong>Timeout note:</strong> Requests with very large contexts may take longer than typical. LiteMaaS routes are configured with a 600-second HAProxy timeout to accommodate this.</p></div>
+    </div>
+
+    <!-- Granite 4.0 Tiny -->
+    <div class="model-card">
+      <div class="model-card-header">
+        <div>
+          <h3>IBM Granite 4.0 H Tiny <span class="badge badge-blue">Chat</span></h3>
+          <p style="color:#555; font-size:0.85rem; margin-top:0.3rem;">Compact, fast Granite 4.0 model optimized for low-latency inference. Best for simple Q&amp;A, classification, and scenarios where response speed matters more than depth.</p>
+        </div>
+      </div>
+      <div class="model-meta">
+        <div class="model-meta-item"><strong>Model ID</strong>granite-4-0-h-tiny</div>
+        <div class="model-meta-item"><strong>Parameters</strong>Tiny (sub-3B)</div>
+        <div class="model-meta-item"><strong>Runtime</strong>vLLM on KServe</div>
+      </div>
+      <pre>curl -X POST https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -d '{
+    <span class="string">"model"</span>: <span class="string">"granite-4-0-h-tiny"</span>,
+    <span class="string">"messages"</span>: [{<span class="string">"role"</span>: <span class="string">"user"</span>, <span class="string">"content"</span>: <span class="string">"Classify the following as positive or negative: Great product!"</span>}],
+    <span class="string">"max_tokens"</span>: 10
+  }'</pre>
+    </div>
+
+    <!-- CodeLlama -->
+    <div class="model-card">
+      <div class="model-card-header">
+        <div>
+          <h3>Meta CodeLlama 7B Instruct <span class="badge badge-blue">Chat</span></h3>
+          <p style="color:#555; font-size:0.85rem; margin-top:0.3rem;">Meta's code-specialized model. Supports code generation, completion, and debugging across Python, Java, C++, Bash, and many other languages. Fill-in-the-middle (FIM) completion available.</p>
+        </div>
+      </div>
+      <div class="model-meta">
+        <div class="model-meta-item"><strong>Model ID</strong>codellama-7b-instruct</div>
+        <div class="model-meta-item"><strong>Parameters</strong>7B</div>
+        <div class="model-meta-item"><strong>Context</strong>16K tokens</div>
+        <div class="model-meta-item"><strong>Runtime</strong>vLLM on KServe</div>
+      </div>
+      <pre><span class="comment"># Code generation</span>
+curl -X POST https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -d '{
+    <span class="string">"model"</span>: <span class="string">"codellama-7b-instruct"</span>,
+    <span class="string">"messages"</span>: [
+      {<span class="string">"role"</span>: <span class="string">"system"</span>, <span class="string">"content"</span>: <span class="string">"You are an expert software engineer."</span>},
+      {<span class="string">"role"</span>: <span class="string">"user"</span>, <span class="string">"content"</span>: <span class="string">"Write an Ansible task to create a Kubernetes namespace."</span>}
+    ]
+  }'</pre>
+    </div>
+  </div>
+
+  <!-- Embedding Models -->
+  <div class="section">
+    <h2>Embedding Models — <code>/v1/embeddings</code></h2>
+    <p>Embedding models convert text into dense vector representations. Use these for semantic search, RAG pipelines, clustering, and similarity scoring.</p>
+
+    <div class="model-card">
+      <div class="model-card-header">
+        <div>
+          <h3>Nomic Embed Text v1.5 <span class="badge badge-green">Embeddings</span></h3>
+          <p style="color:#555; font-size:0.85rem; margin-top:0.3rem;">High-quality open-source text embedding model. 768-dimensional embeddings. Supports Matryoshka representation learning — embeddings can be truncated for smaller storage. Strong on retrieval benchmarks.</p>
+        </div>
+      </div>
+      <div class="model-meta">
+        <div class="model-meta-item"><strong>Model ID</strong>nomic-embed-text-v1-5</div>
+        <div class="model-meta-item"><strong>Dimensions</strong>768</div>
+        <div class="model-meta-item"><strong>Context</strong>8192 tokens</div>
+        <div class="model-meta-item"><strong>Runtime</strong>OpenVino on KServe</div>
+      </div>
+      <pre><span class="comment"># Single string embedding</span>
+curl -X POST https://litellm-prod.apps.maas.redhatworkshops.io/v1/embeddings \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -d '{
+    <span class="string">"model"</span>: <span class="string">"nomic-embed-text-v1-5"</span>,
+    <span class="string">"input"</span>: <span class="string">"Red Hat OpenShift is an enterprise Kubernetes platform."</span>
+  }'</pre>
+      <pre><span class="comment"># Batch embeddings (multiple strings)</span>
+curl -X POST https://litellm-prod.apps.maas.redhatworkshops.io/v1/embeddings \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -d '{
+    <span class="string">"model"</span>: <span class="string">"nomic-embed-text-v1-5"</span>,
+    <span class="string">"input"</span>: [
+      <span class="string">"What is Kubernetes?"</span>,
+      <span class="string">"How does OpenShift differ from vanilla Kubernetes?"</span>,
+      <span class="string">"Explain container orchestration."</span>
+    ]
+  }'</pre>
+      <pre><span class="comment"># Python SDK example</span>
+<span class="keyword">from</span> openai <span class="keyword">import</span> OpenAI
+
+client = OpenAI(
+    api_key=<span class="string">"YOUR_API_KEY"</span>,
+    base_url=<span class="string">"https://litellm-prod.apps.maas.redhatworkshops.io/v1"</span>
+)
+
+response = client.embeddings.create(
+    model=<span class="string">"nomic-embed-text-v1-5"</span>,
+    input=[<span class="string">"OpenShift"</span>, <span class="string">"Kubernetes"</span>]
+)
+vectors = [e.embedding <span class="keyword">for</span> e <span class="keyword">in</span> response.data]
+print(f<span class="string">"Embedding dimensions: {len(vectors[0])}"</span>)  <span class="comment"># 768</span></pre>
+    </div>
+  </div>
+
+  <!-- Tokenize -->
+  <div class="section">
+    <h2>Tokenization — <code>/v1/tokenize</code></h2>
+    <p>The tokenize endpoint allows you to count tokens before sending a request, useful for cost estimation and context window management.</p>
+
+    <pre><span class="comment"># Count tokens for a message (works with chat-capable models)</span>
+curl -X POST https://litellm-prod.apps.maas.redhatworkshops.io/v1/tokenize \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -d '{
+    <span class="string">"model"</span>: <span class="string">"granite-3-2-8b-instruct"</span>,
+    <span class="string">"messages"</span>: [
+      {<span class="string">"role"</span>: <span class="string">"user"</span>, <span class="string">"content"</span>: <span class="string">"How many tokens is this message?"</span>}
+    ]
+  }'</pre>
+    <p style="margin-top:0.5rem; font-size:0.85rem; color:#555;">The response includes <code>count</code> (total token count) and <code>tokens</code> (list of token IDs). Not all models expose this endpoint — check the model's capability badge in the LiteMaaS portal.</p>
+  </div>
+
+  <!-- Document Conversion -->
+  <div class="section">
+    <h2>Document Conversion — Granite Docling 258M</h2>
+    <p>
+      Granite Docling is a specialized model for document parsing and conversion. It converts PDFs, Word documents,
+      and other document formats into clean structured text (Markdown or JSON) suitable for downstream LLM processing.
+      It uses a different endpoint format from the OpenAI-compatible API.
+    </p>
+
+    <div class="model-card">
+      <div class="model-card-header">
+        <div>
+          <h3>IBM Granite Docling 258M <span class="badge badge-orange">Docling</span></h3>
+          <p style="color:#555; font-size:0.85rem; margin-top:0.3rem;">Compact document understanding model from IBM. Handles PDF layout analysis, table extraction, figure detection, and OCR. Output is clean Markdown ready for RAG ingestion.</p>
+        </div>
+      </div>
+      <div class="model-meta">
+        <div class="model-meta-item"><strong>Model ID</strong>granite-docling-258m</div>
+        <div class="model-meta-item"><strong>Parameters</strong>258M</div>
+        <div class="model-meta-item"><strong>Runtime</strong>KServe (CPU)</div>
+        <div class="model-meta-item"><strong>Age</strong>17d (recently deployed)</div>
+      </div>
+      <pre><span class="comment"># Convert a PDF URL to Markdown</span>
+curl -X POST https://litellm-prod.apps.maas.redhatworkshops.io/docling/v1/convert/source \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -d '{
+    <span class="string">"http_sources"</span>: [{
+      <span class="string">"url"</span>: <span class="string">"https://arxiv.org/pdf/2408.09869"</span>
+    }],
+    <span class="string">"options"</span>: {
+      <span class="string">"output_format"</span>: <span class="string">"markdown"</span>
+    }
+  }'</pre>
+      <pre><span class="comment"># Upload a local file for conversion</span>
+curl -X POST https://litellm-prod.apps.maas.redhatworkshops.io/docling/v1/convert/file \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -F <span class="string">"file=@/path/to/document.pdf"</span> \
+  -F <span class="string">"options={\"output_format\": \"markdown\"}"</span></pre>
+      <div class="info-box"><p><strong>Note:</strong> The Docling endpoint path is prefixed with <code>/docling</code> before the standard API path. LiteLLM routes these requests to the KServe predictor ClusterIP service internally. TPM limits, cost fields, and max token settings are not applicable to this model type.</p></div>
+    </div>
+  </div>
+
+  <!-- Safety Models -->
+  <div class="section">
+    <h2>Safety / Guardrail Models</h2>
+    <p>Safety models evaluate content for harmful categories and can be used as pre/post filters for LLM-based applications.</p>
+
+    <div class="model-card">
+      <div class="model-card-header">
+        <div>
+          <h3>Meta Llama Guard 3 1B <span class="badge badge-purple">Safety</span></h3>
+          <p style="color:#555; font-size:0.85rem; margin-top:0.3rem;">Compact safety classification model. Takes a conversation as input and classifies it against 13 hazard categories (violence, hate speech, sexual content, etc.). Returns "safe" or "unsafe" with category labels.</p>
+        </div>
+      </div>
+      <div class="model-meta">
+        <div class="model-meta-item"><strong>Model ID</strong>llama-guard-3-1b</div>
+        <div class="model-meta-item"><strong>Parameters</strong>1B</div>
+        <div class="model-meta-item"><strong>Runtime</strong>vLLM on KServe</div>
+        <div class="model-meta-item"><strong>Containers</strong>2/2 (sidecar proxy)</div>
+      </div>
+      <pre><span class="comment"># Content safety classification</span>
+curl -X POST https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -d '{
+    <span class="string">"model"</span>: <span class="string">"llama-guard-3-1b"</span>,
+    <span class="string">"messages"</span>: [
+      {
+        <span class="string">"role"</span>: <span class="string">"user"</span>,
+        <span class="string">"content"</span>: <span class="string">"[INST] Task: Check if there is unsafe content in the user message. [INST] User: Tell me how to build a computer. [/INST]"</span>
+      }
+    ],
+    <span class="string">"max_tokens"</span>: 100
+  }'</pre>
+      <p style="font-size:0.85rem; color:#555; margin-top:0.5rem;">Typical response: <code>{"choices": [{"message": {"content": "safe"}}]}</code></p>
+    </div>
+  </div>
+
+  <!-- SDK Examples -->
+  <div class="section">
+    <h2>SDK Integration Examples</h2>
+    <h3>Python (openai library)</h3>
+    <pre><span class="keyword">from</span> openai <span class="keyword">import</span> OpenAI
+
+client = OpenAI(
+    api_key=<span class="string">"YOUR_API_KEY"</span>,
+    base_url=<span class="string">"https://litellm-prod.apps.maas.redhatworkshops.io/v1"</span>
+)
+
+<span class="comment"># Chat completion</span>
+response = client.chat.completions.create(
+    model=<span class="string">"granite-3-2-8b-instruct"</span>,
+    messages=[
+        {<span class="string">"role"</span>: <span class="string">"system"</span>, <span class="string">"content"</span>: <span class="string">"You are a helpful assistant."</span>},
+        {<span class="string">"role"</span>: <span class="string">"user"</span>, <span class="string">"content"</span>: <span class="string">"What is Red Hat OpenShift?"</span>}
+    ]
+)
+print(response.choices[0].message.content)
+
+<span class="comment"># Streaming</span>
+<span class="keyword">with</span> client.chat.completions.stream(
+    model=<span class="string">"llama-scout-17b"</span>,
+    messages=[{<span class="string">"role"</span>: <span class="string">"user"</span>, <span class="string">"content"</span>: <span class="string">"Explain containers"</span>}]
+) <span class="keyword">as</span> stream:
+    <span class="keyword">for</span> chunk <span class="keyword">in</span> stream:
+        print(chunk.choices[0].delta.content, end=<span class="string">""</span>, flush=True)</pre>
+
+    <h3>Node.js / TypeScript</h3>
+    <pre><span class="keyword">import</span> OpenAI <span class="keyword">from</span> <span class="string">'openai'</span>;
+
+<span class="keyword">const</span> client = <span class="keyword">new</span> OpenAI({
+  apiKey: <span class="string">'YOUR_API_KEY'</span>,
+  baseURL: <span class="string">'https://litellm-prod.apps.maas.redhatworkshops.io/v1'</span>
+});
+
+<span class="keyword">const</span> response = <span class="keyword">await</span> client.chat.completions.create({
+  model: <span class="string">'granite-3-2-8b-instruct'</span>,
+  messages: [{ role: <span class="string">'user'</span>, content: <span class="string">'Hello!'</span> }]
+});
+console.log(response.choices[0].message.content);</pre>
+
+    <h3>Langchain (Python)</h3>
+    <pre><span class="keyword">from</span> langchain_openai <span class="keyword">import</span> ChatOpenAI, OpenAIEmbeddings
+
+llm = ChatOpenAI(
+    model=<span class="string">"granite-3-2-8b-instruct"</span>,
+    openai_api_key=<span class="string">"YOUR_API_KEY"</span>,
+    openai_api_base=<span class="string">"https://litellm-prod.apps.maas.redhatworkshops.io/v1"</span>
+)
+
+embeddings = OpenAIEmbeddings(
+    model=<span class="string">"nomic-embed-text-v1-5"</span>,
+    openai_api_key=<span class="string">"YOUR_API_KEY"</span>,
+    openai_api_base=<span class="string">"https://litellm-prod.apps.maas.redhatworkshops.io/v1"</span>
+)</pre>
+  </div>
+
+  <!-- Available Models API -->
+  <div class="section">
+    <h2>Listing Available Models via API</h2>
+    <pre><span class="comment"># List all models available to your key</span>
+curl https://litellm-prod.apps.maas.redhatworkshops.io/v1/models \
+  -H "Authorization: Bearer YOUR_API_KEY"
+
+<span class="comment"># Full model info including capabilities (admin key required)</span>
+curl https://litellm-prod.apps.maas.redhatworkshops.io/model/info \
+  -H "Authorization: Bearer LITELLM_MASTER_KEY"</pre>
+  </div>
+
+</div>
+
+<footer>
+  <p>RHDP LiteMaaS Documentation &mdash; Red Hat Demo Platform &mdash; maas.redhatworkshops.io</p>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LiteMaaS — Deployment Guide</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Red Hat Text', 'Segoe UI', sans-serif; background: #f5f5f5; color: #151515; line-height: 1.6; }
+    header { background: #cc0000; color: white; padding: 1.5rem 3rem; display: flex; align-items: center; gap: 1.5rem; }
+    header h1 { font-size: 1.5rem; font-weight: 700; }
+    header p { opacity: 0.85; font-size: 0.9rem; margin-top: 0.2rem; }
+    nav { background: #151515; padding: 0 3rem; display: flex; gap: 0; flex-wrap: wrap; }
+    nav a { color: #e0e0e0; text-decoration: none; padding: 0.85rem 1.2rem; font-size: 0.9rem; display: block; transition: background 0.15s; }
+    nav a:hover, nav a.active { background: #cc0000; color: white; }
+    nav .nav-group { position: relative; }
+    nav .nav-group:hover .nav-dropdown { display: block; }
+    .nav-dropdown { display: none; position: absolute; top: 100%; left: 0; background: #1f1f1f; min-width: 200px; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+    .nav-dropdown a { display: block; padding: 0.7rem 1.2rem; border-bottom: 1px solid #333; }
+    .container { max-width: 1100px; margin: 2rem auto; padding: 0 2rem; }
+    .breadcrumb { font-size: 0.82rem; color: #666; margin-bottom: 1.5rem; }
+    .breadcrumb a { color: #cc0000; text-decoration: none; }
+    .breadcrumb a:hover { text-decoration: underline; }
+    h1.page-title { font-size: 1.8rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .page-subtitle { color: #555; margin-bottom: 2rem; font-size: 1rem; }
+    .section { background: white; border-radius: 8px; padding: 2rem; margin-bottom: 1.5rem; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+    .section h2 { font-size: 1.2rem; font-weight: 700; margin-bottom: 1rem; color: #151515; border-bottom: 2px solid #cc0000; padding-bottom: 0.5rem; }
+    .section h3 { font-size: 1rem; font-weight: 700; margin: 1.4rem 0 0.5rem; color: #333; }
+    .section p { margin-bottom: 0.8rem; color: #333; font-size: 0.92rem; }
+    .section ul, .section ol { padding-left: 1.5rem; margin-bottom: 0.8rem; }
+    .section li { margin-bottom: 0.4rem; color: #333; font-size: 0.92rem; }
+    pre { background: #1e1e1e; color: #d4d4d4; padding: 1.2rem 1.5rem; border-radius: 6px; overflow-x: auto; font-size: 0.82rem; line-height: 1.5; margin: 0.8rem 0; }
+    pre .comment { color: #6a9955; }
+    pre .string { color: #ce9178; }
+    pre .keyword { color: #569cd6; }
+    pre .var { color: #9cdcfe; }
+    code { font-family: 'Courier New', monospace; font-size: 0.85em; background: #f0f0f0; padding: 0.1em 0.3em; border-radius: 3px; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.86rem; }
+    th { background: #151515; color: white; padding: 0.6rem 0.8rem; text-align: left; font-weight: 600; }
+    td { padding: 0.6rem 0.8rem; border-bottom: 1px solid #e8e8e8; vertical-align: top; }
+    tr:nth-child(even) { background: #f9f9f9; }
+    td code { background: #f0f0f0; padding: 0.1em 0.3em; border-radius: 3px; font-size: 0.82rem; }
+    .info-box { background: #e8f4fd; border-left: 4px solid #0066cc; padding: 1rem 1.5rem; border-radius: 0 6px 6px 0; margin: 1rem 0; }
+    .info-box p { margin: 0; font-size: 0.88rem; color: #004080; }
+    .warn-box { background: #fff8e1; border-left: 4px solid #f0a500; padding: 1rem 1.5rem; border-radius: 0 6px 6px 0; margin: 1rem 0; }
+    .warn-box p { margin: 0; font-size: 0.88rem; color: #5d3900; }
+    .danger-box { background: #fce8e8; border-left: 4px solid #cc0000; padding: 1rem 1.5rem; border-radius: 0 6px 6px 0; margin: 1rem 0; }
+    .danger-box p { margin: 0; font-size: 0.88rem; color: #7a0000; }
+    .step-num { display: inline-block; background: #cc0000; color: white; width: 24px; height: 24px; border-radius: 50%; text-align: center; line-height: 24px; font-weight: 700; font-size: 0.8rem; margin-right: 0.5rem; }
+    .checklist li { list-style: none; padding-left: 0; margin-bottom: 0.5rem; }
+    .checklist li::before { content: "☐ "; color: #cc0000; font-size: 1.1em; }
+    .badge { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 3px; font-size: 0.72rem; font-weight: 600; margin: 0.1rem; }
+    .badge-req { background: #f8d7da; color: #721c24; }
+    .badge-opt { background: #d1ecf1; color: #0c5460; }
+    .mermaid { margin: 1.5rem 0; background: #f9f9f9; border-radius: 8px; padding: 1rem; }
+    footer { background: #151515; color: #aaa; text-align: center; padding: 1.5rem; font-size: 0.85rem; margin-top: 3rem; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>RHDP LiteMaaS</h1>
+    <p>Model as a Service for Red Hat Demo Platform</p>
+  </div>
+</header>
+
+<nav>
+  <a href="../index.html">Home</a>
+  <a href="../architecture.html">Architecture</a>
+  <div class="nav-group">
+    <a href="../product/overview.html">Product ▾</a>
+    <div class="nav-dropdown">
+      <a href="../product/overview.html">Overview</a>
+      <a href="../product/models.html">Models Reference</a>
+    </div>
+  </div>
+  <div class="nav-group">
+    <a href="deployment.html" class="active">Install ▾</a>
+    <div class="nav-dropdown">
+      <a href="deployment.html" class="active">Deployment Guide</a>
+    </div>
+  </div>
+  <div class="nav-group">
+    <a href="../day2/operations.html">Day-2 ▾</a>
+    <div class="nav-dropdown">
+      <a href="../day2/operations.html">Operations</a>
+      <a href="../day2/grafana.html">Grafana / Metrics</a>
+    </div>
+  </div>
+  <div class="nav-group">
+    <a href="../troubleshooting/common.html">Troubleshooting ▾</a>
+    <div class="nav-dropdown">
+      <a href="../troubleshooting/common.html">Common Issues</a>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+
+  <div class="breadcrumb">
+    <a href="../index.html">Home</a> / <a href="deployment.html">Install</a> / Deployment Guide
+  </div>
+
+  <h1 class="page-title">Deployment Guide</h1>
+  <p class="page-subtitle">Full installation of LiteMaaS on OpenShift using the <code>rhpds.litemaas</code> Ansible collection.</p>
+
+  <!-- Prerequisites -->
+  <div class="section">
+    <h2>Prerequisites</h2>
+    <p>Before running the deployment playbook, verify these requirements are met.</p>
+
+    <h3>Cluster Requirements</h3>
+    <ul>
+      <li>Red Hat OpenShift 4.12 or later</li>
+      <li>Cluster admin privileges (or namespace admin with the ability to create Routes and OAuthClients)</li>
+      <li>Sufficient compute capacity: minimum 4 CPU cores and 8 GB RAM allocatable for the LiteMaaS components alone</li>
+      <li>A default StorageClass that supports ReadWriteOnce PVCs (or specify one explicitly)</li>
+      <li>Outbound internet access to pull images from <code>quay.io</code> and <code>registry.redhat.io</code></li>
+    </ul>
+
+    <h3>Local Workstation Requirements</h3>
+    <ul>
+      <li>Ansible 2.14+ with <code>kubernetes.core</code> collection</li>
+      <li><code>oc</code> CLI authenticated to the target cluster</li>
+      <li><code>python3</code> with <code>kubernetes</code> and <code>openshift</code> pip packages</li>
+    </ul>
+
+    <pre><span class="comment"># Install Python dependencies</span>
+pip install kubernetes openshift
+
+<span class="comment"># Install required Ansible collections</span>
+ansible-galaxy collection install kubernetes.core community.general</pre>
+
+    <h3>Image Registry Access</h3>
+    <p>
+      The deployment pulls images from two registries. Verify cluster access before starting:
+    </p>
+    <table>
+      <thead><tr><th>Registry</th><th>Images</th><th>Auth Required</th></tr></thead>
+      <tbody>
+        <tr><td><code>quay.io/rh-aiservices-bu</code></td><td>litellm-non-root, litemaas-backend, litemaas-frontend</td><td>Public pull</td></tr>
+        <tr><td><code>registry.redhat.io/rhel9</code></td><td>redis-7 (primary), falls back to quay.io/sclorg</td><td>Red Hat credentials</td></tr>
+      </tbody>
+    </table>
+    <div class="info-box"><p>The HA deployment task automatically tests image accessibility and falls back to an alternative image if the primary cannot be pulled. The fallback for Redis is <code>quay.io/sclorg/redis-7-c9s:latest</code>.</p></div>
+  </div>
+
+  <!-- Collection Install -->
+  <div class="section">
+    <h2>Collection Installation</h2>
+    <p>LiteMaaS is distributed as an Ansible collection. Install it from the repository or via Ansible Galaxy.</p>
+
+    <h3>Option A: From GitHub (Recommended for RHDP)</h3>
+    <pre><span class="comment"># Clone the collection repository</span>
+git clone https://github.com/rhpds/rhpds.litemaas.git ~/work/code/rhpds.litemaas
+cd ~/work/code/rhpds.litemaas
+
+<span class="comment"># Install the collection locally</span>
+ansible-galaxy collection install . --force</pre>
+
+    <h3>Option B: In AgnosticV (RHDP Catalog Items)</h3>
+    <p>For catalog-deployed workloads, add the collection to your AgnosticV <code>common.yaml</code>:</p>
+    <pre><span class="comment"># In agnosticv/config/catalog-item/common.yaml</span>
+<span class="var">requirements_collections</span>:
+  - name: rhpds.litemaas
+    source: https://github.com/rhpds/rhpds.litemaas.git
+    type: git
+    version: main
+
+<span class="var">workloads</span>:
+  - rhpds.litemaas.ocp4_workload_litemaas</pre>
+
+    <h3>Option C: Helm Chart (Kubernetes / OpenShift, no Ansible)</h3>
+    <pre><span class="comment"># Add the chart repository (if published) or install from local path</span>
+helm install litemaas ~/work/code/rh-litemaas/deployment/helm/litemaas/ \
+  --namespace litemaas \
+  --create-namespace \
+  -f my-values.yaml</pre>
+  </div>
+
+  <!-- Deployment -->
+  <div class="section">
+    <h2>Deployment</h2>
+
+    <h3>Step 1: Configure Variables</h3>
+    <p>Create an extra vars file. At minimum you need to set the namespace and decide whether to enable OAuth.</p>
+    <pre><span class="comment"># litemaas-vars.yml</span>
+<span class="comment">---</span>
+<span class="var">ocp4_workload_litemaas_namespace</span>: <span class="string">"litemaas"</span>
+
+<span class="comment"># OAuth login (recommended for production)</span>
+<span class="var">ocp4_workload_litemaas_oauth_enabled</span>: true
+
+<span class="comment"># Scale LiteLLM replicas (default 3)</span>
+<span class="var">ocp4_workload_litemaas_ha_litellm_replicas</span>: 3
+
+<span class="comment"># Enable RHDP branding</span>
+<span class="var">ocp4_workload_litemaas_branding_enabled</span>: true
+
+<span class="comment"># Route prefix customization (optional)</span>
+<span class="var">ocp4_workload_litemaas_api_route_prefix</span>: <span class="string">"litellm-prod"</span>
+<span class="var">ocp4_workload_litemaas_frontend_route_prefix</span>: <span class="string">"litellm-prod-frontend"</span>
+<span class="var">ocp4_workload_litemaas_admin_route_prefix</span>: <span class="string">"litellm-prod-admin"</span>
+
+<span class="comment"># Pre-configure models (optional — can also be done via UI after deploy)</span>
+<span class="var">ocp4_workload_litemaas_litellm_models</span>:
+  - model_name: <span class="string">"granite-3-2-8b-instruct"</span>
+    litellm_model: <span class="string">"openai/granite-3-2-8b-instruct"</span>
+    api_base: <span class="string">"http://granite-3-2-8b-instruct-predictor.llm-hosting.svc.cluster.local/v1"</span>
+    api_key: <span class="string">"sk-placeholder"</span>
+    rpm: 120
+    tpm: 200000</pre>
+
+    <h3>Step 2: Run the Playbook</h3>
+    <pre><span class="comment"># Deploy LiteMaaS in HA mode</span>
+ansible-playbook playbooks/deploy_litemaas_ha.yml \
+  -e @litemaas-vars.yml
+
+<span class="comment"># Or pass variables inline</span>
+ansible-playbook playbooks/deploy_litemaas_ha.yml \
+  -e ocp4_workload_litemaas_namespace=litemaas \
+  -e ocp4_workload_litemaas_oauth_enabled=true \
+  -e ocp4_workload_litemaas_branding_enabled=true</pre>
+
+    <h3>Step 3: Deployment Order</h3>
+    <p>The HA task deploys components in this sequence. Each component waits for its predecessor to be ready before continuing:</p>
+    <div class="mermaid">
+graph LR
+    A[Namespace] --> B[PostgreSQL 16<br/>StatefulSet + PVC]
+    B --> C[Redis 7<br/>Deployment]
+    C --> D[LiteLLM Proxy<br/>3 replicas]
+    D --> E[LiteMaaS Backend<br/>3 replicas]
+    E --> F[Branding ConfigMaps<br/>if enabled]
+    F --> G[LiteMaaS Frontend<br/>3 replicas]
+    G --> H[Routes + OAuthClient]
+    style A fill:#e8e8e8
+    style D fill:#fef0f0,stroke:#cc0000
+    style E fill:#f0f4ff,stroke:#0066cc
+    style G fill:#f0faf2,stroke:#3e8635
+    </div>
+
+    <h3>Step 4: Post-Deploy Output</h3>
+    <p>After successful deployment, the playbook prints connection details via <code>agnosticd_user_info</code>:</p>
+    <pre><span class="comment"># Example output</span>
+LiteLLM Admin Portal: https://litellm-prod.apps.cluster.example.com
+LiteLLM Admin Login: admin / &lt;auto-generated-password&gt;
+LiteLLM Master API Key: sk-&lt;auto-generated-key&gt;
+LiteMaaS User Interface: https://litellm-prod-frontend.apps.cluster.example.com</pre>
+  </div>
+
+  <!-- Key Variables -->
+  <div class="section">
+    <h2>Complete Variable Reference</h2>
+    <p>All variables with their defaults from <code>roles/ocp4_workload_litemaas/defaults/main.yml</code>.</p>
+
+    <h3>Core Settings</h3>
+    <table>
+      <thead><tr><th>Variable</th><th>Default</th><th>Required</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>ocp4_workload_litemaas_namespace</code></td><td><code>litemaas</code></td><td><span class="badge badge-opt">optional</span></td><td>OpenShift namespace to deploy into</td></tr>
+        <tr><td><code>ocp4_workload_litemaas_version</code></td><td><code>0.2.2</code></td><td><span class="badge badge-opt">optional</span></td><td>Collection version tag (metadata only)</td></tr>
+        <tr><td><code>ocp4_workload_litemaas_remove</code></td><td><code>false</code></td><td><span class="badge badge-opt">optional</span></td><td>Set to <code>true</code> to uninstall (deletes namespace)</td></tr>
+        <tr><td><code>ocp4_workload_litemaas_cluster_domain</code></td><td><code>""</code></td><td><span class="badge badge-opt">optional</span></td><td>Cluster apps domain (auto-detected from cluster if empty)</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Image Configuration</h3>
+    <table>
+      <thead><tr><th>Variable</th><th>Default</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>ocp4_workload_litemaas_litellm_image</code></td><td><code>quay.io/rh-aiservices-bu/litellm-non-root</code></td><td>LiteLLM proxy image repository</td></tr>
+        <tr><td><code>ocp4_workload_litemaas_litellm_tag</code></td><td><code>main-v1.81.0-stable</code></td><td>LiteLLM image tag</td></tr>
+        <tr><td><code>ocp4_workload_litemaas_backend_image</code></td><td><code>quay.io/rhpds/litemaas</code></td><td>LiteMaaS backend image repository</td></tr>
+        <tr><td><code>ocp4_workload_litemaas_backend_tag</code></td><td><code>backend-0.2.2</code></td><td>Backend image tag</td></tr>
+        <tr><td><code>ocp4_workload_litemaas_frontend_image</code></td><td><code>quay.io/rhpds/litemaas</code></td><td>LiteMaaS frontend image repository</td></tr>
+        <tr><td><code>ocp4_workload_litemaas_frontend_tag</code></td><td><code>frontend-0.2.2</code></td><td>Frontend image tag</td></tr>
+      </tbody>
+    </table>
+
+    <div class="info-box">
+      <p>
+        <strong>Production images:</strong> The running production deployment uses
+        <code>quay.io/rh-aiservices-bu/litellm-non-root:main-v1.81.0-stable-custom</code> for LiteLLM and
+        <code>quay.io/rh-aiservices-bu/litemaas-backend:0.4.0</code> /
+        <code>quay.io/rh-aiservices-bu/litemaas-frontend:0.4.0</code> for LiteMaaS.
+        The production image registry is <code>quay.io/rh-aiservices-bu</code>, not the default <code>quay.io/rhpds</code>.
+      </p>
+    </div>
+
+    <h3>Route Configuration</h3>
+    <table>
+      <thead><tr><th>Variable</th><th>Default</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>ocp4_workload_litemaas_api_route_prefix</code></td><td><code>litellm</code></td><td>Subdomain prefix for the LiteLLM API route</td></tr>
+        <tr><td><code>ocp4_workload_litemaas_admin_route_prefix</code></td><td><code>litellm-admin</code></td><td>Subdomain prefix for the admin/backend route</td></tr>
+        <tr><td><code>ocp4_workload_litemaas_frontend_route_prefix</code></td><td><code>litellm-frontend</code></td><td>Subdomain prefix for the frontend UI route</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Credentials (Auto-Generated)</h3>
+    <table>
+      <thead><tr><th>Variable</th><th>Default</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>ocp4_workload_litemaas_postgres_password</code></td><td><em>random 32-char</em></td><td>PostgreSQL database password</td></tr>
+        <tr><td><code>ocp4_workload_litemaas_jwt_secret</code></td><td><em>random 32-char</em></td><td>JWT signing secret for LiteMaaS backend sessions</td></tr>
+        <tr><td><code>ocp4_workload_litemaas_admin_api_key</code></td><td><em>random 32-char</em></td><td>LiteMaaS admin API key (stored in <code>backend-secret</code>)</td></tr>
+        <tr><td><code>ocp4_workload_litemaas_litellm_api_key</code></td><td><em>sk- + random 32-char</em></td><td>LiteLLM master key (stored in <code>litellm-secret</code>)</td></tr>
+        <tr><td><code>ocp4_workload_litemaas_litellm_ui_username</code></td><td><code>admin</code></td><td>LiteLLM admin UI username</td></tr>
+        <tr><td><code>ocp4_workload_litemaas_litellm_ui_password</code></td><td><em>random 16-char</em></td><td>LiteLLM admin UI password</td></tr>
+      </tbody>
+    </table>
+    <div class="danger-box"><p><strong>Security:</strong> Never commit actual credentials to version control. The Ansible role generates secure random values at deploy time. Retrieve them after deployment from the OpenShift secrets, not from code.</p></div>
+
+    <h3>PostgreSQL Configuration</h3>
+    <table>
+      <thead><tr><th>Variable</th><th>Default</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>ocp4_workload_litemaas_postgres_version</code></td><td><code>16</code></td><td>PostgreSQL major version</td></tr>
+        <tr><td><code>ocp4_workload_litemaas_postgres_storage_size</code></td><td><code>10Gi</code></td><td>PVC size for PostgreSQL data</td></tr>
+        <tr><td><code>ocp4_workload_litemaas_postgres_storage_class</code></td><td><code>""</code></td><td>StorageClass (empty = auto-detect per cloud)</td></tr>
+        <tr><td><code>ocp4_workload_litemaas_postgres_storage_access_mode</code></td><td><code>ReadWriteOnce</code></td><td>PVC access mode</td></tr>
+      </tbody>
+    </table>
+
+    <h3>HA-Specific Variables</h3>
+    <table>
+      <thead><tr><th>Variable</th><th>Default</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>ocp4_workload_litemaas_ha_litellm_replicas</code></td><td><code>3</code></td><td>Number of LiteLLM proxy replicas</td></tr>
+        <tr><td><code>ocp4_workload_litemaas_ha_enable_redis</code></td><td><code>true</code></td><td>Deploy Redis for session/key caching</td></tr>
+        <tr><td><code>ocp4_workload_litemaas_ha_enable_postgres</code></td><td><code>true</code></td><td>Deploy PostgreSQL (set false to use external DB)</td></tr>
+        <tr><td><code>ocp4_workload_litemaas_ha_redis_image</code></td><td><code>registry.redhat.io/rhel9/redis-7:latest</code></td><td>Primary Redis image</td></tr>
+        <tr><td><code>ocp4_workload_litemaas_ha_redis_image_fallback</code></td><td><code>quay.io/sclorg/redis-7-c9s:latest</code></td><td>Fallback Redis image</td></tr>
+        <tr><td><code>ocp4_workload_litemaas_ha_postgres_pvc_size</code></td><td><code>10Gi</code></td><td>PVC size for HA PostgreSQL</td></tr>
+        <tr><td><code>ocp4_workload_litemaas_ha_litellm_memory_limit</code></td><td><code>2Gi</code></td><td>Per-pod memory limit for LiteLLM</td></tr>
+        <tr><td><code>ocp4_workload_litemaas_ha_litellm_cpu_limit</code></td><td><code>2000m</code></td><td>Per-pod CPU limit for LiteLLM</td></tr>
+      </tbody>
+    </table>
+
+    <h3>OAuth Configuration</h3>
+    <table>
+      <thead><tr><th>Variable</th><th>Default</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>ocp4_workload_litemaas_oauth_enabled</code></td><td><code>false</code></td><td>Enable OpenShift OAuth login</td></tr>
+        <tr><td><code>ocp4_workload_litemaas_oauth_provider</code></td><td><code>openshift</code></td><td>OAuth provider type (<code>openshift</code> or <code>oidc</code>)</td></tr>
+        <tr><td><code>ocp4_workload_litemaas_oauth_client_id</code></td><td><em>namespace name</em></td><td>OAuthClient resource name</td></tr>
+        <tr><td><code>ocp4_workload_litemaas_oauth_client_secret</code></td><td><em>random 32-char</em></td><td>OAuthClient secret</td></tr>
+        <tr><td><code>ocp4_workload_litemaas_admin_emails</code></td><td><code>[admin]</code></td><td>Initial admin user list</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Resource Limits</h3>
+    <table>
+      <thead><tr><th>Variable</th><th>Default</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>ocp4_workload_litemaas_litellm_memory_limit</code></td><td><code>1Gi</code></td><td>LiteLLM memory limit (single-replica mode)</td></tr>
+        <tr><td><code>ocp4_workload_litemaas_litellm_cpu_limit</code></td><td><code>1000m</code></td><td>LiteLLM CPU limit</td></tr>
+        <tr><td><code>ocp4_workload_litemaas_backend_memory_limit</code></td><td><code>512Mi</code></td><td>Backend memory limit</td></tr>
+        <tr><td><code>ocp4_workload_litemaas_backend_cpu_limit</code></td><td><code>500m</code></td><td>Backend CPU limit</td></tr>
+        <tr><td><code>ocp4_workload_litemaas_frontend_memory_limit</code></td><td><code>256Mi</code></td><td>Frontend memory limit</td></tr>
+        <tr><td><code>ocp4_workload_litemaas_frontend_cpu_limit</code></td><td><code>250m</code></td><td>Frontend CPU limit</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Cloud-Specific Storage Classes</h3>
+    <p>When <code>ocp4_workload_litemaas_postgres_storage_class</code> is empty, the role auto-detects the cloud provider and selects the appropriate StorageClass:</p>
+    <table>
+      <thead><tr><th>Cloud Provider</th><th>Storage Class</th></tr></thead>
+      <tbody>
+        <tr><td>AWS</td><td><code>gp3-csi</code></td></tr>
+        <tr><td>Azure</td><td><code>managed-premium</code></td></tr>
+        <tr><td>GCP</td><td><code>standard-rwo</code></td></tr>
+        <tr><td>vSphere</td><td><code>thin-csi</code></td></tr>
+        <tr><td>OpenStack</td><td><code>standard</code></td></tr>
+        <tr><td>Bare Metal</td><td><code>ocs-external-storagecluster-ceph-rbd</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- LiteLLM DB Migration -->
+  <div class="section">
+    <h2>LiteLLM Database Migration</h2>
+    <p>
+      LiteLLM uses Prisma ORM and runs database migrations automatically on startup. However, when upgrading
+      between LiteLLM versions, you may need to trigger a migration manually if automatic migration fails or
+      is skipped.
+    </p>
+
+    <h3>Check Migration Status</h3>
+    <pre><span class="comment"># Check LiteLLM logs for migration output</span>
+oc logs -n litellm-rhpds deployment/litellm --tail=100 | grep -i migrat
+
+<span class="comment"># Check if database tables exist</span>
+oc exec -n litellm-rhpds litellm-postgres-0 -- \
+  psql -U litellm -d litellm -c "\dt"</pre>
+
+    <h3>Run Migration Manually</h3>
+    <pre><span class="comment"># Get the DATABASE_URL from the running LiteLLM deployment</span>
+DB_URL=$(oc exec -n litellm-rhpds deployment/litellm -- \
+  sh -c 'echo $DATABASE_URL')
+
+<span class="comment"># Exec into a LiteLLM pod and run migration</span>
+LITELLM_POD=$(oc get pods -n litellm-rhpds -l app=litellm \
+  -o jsonpath='{.items[0].metadata.name}')
+
+oc exec -n litellm-rhpds $LITELLM_POD -- \
+  python -c "from litellm.proxy.proxy_server import prisma_client; prisma_client.db.migrate.deploy()"
+
+<span class="comment"># Alternative: restart the deployment (migration runs on startup)</span>
+oc rollout restart deployment/litellm -n litellm-rhpds
+oc rollout status deployment/litellm -n litellm-rhpds</pre>
+
+    <div class="warn-box"><p><strong>Caution:</strong> Always take a database backup before running migrations between major LiteLLM versions. See the <a href="../day2/operations.html">Operations</a> page for upgrade procedures.</p></div>
+  </div>
+
+  <!-- Post-Install Checklist -->
+  <div class="section">
+    <h2>Post-Install Checklist</h2>
+    <p>After deployment completes, verify the following before announcing the service to users.</p>
+
+    <ul class="checklist">
+      <li>All pods are Running: <code>oc get pods -n &lt;namespace&gt;</code> — expect litellm (3), litellm-backend (3), litellm-frontend (3), litellm-postgres-0, litellm-redis-*</li>
+      <li>All routes resolve: test the API, frontend, and admin routes in a browser</li>
+      <li>LiteLLM health check passes: <code>curl https://&lt;api-route&gt;/health/livenessz</code></li>
+      <li>LiteLLM admin UI accessible: log in with the generated credentials at the API route URL</li>
+      <li>LiteMaaS frontend loads: visit the frontend route, verify it shows the login page</li>
+      <li>OAuth login works (if enabled): click Login, authenticate with OpenShift, verify redirect works</li>
+      <li>At least one model is configured: use the LiteLLM admin UI to add and test a model</li>
+      <li>Model is visible in LiteMaaS frontend: check that models appear in the catalog after sync</li>
+      <li>Test subscription flow: as a non-admin user, subscribe to a model and retrieve an API key</li>
+      <li>Test API key: make a curl request with the issued virtual key, verify response</li>
+      <li>Retrieve and save admin credentials: <code>oc get secret litellm-secret -n &lt;ns&gt; -o yaml</code></li>
+      <li>Set up key cleanup cron (production): <code>./setup-key-cleanup-cronjob.sh &lt;namespace&gt;</code></li>
+      <li>Configure backup cron (production): <code>./setup-litemaas-backup-cronjob.sh &lt;namespace&gt; &lt;s3-bucket&gt;</code></li>
+    </ul>
+  </div>
+
+  <!-- Resource Summary -->
+  <div class="section">
+    <h2>Resource Summary (Standard HA Deployment)</h2>
+    <table>
+      <thead><tr><th>Component</th><th>Replicas</th><th>CPU Request</th><th>Memory Request</th><th>Storage</th></tr></thead>
+      <tbody>
+        <tr><td>LiteLLM proxy</td><td>3</td><td>3 × 500m = 1500m</td><td>3 × 512Mi = 1.5Gi</td><td>—</td></tr>
+        <tr><td>LiteMaaS backend</td><td>3</td><td>3 × 100m = 300m</td><td>3 × 256Mi = 768Mi</td><td>—</td></tr>
+        <tr><td>LiteMaaS frontend</td><td>3</td><td>3 × 50m = 150m</td><td>3 × 128Mi = 384Mi</td><td>—</td></tr>
+        <tr><td>PostgreSQL 16</td><td>1 (StatefulSet)</td><td>500m</td><td>512Mi</td><td>10Gi RWO</td></tr>
+        <tr><td>Redis 7</td><td>1</td><td>200m</td><td>256Mi</td><td>—</td></tr>
+        <tr><td><strong>Total</strong></td><td></td><td><strong>~2650m</strong></td><td><strong>~3.4Gi</strong></td><td><strong>10Gi</strong></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Removal -->
+  <div class="section">
+    <h2>Removal / Uninstall</h2>
+    <pre><span class="comment"># Remove via playbook (cleanly removes OAuthClient too)</span>
+ansible-playbook playbooks/deploy_litemaas_ha.yml \
+  -e ocp4_workload_litemaas_namespace=litemaas \
+  -e ocp4_workload_litemaas_remove=true
+
+<span class="comment"># Or delete the namespace directly (OAuthClient persists — clean it up separately)</span>
+oc delete namespace litemaas
+oc delete oauthclient litemaas</pre>
+    <div class="warn-box"><p>Deleting the namespace also deletes the PostgreSQL PVC and all data. Take a backup first if you need to preserve data.</p></div>
+  </div>
+
+</div>
+
+<footer>
+  <p>RHDP LiteMaaS Documentation &mdash; Red Hat Demo Platform &mdash; maas.redhatworkshops.io</p>
+</footer>
+
+<script>mermaid.initialize({ startOnLoad: true, theme: 'neutral' });</script>
+</body>
+</html>
