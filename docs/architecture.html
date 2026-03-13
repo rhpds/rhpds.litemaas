@@ -58,133 +58,104 @@
 
 <div class="container">
 
-  <!-- FULL ARCHITECTURE DIAGRAM -->
-  <div class="mermaid">
+  <p style="color:#555; margin-bottom:1rem;">Click any diagram to open full screen. Press Escape to close.</p>
+
+  <!-- DIAGRAM 1: High-level overview -->
+  <div class="card">
+    <h2>Overview — Three Layers</h2>
+    <div class="mermaid">
+graph LR
+    U["👤 Users\n(developers, workshop attendees, admins)"]
+
+    subgraph LM["LiteMaaS Platform"]
+        UI["🖥 Web UI\n(model catalog, API keys,\nusage, settings)"]
+        API["⚙️ Backend API\n(subscriptions, auth,\nanalytics, admin)"]
+        PROXY["🔀 AI Proxy\n(routes requests,\nenforces quotas,\nlogs spend)"]
+    end
+
+    subgraph MODELS["Model Servers"]
+        M1["💬 Chat models\n(e.g. Granite, Llama)"]
+        M2["🔢 Embedding model\n(e.g. Nomic)"]
+        M3["📄 Document Conversion\n(e.g. Docling)"]
+    end
+
+    U -->|"browse & manage"| UI
+    U -->|"inference API calls\nsk-... virtual key"| PROXY
+    UI <--> API
+    API <--> PROXY
+    PROXY --> M1
+    PROXY --> M2
+    PROXY --> M3
+
+    style LM fill:#fff8f8,stroke:#cc0000,stroke-width:2px
+    style MODELS fill:#e3f2fd,stroke:#0066cc,stroke-width:2px
+    style U fill:#fce4ec,stroke:#cc0000,stroke-width:1px
+    </div>
+  </div>
+
+  <!-- DIAGRAM 2: Production deployment -->
+  <div class="card">
+    <h2>Production Deployment — litellm-rhpds namespace</h2>
+    <div class="mermaid">
 graph TB
-    classDef user fill:#fce4ec,stroke:#cc0000,stroke-width:2px,color:#151515
-    classDef route fill:#e8eaf6,stroke:#3949ab,stroke-width:1px,color:#151515
-    classDef app fill:#fff8f8,stroke:#cc0000,stroke-width:1.5px,color:#151515
-    classDef db fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px,color:#151515
-    classDef model fill:#e3f2fd,stroke:#0066cc,stroke-width:1.5px,color:#151515
-    classDef init fill:#f3e5f5,stroke:#6a1b9a,stroke-width:1px,color:#151515,stroke-dasharray:4
-    classDef ops fill:#f5f5f5,stroke:#555,stroke-width:1px,color:#151515
-    classDef ext fill:#e8f5e9,stroke:#2e7d32,stroke-width:1px,stroke-dasharray:5,color:#151515
-    classDef gitops fill:#fff9c4,stroke:#f9a825,stroke-width:1.5px,color:#151515
-
-    DEV(["👨‍💻 Developers"]):::user
-    WS(["🎓 Workshop Attendees"]):::user
-    ADMIN(["🔧 Admins"]):::user
-    OAUTH["🔐 OpenShift OAuth"]:::ops
-
-    subgraph ROUTES["🌐 OpenShift Routes — maas.redhatworkshops.io"]
-        direction LR
-        R_FE["litellm-prod-frontend\nLiteMaaS UI"]:::route
-        R_BE["litellm-prod-admin\nLiteMaaS API"]:::route
-        R_LLM["litellm-prod\nLiteLLM Proxy :4000"]:::route
+    subgraph EXT["External access — maas.redhatworkshops.io"]
+        R1["litellm-prod-frontend\nLiteMaaS Portal"]
+        R2["litellm-prod-admin\nBackend API"]
+        R3["litellm-prod\nAI Proxy"]
     end
 
-    subgraph NS["📦 Namespace: litellm-rhpds"]
-        direction TB
-
-        subgraph APPS["Application Layer"]
-            direction LR
-            FE["🖥 litellm-frontend\n×3 replicas\nReact SPA · nginx\nv0.4.0"]:::app
-            BE["⚙️ litellm-backend\n×3 replicas\nFastify / Node.js\nv0.4.0"]:::app
-            LLM["🔀 litellm proxy\n×3 replicas\nLiteLLM custom fork\nv1.81.0-stable-custom\n/tokenize · /docling · /v1/*"]:::app
-        end
-
-        subgraph INITS["Init Containers"]
-            direction LR
-            IC1["copy-custom-logos\nRHDP branding assets"]:::init
-            IC2["wait-for-database\n+ run-migrations"]:::init
-        end
-
-        subgraph DATA["Data Layer"]
-            direction LR
-            PG_LM[("🗃 litemaas_db\nusers · api_keys\nsubscriptions · models\naudit_logs · branding")]:::db
-            PG_LL[("🗃 litellm_db\nVerificationToken\nUserTable · SpendLogs\nProxyModelTable +38")]:::db
-            REDIS[("⚡ Redis\nModel + key cache\nRate limit counters")]:::db
-        end
+    subgraph APP["LiteMaaS Application (×3 replicas each)"]
+        FE["Frontend\nReact + nginx\nv0.4.0"]
+        BE["Backend\nFastify / Node.js\nv0.4.0"]
+        PROXY["AI Proxy\nLiteLLM custom fork\nv1.81.0-stable-custom"]
     end
 
-    subgraph MODELS["📦 Namespace: llm-hosting — OpenShift AI / KServe InferenceServices"]
-        direction LR
-        subgraph CHAT["Chat Models — vLLM"]
-            MC1["granite-3-2-8b\n🗨 Chat · 🔧 Tools"]:::model
-            MC2["llama-scout-17b\n🗨 Chat · 🔧 Tools"]:::model
-            MC3["granite-4-0-h-tiny\n🗨 Chat · 🔧 Tools"]:::model
-            MC4["qwen3-14b\n🗨 Chat · 🔧 Tools"]:::model
-            MC5["deepseek-r1-14b\n🗨 Chat · 🔧 Tools"]:::model
-            MC6["codellama-7b\n💻 Code"]:::model
-            MC7["microsoft-phi-4\n🗨 Chat"]:::model
-        end
-        subgraph SPEC["Specialist Models"]
-            MS1["nomic-embed-v1-5\n🔢 Embeddings"]:::model
-            MS2["granite-docling-258m\n📄 Document Conversion\nDocling Serve"]:::model
-            MS3["llama-guard-3-1b\n🛡 Safety Classifier"]:::model
-        end
+    subgraph DATA["Data (single node)"]
+        PG[("PostgreSQL 16\n10 Gi storage\nlitemaas_db + litellm_db")]
+        RD[("Redis\nmodel + key cache")]
     end
 
-    subgraph GITOPS["🔄 GitOps — AgnosticD / AgnosticV"]
-        direction LR
-        AV["agnosticv catalog\ncommon.yaml"]:::gitops
-        AGD["agnosticd\nocp4_workload_litemaas\nocp4_workload_litemaas_models"]:::gitops
+    R1 --> FE
+    R2 --> BE
+    R3 --> PROXY
+    FE --> BE
+    BE --> PROXY
+    BE --> PG
+    PROXY --> PG
+    PROXY --> RD
+
+    style EXT fill:#e8eaf6,stroke:#3949ab,stroke-width:1.5px
+    style APP fill:#fff8f8,stroke:#cc0000,stroke-width:2px
+    style DATA fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
+    </div>
+  </div>
+
+  <!-- DIAGRAM 3: GitOps -->
+  <div class="card">
+    <h2>GitOps — How Deployments & Models are Managed</h2>
+    <div class="mermaid">
+graph LR
+    AV["📋 AgnosticV\ncatalog common.yaml\n(what to deploy)"]
+    AGD["🔧 AgnosticD\nAnsible playbook\n(how to deploy)"]
+
+    subgraph ROLES["rhpds.litemaas Ansible Collection"]
+        R1["ocp4_workload_litemaas\ndeploys the platform"]
+        R2["ocp4_workload_litemaas_models\nregisters models"]
+        R3["ocp4_workload_rhoai_metrics\ndeploys Grafana"]
     end
 
-    subgraph OPS["🖥 Operations"]
-        direction LR
-        CRON["⏰ Bastion Cronjob\n2AM daily\nDelete expired keys\nSync api_keys table"]:::ops
-        GRAFANA["📊 Grafana\nrhoai-grafana\nGPU · vLLM · KServe\nmetrics dashboards"]:::ops
-    end
-
-    subgraph EXT["☁️ Planned — External Providers"]
-        direction LR
-        WX["IBM WatsonX\nEssentials Plan\nDev access"]:::ext
-        AWB["AWS Bedrock\nSummit + Workshops"]:::ext
-    end
-
-    DEV & ADMIN --> R_FE & R_BE
-    WS & DEV --> R_LLM
-    OAUTH -.->|authenticates| R_FE
-
-    R_FE --> FE
-    R_BE --> BE
-    R_LLM --> LLM
-
-    IC1 -.->|init| FE
-    IC2 -.->|init| BE
-
-    FE -->|API calls| R_BE
-    BE -->|inference proxy| LLM
-    BE --> PG_LM
-    BE -->|cross-reference| PG_LL
-    LLM --> PG_LL
-    LLM --> REDIS
-
-    LLM --> MC1 & MC2 & MC3 & MC4 & MC5 & MC6 & MC7
-    LLM --> MS1 & MS2 & MS3
+    OCP["☁️ OpenShift Cluster\n(litellm-rhpds namespace)"]
+    MODELS["🤖 Model Servers\n(llm-hosting namespace)"]
 
     AV -->|triggers| AGD
-    AGD -->|deploys & configures| NS
-    AGD -->|registers models| MODELS
+    AGD --> R1 & R2 & R3
+    R1 -->|deploy| OCP
+    R2 -->|register models| OCP
+    R2 -->|register KServe services| MODELS
+    R3 -->|deploy dashboards| MODELS
 
-    CRON -->|delete keys| LLM
-    CRON -->|sync| PG_LM
-    GRAFANA -->|scrapes metrics| MODELS
-
-    LLM -.->|planned| WX & AWB
-
-    style ROUTES fill:#e8eaf6,stroke:#3949ab,stroke-width:1.5px
-    style NS fill:#fff8f8,stroke:#cc0000,stroke-width:2px
-    style MODELS fill:#e3f2fd,stroke:#0066cc,stroke-width:2px
-    style GITOPS fill:#fff9c4,stroke:#f9a825,stroke-width:2px
-    style OPS fill:#f5f5f5,stroke:#555,stroke-width:1.5px
-    style EXT fill:#e8f5e9,stroke:#2e7d32,stroke-width:1.5px,stroke-dasharray:5
-    style APPS fill:#ffeef0,stroke:#cc0000,stroke-width:1px
-    style DATA fill:#e8f5e9,stroke:#2e7d32,stroke-width:1px
-    style INITS fill:#f8f0ff,stroke:#6a1b9a,stroke-width:1px
-    style CHAT fill:#e3f2fd,stroke:#0066cc,stroke-width:1px
-    style SPEC fill:#fff3e0,stroke:#e65100,stroke-width:1px
+    style ROLES fill:#fff9c4,stroke:#f9a825,stroke-width:2px
+    </div>
   </div>
 
   <!-- COMPONENT TABLE -->
