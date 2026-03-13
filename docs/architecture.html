@@ -135,11 +135,12 @@ graph TB
   <!-- DIAGRAM 3: GitOps -->
   <div class="card">
     <h2>GitOps — How Deployments & Models are Managed</h2>
-    <p style="color:#555; font-size:0.9rem; margin-bottom:1rem;">A user orders a lab from the RHDP catalog. Babylon processes the order using the AgnosticV catalog definition, which specifies which AgnosticD workload roles to run. For workshop labs, the <code>rhpds.litellm_virtual_keys</code> role automatically creates API keys for each participant — no manual key creation needed.</p>
+    <p style="color:#555; font-size:0.9rem; margin-bottom:1rem;">A user orders a lab from the RHDP catalog. Babylon processes the order and runs the Ansible roles defined in the AgnosticV catalog. For workshop labs, the <code>rhpds.litellm_virtual_keys</code> role automatically creates API keys for each participant — no manual key creation needed.</p>
     <div class="mermaid">
 graph LR
     USER["👤 RHDP User\norders lab from catalog"]
-    BAB["⚙️ Babylon\nreads AgnosticV config\nruns AgnosticD roles"]
+    AV["📋 AgnosticV\ncatalog definition\n(common.yaml)"]
+    BAB["⚙️ Babylon\norchestration engine"]
 
     subgraph PLATFORM["rhpds.litemaas — Platform Setup"]
         R1["ocp4_workload_litemaas\ndeploys LiteMaaS"]
@@ -148,13 +149,14 @@ graph LR
     end
 
     subgraph KEYS["rhpds.litellm_virtual_keys — Per-Workshop"]
-        K1["ocp4_workload_litellm_virtual_keys\ncreates API keys\nfor each participant\nautomatically"]
+        K1["ocp4_workload_litellm_virtual_keys\ncreates API keys per participant\nautomatically at deploy time"]
     end
 
     OCP["☁️ OpenShift\n(litellm-rhpds)"]
     MODELS["🤖 Model Servers\n(llm-hosting)"]
 
     USER --> BAB
+    AV -->|defines what to run| BAB
     BAB --> R1 & R2 & R3
     BAB --> K1
     R1 --> OCP
@@ -166,6 +168,7 @@ graph LR
     style KEYS fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
     style BAB fill:#e8eaf6,stroke:#3949ab,stroke-width:1.5px
     style USER fill:#fce4ec,stroke:#cc0000,stroke-width:1px
+    style AV fill:#fff3e0,stroke:#e65100,stroke-width:1.5px
     </div>
   </div>
 
