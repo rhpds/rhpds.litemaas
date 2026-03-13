@@ -135,33 +135,35 @@ graph TB
   <!-- DIAGRAM 3: GitOps -->
   <div class="card">
     <h2>GitOps — How Deployments & Models are Managed</h2>
-    <p style="color:#555; font-size:0.9rem; margin-bottom:1rem;">A user orders a lab from the RHDP catalog. Babylon (the RHDP orchestration engine) picks up the order, reads the catalog definition from AgnosticV, and calls AgnosticD to run the actual Ansible deployment. AgnosticD uses the <code>rhpds.litemaas</code> collection roles to deploy the platform, register models, and set up monitoring.</p>
+    <p style="color:#555; font-size:0.9rem; margin-bottom:1rem;">A user orders a lab from the RHDP catalog. Babylon processes the order using the AgnosticV catalog definition, which specifies which AgnosticD workload roles to run. For workshop labs, the <code>rhpds.litellm_virtual_keys</code> role automatically creates API keys for each participant — no manual key creation needed.</p>
     <div class="mermaid">
 graph LR
-    USER["👤 RHDP User\norders from catalog"]
-    BAB["⚙️ Babylon\nRHDP orchestration\nengine"]
-    AV["📋 AgnosticV\ncatalog common.yaml\n(what to deploy + config)"]
-    AGD["🔧 AgnosticD\nAnsible execution\nengine"]
+    USER["👤 RHDP User\norders lab from catalog"]
+    BAB["⚙️ Babylon\nreads AgnosticV config\nruns AgnosticD roles"]
 
-    subgraph ROLES["rhpds.litemaas Ansible Collection"]
-        R1["ocp4_workload_litemaas\ndeploys the platform"]
+    subgraph PLATFORM["rhpds.litemaas — Platform Setup"]
+        R1["ocp4_workload_litemaas\ndeploys LiteMaaS"]
         R2["ocp4_workload_litemaas_models\nregisters models"]
         R3["ocp4_workload_rhoai_metrics\ndeploys Grafana"]
     end
 
-    OCP["☁️ OpenShift Cluster\n(litellm-rhpds namespace)"]
-    MODELS["🤖 Model Servers\n(llm-hosting namespace)"]
+    subgraph KEYS["rhpds.litellm_virtual_keys — Per-Workshop"]
+        K1["ocp4_workload_litellm_virtual_keys\ncreates API keys\nfor each participant\nautomatically"]
+    end
 
-    USER -->|places order| BAB
-    BAB -->|reads config| AV
-    BAB -->|triggers| AGD
-    AGD --> R1 & R2 & R3
-    R1 -->|deploy platform| OCP
-    R2 -->|register models| OCP
-    R2 -->|sync model services| MODELS
-    R3 -->|deploy dashboards| MODELS
+    OCP["☁️ OpenShift\n(litellm-rhpds)"]
+    MODELS["🤖 Model Servers\n(llm-hosting)"]
 
-    style ROLES fill:#fff9c4,stroke:#f9a825,stroke-width:2px
+    USER --> BAB
+    BAB --> R1 & R2 & R3
+    BAB --> K1
+    R1 --> OCP
+    R2 --> OCP & MODELS
+    R3 --> MODELS
+    K1 -->|"sk-... key per user"| OCP
+
+    style PLATFORM fill:#fff9c4,stroke:#f9a825,stroke-width:2px
+    style KEYS fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
     style BAB fill:#e8eaf6,stroke:#3949ab,stroke-width:1.5px
     style USER fill:#fce4ec,stroke:#cc0000,stroke-width:1px
     </div>
