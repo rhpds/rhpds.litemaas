@@ -166,14 +166,10 @@ graph LR
     AV["📋 AgnosticV\ncatalog definition\n(common.yaml)"]
     BAB["⚙️ Babylon\norchestration engine"]
 
-    subgraph ANSIBLE["Ansible Roles — rhpds.litemaas collection"]
+    subgraph ANSIBLE["rhpds.litemaas Ansible Collection"]
         R1["ocp4_workload_litemaas\ndeploys LiteMaaS platform"]
         R2["ocp4_workload_litemaas_models\nregisters model endpoints\nin LiteLLM"]
         R3["ocp4_workload_rhoai_metrics\ndeploys Grafana dashboards"]
-    end
-
-    subgraph KEYS["rhpds.litellm_virtual_keys — per workshop"]
-        K1["ocp4_workload_litellm_virtual_keys\ncreates one API key per participant\nautomatically at deploy time"]
     end
 
     OCP["☁️ OpenShift\nlitellm-rhpds namespace"]
@@ -181,15 +177,41 @@ graph LR
     USER --> BAB
     AV -->|defines what to run| BAB
     BAB --> R1 & R2 & R3
-    BAB --> K1
     R1 & R2 & R3 --> OCP
-    K1 -->|"sk-... key per user"| OCP
 
     style ANSIBLE fill:#fff9c4,stroke:#f9a825,stroke-width:2px
-    style KEYS fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
     style BAB fill:#e8eaf6,stroke:#3949ab,stroke-width:1.5px
     style USER fill:#fce4ec,stroke:#cc0000,stroke-width:1px
     style AV fill:#fff3e0,stroke:#e65100,stroke-width:1.5px
+    </div>
+  </div>
+
+  <!-- DIAGRAM 3c: Key creation -->
+  <div class="card">
+    <h2>Virtual Key Creation — Per Workshop Participant</h2>
+    <p style="color:#555; font-size:0.9rem; margin-bottom:1rem;">This is a complete standalone flow using a <strong>separate collection</strong> — <code>rhpds.litellm_virtual_keys</code>. It has no dependency on <code>rhpds.litemaas</code>. For every workshop participant, Babylon runs this collection to create a personal API key scoped to the models the workshop needs, with budget and rate limits applied. The key is delivered automatically as part of the lab credentials.</p>
+    <div class="mermaid">
+graph LR
+    LAB["📋 Workshop Lab Order\nAgnosticV defines:\n- which models\n- budget limit\n- key duration"]
+    BAB["⚙️ Babylon"]
+
+    subgraph COLL["rhpds.litellm_virtual_keys\n(separate Ansible collection)"]
+        R["ocp4_workload_litellm_virtual_keys\n• validates models exist in LiteMaaS\n• sets budget + expiry + TPM/RPM\n• calls LiteMaaS API to create key"]
+    end
+
+    LM["🔀 LiteMaaS API\n/key/generate"]
+    KEY["🔑 Virtual Key\nsk-...\nscoped to workshop models"]
+    USER["👤 Participant\ncalls /v1/chat/completions\n/v1/embeddings · /docling/..."]
+
+    LAB --> BAB
+    BAB --> R
+    R -->|"POST /key/generate"| LM
+    LM --> KEY
+    KEY --> USER
+
+    style COLL fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
+    style KEY fill:#fff9c4,stroke:#f9a825,stroke-width:2px
+    style USER fill:#fce4ec,stroke:#cc0000,stroke-width:1px
     </div>
   </div>
 
