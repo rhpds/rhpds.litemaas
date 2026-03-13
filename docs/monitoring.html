@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Monitoring — RHDP LiteMaaS</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Red Hat Text', 'Segoe UI', sans-serif; background: #f5f5f5; color: #151515; line-height: 1.6; }
+    header { background: #cc0000; color: white; padding: 1.5rem 3rem; }
+    header h1 { font-size: 1.5rem; font-weight: 700; }
+    header p { opacity: 0.85; font-size: 0.9rem; margin-top: 0.2rem; }
+    nav { background: #151515; padding: 0 3rem; display: flex; gap: 0; }
+    nav a { color: #e0e0e0; text-decoration: none; padding: 0.85rem 1.2rem; font-size: 0.9rem; display: block; transition: background 0.15s; }
+    nav a:hover, nav a.active { background: #cc0000; color: white; }
+    .container { max-width: 1100px; margin: 2rem auto; padding: 0 2rem; }
+    .card { background: white; border-radius: 8px; padding: 1.8rem; margin-bottom: 1.5rem; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+    .card h2 { font-size: 1.15rem; font-weight: 700; margin-bottom: 0.8rem; border-bottom: 2px solid #cc0000; padding-bottom: 0.4rem; }
+    .card h3 { font-size: 0.98rem; font-weight: 700; margin: 1.2rem 0 0.4rem; color: #333; }
+    .card p { color: #444; font-size: 0.9rem; margin-bottom: 0.7rem; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.87rem; margin: 0.8rem 0 1.2rem; }
+    th { background: #151515; color: white; padding: 0.6rem 1rem; text-align: left; font-weight: 600; }
+    td { padding: 0.55rem 1rem; border-bottom: 1px solid #e8e8e8; vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafafa; }
+    code { background: #f0f0f0; padding: 0.1rem 0.4rem; border-radius: 3px; font-size: 0.83rem; font-family: monospace; }
+    pre { background: #1e1e1e; color: #d4d4d4; padding: 1rem 1.3rem; border-radius: 6px; overflow-x: auto; font-size: 0.82rem; line-height: 1.5; margin: 0.6rem 0 1rem; }
+    .c { color: #6a9955; }
+    .callout { border-left: 4px solid #0066cc; background: #e8f4fd; padding: 0.8rem 1.1rem; border-radius: 0 6px 6px 0; margin: 0.8rem 0; font-size: 0.88rem; color: #004080; }
+    .callout.warn { border-color: #f0ab00; background: #fff8e1; color: #5d3900; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.8rem; margin: 0.8rem 0 1.2rem; }
+    .metric { background: #f5f5f5; border-radius: 6px; padding: 0.8rem 1rem; border-left: 3px solid #0066cc; }
+    .metric strong { display: block; font-size: 0.78rem; color: #555; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 0.2rem; }
+    .metric code { background: #1e1e1e; color: #9cdcfe; display: block; margin-top: 0.3rem; padding: 0.2rem 0.4rem; border-radius: 3px; font-size: 0.75rem; }
+    footer { background: #151515; color: #aaa; text-align: center; padding: 1.5rem; font-size: 0.85rem; margin-top: 3rem; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>RHDP LiteMaaS — Monitoring</h1>
+  <p>Grafana dashboards, ServiceMonitors, usage analytics, and automated key cleanup</p>
+</header>
+
+<nav>
+  <a href="index.html">Home</a>
+  <a href="architecture.html">Architecture</a>
+  <a href="product/overview.html">Overview</a>
+  <a href="product/models.html">Models</a>
+  <a href="install/deployment.html">Install</a>
+  <a href="day2/operations.html">Day-2</a>
+  <a href="monitoring.html" class="active">Monitoring</a>
+  <a href="troubleshooting/common.html">Troubleshooting</a>
+</nav>
+
+<div class="container">
+
+  <!-- Grafana -->
+  <div class="card">
+    <h2>Grafana — Infrastructure Monitoring</h2>
+    <p>Grafana is deployed in the <code>llm-hosting</code> namespace by the <code>ocp4_workload_rhoai_metrics</code> Ansible role. It monitors vLLM model performance, GPU utilization, and KServe InferenceService health using OpenShift User Workload Monitoring as the data source.</p>
+
+    <h3>Access</h3>
+    <div class="callout">
+      <strong>Production Grafana:</strong> <a href="https://grafana-route-llm-hosting.apps.maas.redhatworkshops.io" target="_blank">grafana-route-llm-hosting.apps.maas.redhatworkshops.io</a> — uses reencrypt TLS. Running for 94 days.
+    </div>
+    <pre><span class="c"># Get Grafana route</span>
+oc get route grafana-route -n llm-hosting
+
+<span class="c"># Get admin credentials</span>
+oc get secret -n llm-hosting | grep grafana-admin
+oc get secret &lt;grafana-admin-secret&gt; -n llm-hosting \
+  -o jsonpath='{.data.GF_SECURITY_ADMIN_PASSWORD}' | base64 -d</pre>
+
+    <h3>What's Deployed</h3>
+    <table>
+      <tr><th>Component</th><th>Status</th><th>Age</th><th>Details</th></tr>
+      <tr><td><code>grafana-deployment</code></td><td>Running</td><td>94d</td><td>2/2 containers (Grafana + sidecar dashboard loader)</td></tr>
+      <tr><td><code>grafana-operator-controller-manager-v5</code></td><td>Running</td><td>85d</td><td>Grafana Operator v5 — manages GrafanaInstance CRs</td></tr>
+    </table>
+
+    <h3>ServiceMonitors — What Gets Scraped</h3>
+    <p>Each model predictor service has a corresponding ServiceMonitor that tells OpenShift's Prometheus to scrape its <code>/metrics</code> endpoint on port 8080.</p>
+    <table>
+      <tr><th>ServiceMonitor</th><th>Age</th><th>Scrapes</th></tr>
+      <tr><td><code>granite-3-2-8b-instruct-metrics</code></td><td>175d</td><td>vLLM metrics — throughput, TTFT, queue depth, KV cache</td></tr>
+      <tr><td><code>llama-scout-17b-metrics</code></td><td>99d</td><td>vLLM metrics</td></tr>
+      <tr><td><code>granite-4-0-h-tiny-metrics</code></td><td>93d</td><td>vLLM metrics</td></tr>
+      <tr><td><code>codellama-7b-instruct-metrics</code></td><td>99d</td><td>vLLM metrics</td></tr>
+      <tr><td><code>llama-guard-3-1b-metrics</code></td><td>114d</td><td>vLLM metrics</td></tr>
+      <tr><td><code>nomic-embed-text-v1-5-metrics</code></td><td>175d</td><td>OpenVino metrics</td></tr>
+      <tr><td><code>granite-docling-258m-metrics</code></td><td>17d</td><td>vLLM metrics</td></tr>
+      <tr><td><code>vllm-models</code></td><td>94d</td><td>Catch-all vLLM ServiceMonitor</td></tr>
+    </table>
+    <pre><span class="c"># Verify ServiceMonitors</span>
+oc get servicemonitor -n llm-hosting
+
+<span class="c"># Test a metrics endpoint directly</span>
+oc exec -n llm-hosting \
+  $(oc get pods -n llm-hosting -l app=granite-3-2-8b-instruct -o name | head -1) -- \
+  curl -s http://localhost:8080/metrics | grep vllm_requests</pre>
+
+    <h3>Grafana Dashboards</h3>
+
+    <h4>vLLM Performance</h4>
+    <div class="grid">
+      <div class="metric"><strong>Request throughput</strong>Requests/sec per model<code>rate(vllm:request_success_total[5m])</code></div>
+      <div class="metric"><strong>Time to First Token</strong>P50/P95/P99 latency<code>vllm:time_to_first_token_seconds_bucket</code></div>
+      <div class="metric"><strong>Queue Depth</strong>Requests waiting<code>vllm:num_requests_waiting</code></div>
+      <div class="metric"><strong>KV Cache Usage</strong>GPU memory for context<code>vllm:gpu_cache_usage_perc</code></div>
+      <div class="metric"><strong>Tokens/sec</strong>Generation throughput<code>rate(vllm:generation_tokens_total[5m])</code></div>
+      <div class="metric"><strong>Running Requests</strong>In-flight requests<code>vllm:num_requests_running</code></div>
+    </div>
+
+    <h4>GPU — DCGM Exporter</h4>
+    <div class="grid">
+      <div class="metric"><strong>GPU Utilization</strong>% time executing kernels<code>DCGM_FI_DEV_GPU_UTIL</code></div>
+      <div class="metric"><strong>GPU Memory Used</strong>Framebuffer memory<code>DCGM_FI_DEV_FB_USED</code></div>
+      <div class="metric"><strong>GPU Temperature</strong>Device temp °C<code>DCGM_FI_DEV_GPU_TEMP</code></div>
+      <div class="metric"><strong>Power Draw</strong>Current Watts<code>DCGM_FI_DEV_POWER_USAGE</code></div>
+    </div>
+
+    <h3>Deploying the Monitoring Stack</h3>
+    <p>Deployed via the <code>ocp4_workload_rhoai_metrics</code> role in the <code>rhpds.litemaas</code> collection.</p>
+    <pre><span class="c"># Deploy Grafana + ServiceMonitors to llm-hosting namespace</span>
+ansible-playbook playbooks/deploy_rhoai_metrics.yml \
+  -e ocp4_workload_rhoai_metrics_namespace=llm-hosting \
+  -e ocp4_workload_rhoai_metrics_enable_gpu=true</pre>
+  </div>
+
+  <!-- LiteMaaS analytics -->
+  <div class="card">
+    <h2>LiteMaaS — Built-in Usage Analytics</h2>
+    <p>The LiteMaaS admin portal provides application-level analytics from LiteLLM spend logs — per-user spend, per-model call counts, per-API-key usage, trends, and exports. No Grafana needed for this.</p>
+
+    <h3>Access</h3>
+    <div class="callout">
+      Log in to <a href="https://litellm-prod-frontend.apps.maas.redhatworkshops.io" target="_blank">litellm-prod-frontend.apps.maas.redhatworkshops.io</a> as admin → <strong>Admin → Analytics</strong>
+    </div>
+
+    <h3>Available Views</h3>
+    <table>
+      <tr><th>View</th><th>Data</th></tr>
+      <tr><td>System overview</td><td>Total requests, tokens, cost — with trend vs previous period</td></tr>
+      <tr><td>By user</td><td>Per-user spend, request count, top models used</td></tr>
+      <tr><td>By model</td><td>Per-model usage, cost breakdown</td></tr>
+      <tr><td>By provider</td><td>On-cluster vs external (WatsonX, Bedrock) split</td></tr>
+      <tr><td>By API key</td><td>Per-key usage and budget consumption</td></tr>
+      <tr><td>Export</td><td>CSV or JSON export with filters applied</td></tr>
+    </table>
+
+    <h3>Caching</h3>
+    <p>Historical data (past days) is cached permanently. Current day is refreshed every 5 minutes. Use <strong>Refresh Today</strong> in the UI to force an immediate update.</p>
+  </div>
+
+  <!-- Key cleanup cronjob -->
+  <div class="card">
+    <h2>Automated Key Cleanup — Bastion Cronjob</h2>
+    <p>A shell script runs daily at 2 AM on the bastion host. It deletes expired and old virtual keys from LiteMaaS and keeps the LiteMaaS database in sync.</p>
+
+    <h3>What It Does</h3>
+    <table>
+      <tr><th>Step</th><th>Action</th></tr>
+      <tr><td>1</td><td>Fetches all virtual keys from LiteMaaS API (paginated)</td></tr>
+      <tr><td>2</td><td>Identifies expired keys (<code>expires &lt; now</code>) and old keys (created &gt; 30 days ago)</td></tr>
+      <tr><td>3</td><td>Deletes each key from LiteMaaS via <code>POST /key/delete</code></td></tr>
+      <tr><td>4</td><td>Marks matching <code>api_keys</code> record inactive in LiteMaaS DB</td></tr>
+      <tr><td>5</td><td>Final sweep — marks any remaining orphaned <code>api_keys</code> records inactive</td></tr>
+    </table>
+
+    <h3>Setup</h3>
+    <pre><span class="c"># Run from workstation — installs script on bastion and creates crontab entry</span>
+./setup-key-cleanup-cronjob.sh litellm-rhpds</pre>
+
+    <h3>Operations</h3>
+    <pre><span class="c"># Check the cronjob is scheduled</span>
+ssh bastion 'sudo crontab -l | grep cleanup'
+
+<span class="c"># View recent cleanup runs</span>
+ssh bastion 'sudo tail -100 /var/log/litemaas-key-cleanup.log'
+
+<span class="c"># Run manually</span>
+ssh bastion 'sudo /usr/local/bin/cleanup-litemaas-keys-litellm-rhpds.sh'</pre>
+
+    <div class="callout warn">
+      The script auto-discovers the LiteMaaS URL and master key from OpenShift secrets — it requires <code>oc</code> to be installed and logged in on the bastion host.
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  RHDP Platform Team &nbsp;·&nbsp; <a href="https://github.com/rhpds/rhpds.litemaas" style="color:#aaa">github.com/rhpds/rhpds.litemaas</a>
+</footer>
+
+</body>
+</html>
