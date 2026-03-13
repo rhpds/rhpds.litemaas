@@ -316,6 +316,53 @@ nav a.active {
   h1.page-title { font-size: 1.4rem; }
 }
 
+/* ---- Prev / Next page navigation ---- */
+.page-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: stretch;
+  gap: 1rem;
+  margin: 2rem 0 1rem;
+}
+
+.page-nav a {
+  display: flex;
+  flex-direction: column;
+  padding: 1rem 1.4rem;
+  background: white;
+  border-radius: 8px;
+  text-decoration: none;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+  color: #151515;
+  transition: box-shadow 0.2s, border-color 0.2s;
+  border: 2px solid transparent;
+  min-width: 180px;
+  max-width: 48%;
+}
+
+.page-nav a:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  border-color: #cc0000;
+}
+
+.page-nav .pn-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #cc0000;
+  margin-bottom: 0.3rem;
+}
+
+.page-nav .pn-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #151515;
+}
+
+.page-nav .pn-next { margin-left: auto; text-align: right; }
+.page-nav .pn-prev { margin-right: auto; text-align: left; }
+
 /* ---- Card hover (keep existing, ensure consistent) ---- */
 .card {
   transition: box-shadow 0.2s, transform 0.2s;
