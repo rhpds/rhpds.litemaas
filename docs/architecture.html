@@ -71,10 +71,10 @@ graph LR
     subgraph LM["LiteMaaS Platform"]
         UI["🖥 Web UI\n(model catalog, API keys,\nusage, settings)"]
         API["⚙️ Backend API\n(subscriptions, auth,\nanalytics, admin)"]
-        PROXY["🔀 AI Proxy\n(routes requests,\nenforces quotas,\nlogs spend)"]
+        PROXY["🔀 LiteLLM Proxy\n(routes requests,\nenforces quotas,\nlogs spend)"]
     end
 
-    subgraph MODELS["Model Servers"]
+    subgraph MODELS["OpenShift AI — KServe InferenceServices"]
         M1["💬 Chat models\n(e.g. Granite, Llama)"]
         M2["🔢 Embedding model\n(e.g. Nomic)"]
         M3["📄 Document Conversion\n(e.g. Docling)"]
