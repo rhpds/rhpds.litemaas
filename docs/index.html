@@ -45,68 +45,70 @@
 <nav>
   <a href="index.html" class="active">Home</a>
   <a href="architecture.html">Architecture</a>
-  <a href="ADDING_MODELS.md">Adding Models</a>
-  <a href="ADMIN_SETUP.md">Admin Setup</a>
-  <a href="HA_DEPLOYMENT.md">HA Deployment</a>
-  <a href="INFRA_TEAM_GUIDE.md">Infra Guide</a>
-  <a href="BACKUP.md">Backup</a>
+  <a href="product/overview.html">Overview</a>
+  <a href="product/models.html">Models</a>
+  <a href="install/deployment.html">Install</a>
+  <a href="day2/operations.html">Day-2</a>
+  <a href="day2/grafana.html">Grafana</a>
+  <a href="troubleshooting/common.html">Troubleshooting</a>
 </nav>
 
 <div class="container">
 
   <div class="status-bar">
     <span style="font-weight:700; font-size:0.9rem;">Production Status</span>
-    <div class="status-item"><span class="dot"></span> LiteLLM Proxy <span class="badge badge-green">v1.81.0-custom</span></div>
     <div class="status-item"><span class="dot"></span> LiteMaaS <span class="badge badge-green">v0.4.0</span></div>
-    <div class="status-item"><span class="dot dot-blue"></span> 11 Models Available</div>
     <div class="status-item"><span class="dot dot-blue"></span> maas.redhatworkshops.io</div>
+    <div class="status-item"><span class="dot dot-blue"></span> <a href="https://github.com/rhpds/rhpds.litemaas" style="color:#151515;">rhpds/rhpds.litemaas</a></div>
+    <div class="status-item"><span class="dot dot-blue"></span> <a href="https://github.com/rh-aiservices-bu/litemaas" style="color:#151515;">upstream: rh-aiservices-bu/litemaas</a></div>
   </div>
 
   <div class="hero">
-    <h2>What is RHDP LiteMaaS?</h2>
-    <p>LiteMaaS is a Model-as-a-Service platform built on LiteLLM that provides Red Hat Demo Platform users with managed access to AI/LLM models. It handles API key management, model subscriptions, usage tracking, rate limiting, and budget controls — so workshop attendees and developers get a simple API endpoint without managing infrastructure.</p>
+    <h2>What is LiteMaaS?</h2>
+    <p>LiteMaaS is a Model-as-a-Service platform that provides Red Hat Demo Platform users with managed access to AI/LLM models. It handles API key management, model subscriptions, usage tracking, rate limiting, and budget controls — so workshop attendees and developers get a simple OpenAI-compatible API endpoint without managing any infrastructure.</p>
+    <p style="margin-top:0.5rem;">This documentation covers the <strong>RHDP deployment</strong> using the <a href="https://github.com/rhpds/rhpds.litemaas"><code>rhpds.litemaas</code></a> Ansible collection. For the upstream LiteMaaS application, see <a href="https://github.com/rh-aiservices-bu/litemaas">rh-aiservices-bu/litemaas</a>.</p>
   </div>
 
   <div class="grid">
     <a class="card" href="architecture.html">
       <div class="card-icon">🏗</div>
       <h3>Architecture</h3>
-      <p>Full component diagram — LiteMaaS frontend/backend, LiteLLM proxy, PostgreSQL, Redis, model servers, and how they connect.</p>
+      <p>Full component diagram — all LiteMaaS layers, PostgreSQL, Redis, model servers, GitOps flow, and sequence diagrams. Click any diagram to expand.</p>
     </a>
-    <a class="card" href="ADDING_MODELS.md">
+    <a class="card" href="product/overview.html">
+      <div class="card-icon">📖</div>
+      <h3>Product Overview</h3>
+      <p>What LiteMaaS is, the problem it solves, key features, role hierarchy, and the end-to-end user flow.</p>
+    </a>
+    <a class="card" href="product/models.html">
       <div class="card-icon">🤖</div>
-      <h3>Adding Models</h3>
-      <p>How to register a new model in LiteLLM and sync it to LiteMaaS. Covers chat, embedding, and document conversion model types.</p>
+      <h3>Models Reference</h3>
+      <p>Model capability types (Chat, Embeddings, Document Conversion), API endpoints, and curl/SDK examples.</p>
     </a>
-    <a class="card" href="ADMIN_SETUP.md">
-      <div class="card-icon">⚙️</div>
-      <h3>Admin Setup</h3>
-      <p>Initial admin user configuration, promoting users to admin, and managing the platform after deployment.</p>
+    <a class="card" href="install/deployment.html">
+      <div class="card-icon">🚀</div>
+      <h3>Deployment Guide</h3>
+      <p>Prerequisites, Ansible collection variables reference, step-by-step deployment, post-install checklist.</p>
     </a>
-    <a class="card" href="HA_DEPLOYMENT.md">
-      <div class="card-icon">🔁</div>
-      <h3>HA Deployment</h3>
-      <p>High availability deployment with multiple replicas, Redis cache, and PostgreSQL. Covers the Ansible workload role.</p>
-    </a>
-    <a class="card" href="INFRA_TEAM_GUIDE.md">
+    <a class="card" href="day2/operations.html">
       <div class="card-icon">🛠</div>
-      <h3>Infra Team Guide</h3>
-      <p>Day-2 operations — upgrading LiteLLM, updating images, running migrations, scaling, and troubleshooting.</p>
+      <h3>Day-2 Operations</h3>
+      <p>Upgrading, scaling, key cleanup cronjob, adding models, LITELLM_AUTO_SYNC, DB sync, admin operations.</p>
     </a>
-    <a class="card" href="BACKUP.md">
-      <div class="card-icon">💾</div>
-      <h3>Backup & Restore</h3>
-      <p>How to back up and restore the LiteMaaS and LiteLLM databases. Includes the daily cleanup cronjob for expired keys.</p>
+    <a class="card" href="day2/grafana.html">
+      <div class="card-icon">📊</div>
+      <h3>Grafana & Metrics</h3>
+      <p>RHOAI metrics role, Grafana dashboards, vLLM and GPU PromQL metrics, ServiceMonitors, LiteMaaS analytics.</p>
     </a>
-    <a class="card" href="RHDP_BRANDING.md">
-      <div class="card-icon">🎨</div>
-      <h3>RHDP Branding</h3>
-      <p>Customising the LiteMaaS UI with RHDP logos, login page title, and disclaimer text via the branding API.</p>
+    <a class="card" href="troubleshooting/common.html">
+      <div class="card-icon">🔍</div>
+      <h3>Troubleshooting</h3>
+      <p>10 common issues with exact fix commands — model sync, OAuth, migrations, cache, OOMKills, timeouts.</p>
     </a>
-    <a class="card" href="OAUTH_LOGIN.md">
-      <div class="card-icon">🔐</div>
-      <h3>OAuth / OIDC</h3>
-      <p>Configuring OpenShift OAuth or standard OIDC authentication. Covers both serviceaccount and external provider modes.</p>
+    <a class="card" href="https://github.com/rhpds/rhpds.litemaas">
+      <div class="card-icon">📦</div>
+      <h3>Ansible Collection</h3>
+      <p>rhpds/rhpds.litemaas on GitHub — Ansible roles, playbooks, templates and scripts for RHDP deployment.</p>
     </a>
   </div>
 

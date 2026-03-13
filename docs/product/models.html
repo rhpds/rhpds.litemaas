@@ -110,20 +110,21 @@
   </div>
 
   <h1 class="page-title">Models Reference</h1>
-  <p class="page-subtitle">All production models on maas.redhatworkshops.io — capabilities, endpoints, and curl examples.</p>
+  <p class="page-subtitle">Model capability types, API endpoints, and integration examples. Models change over time — check the LiteMaaS portal for the current list.</p>
 
   <div class="info-box">
     <p>
       <strong>API base URL:</strong> <code>https://litellm-prod.apps.maas.redhatworkshops.io</code> &mdash;
-      All endpoints below are relative to this base. Replace <code>YOUR_API_KEY</code> with your virtual key from the LiteMaaS portal.
-      Model names listed here are the LiteMaaS proxy names (what you pass to the <code>model</code> field).
+      Replace <code>YOUR_API_KEY</code> with your virtual key from the LiteMaaS portal.
+      Replace <code>your-model-name</code> in examples with the actual model ID from the <strong>Models</strong> page in the portal.
+      <strong>Available models change over time as new models are added or retired.</strong>
     </p>
   </div>
 
-  <!-- Production Status Table -->
+  <!-- Model Types -->
   <div class="section">
-    <h2>Production Model Inventory</h2>
-    <p>Sourced from <code>oc get pods -n llm-hosting</code> and <code>oc get svc -n llm-hosting</code> — current as of deployment.</p>
+    <h2>Model Capability Types</h2>
+    <p>LiteMaaS labels each model with its capability type. Look for these badges on model cards in the portal.</p>
 
     <table>
       <thead>
@@ -222,7 +223,7 @@ curl -X POST https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completio
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -d '{
-    <span class="string">"model"</span>: <span class="string">"granite-3-2-8b-instruct"</span>,
+    <span class="string">"model"</span>: <span class="string">"your-chat-model"</span>,
     <span class="string">"messages"</span>: [
       {<span class="string">"role"</span>: <span class="string">"system"</span>, <span class="string">"content"</span>: <span class="string">"You are a helpful AI assistant."</span>},
       {<span class="string">"role"</span>: <span class="string">"user"</span>, <span class="string">"content"</span>: <span class="string">"Explain Kubernetes in three sentences."</span>}
@@ -235,7 +236,7 @@ curl -X POST https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completio
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -d '{
-    <span class="string">"model"</span>: <span class="string">"granite-3-2-8b-instruct"</span>,
+    <span class="string">"model"</span>: <span class="string">"your-chat-model"</span>,
     <span class="string">"messages"</span>: [{<span class="string">"role"</span>: <span class="string">"user"</span>, <span class="string">"content"</span>: <span class="string">"Write a Python function to reverse a string"</span>}],
     <span class="string">"stream"</span>: true
   }'</pre>
@@ -261,7 +262,7 @@ curl -X POST https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completio
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -d '{
-    <span class="string">"model"</span>: <span class="string">"llama-scout-17b"</span>,
+    <span class="string">"model"</span>: <span class="string">"your-chat-model"</span>,
     <span class="string">"messages"</span>: [
       {<span class="string">"role"</span>: <span class="string">"system"</span>, <span class="string">"content"</span>: <span class="string">"Analyze the provided document and summarize key points."</span>},
       {<span class="string">"role"</span>: <span class="string">"user"</span>, <span class="string">"content"</span>: <span class="string">"[Your long document text here...]"</span>}
@@ -345,7 +346,7 @@ curl -X POST https://litellm-prod.apps.maas.redhatworkshops.io/v1/embeddings \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -d '{
-    <span class="string">"model"</span>: <span class="string">"nomic-embed-text-v1-5"</span>,
+    <span class="string">"model"</span>: <span class="string">"your-embedding-model"</span>,
     <span class="string">"input"</span>: <span class="string">"Red Hat OpenShift is an enterprise Kubernetes platform."</span>
   }'</pre>
       <pre><span class="comment"># Batch embeddings (multiple strings)</span>
@@ -353,7 +354,7 @@ curl -X POST https://litellm-prod.apps.maas.redhatworkshops.io/v1/embeddings \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -d '{
-    <span class="string">"model"</span>: <span class="string">"nomic-embed-text-v1-5"</span>,
+    <span class="string">"model"</span>: <span class="string">"your-embedding-model"</span>,
     <span class="string">"input"</span>: [
       <span class="string">"What is Kubernetes?"</span>,
       <span class="string">"How does OpenShift differ from vanilla Kubernetes?"</span>,
@@ -369,7 +370,7 @@ client = OpenAI(
 )
 
 response = client.embeddings.create(
-    model=<span class="string">"nomic-embed-text-v1-5"</span>,
+    model=<span class="string">"your-embedding-model"</span>,
     input=[<span class="string">"OpenShift"</span>, <span class="string">"Kubernetes"</span>]
 )
 vectors = [e.embedding <span class="keyword">for</span> e <span class="keyword">in</span> response.data]
@@ -387,7 +388,7 @@ curl -X POST https://litellm-prod.apps.maas.redhatworkshops.io/v1/tokenize \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -d '{
-    <span class="string">"model"</span>: <span class="string">"granite-3-2-8b-instruct"</span>,
+    <span class="string">"model"</span>: <span class="string">"your-chat-model"</span>,
     <span class="string">"messages"</span>: [
       {<span class="string">"role"</span>: <span class="string">"user"</span>, <span class="string">"content"</span>: <span class="string">"How many tokens is this message?"</span>}
     ]
@@ -434,7 +435,7 @@ curl -X POST https://litellm-prod.apps.maas.redhatworkshops.io/docling/v1/conver
   -H "Authorization: Bearer YOUR_API_KEY" \
   -F <span class="string">"file=@/path/to/document.pdf"</span> \
   -F <span class="string">"options={\"output_format\": \"markdown\"}"</span></pre>
-      <div class="info-box"><p><strong>Note:</strong> The Docling endpoint path is prefixed with <code>/docling</code> before the standard API path. LiteLLM routes these requests to the KServe predictor ClusterIP service internally. TPM limits, cost fields, and max token settings are not applicable to this model type.</p></div>
+      <div class="info-box"><p><strong>Note:</strong> The Docling endpoint path is prefixed with <code>/docling</code> before the standard API path. LiteMaaS routes these requests to the document conversion service internally.TPM limits, cost fields, and max token settings are not applicable to this model type.</p></div>
     </div>
   </div>
 
@@ -487,7 +488,7 @@ client = OpenAI(
 
 <span class="comment"># Chat completion</span>
 response = client.chat.completions.create(
-    model=<span class="string">"granite-3-2-8b-instruct"</span>,
+    model=<span class="string">"your-chat-model"</span>,
     messages=[
         {<span class="string">"role"</span>: <span class="string">"system"</span>, <span class="string">"content"</span>: <span class="string">"You are a helpful assistant."</span>},
         {<span class="string">"role"</span>: <span class="string">"user"</span>, <span class="string">"content"</span>: <span class="string">"What is Red Hat OpenShift?"</span>}
@@ -497,7 +498,7 @@ print(response.choices[0].message.content)
 
 <span class="comment"># Streaming</span>
 <span class="keyword">with</span> client.chat.completions.stream(
-    model=<span class="string">"llama-scout-17b"</span>,
+    model=<span class="string">"your-chat-model"</span>,
     messages=[{<span class="string">"role"</span>: <span class="string">"user"</span>, <span class="string">"content"</span>: <span class="string">"Explain containers"</span>}]
 ) <span class="keyword">as</span> stream:
     <span class="keyword">for</span> chunk <span class="keyword">in</span> stream:
@@ -512,7 +513,7 @@ print(response.choices[0].message.content)
 });
 
 <span class="keyword">const</span> response = <span class="keyword">await</span> client.chat.completions.create({
-  model: <span class="string">'granite-3-2-8b-instruct'</span>,
+  model: <span class="string">'your-chat-model'</span>,
   messages: [{ role: <span class="string">'user'</span>, content: <span class="string">'Hello!'</span> }]
 });
 console.log(response.choices[0].message.content);</pre>
@@ -521,13 +522,13 @@ console.log(response.choices[0].message.content);</pre>
     <pre><span class="keyword">from</span> langchain_openai <span class="keyword">import</span> ChatOpenAI, OpenAIEmbeddings
 
 llm = ChatOpenAI(
-    model=<span class="string">"granite-3-2-8b-instruct"</span>,
+    model=<span class="string">"your-chat-model"</span>,
     openai_api_key=<span class="string">"YOUR_API_KEY"</span>,
     openai_api_base=<span class="string">"https://litellm-prod.apps.maas.redhatworkshops.io/v1"</span>
 )
 
 embeddings = OpenAIEmbeddings(
-    model=<span class="string">"nomic-embed-text-v1-5"</span>,
+    model=<span class="string">"your-embedding-model"</span>,
     openai_api_key=<span class="string">"YOUR_API_KEY"</span>,
     openai_api_base=<span class="string">"https://litellm-prod.apps.maas.redhatworkshops.io/v1"</span>
 )</pre>
