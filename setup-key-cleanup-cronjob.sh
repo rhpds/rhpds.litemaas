@@ -18,6 +18,8 @@
 #   4. Deletes keys matching EITHER condition:
 #      - Expired keys (expires field < current time)
 #      - Old keys (created_at > 30 days ago)
+#   5. After each LiteLLM deletion, syncs the matching api_keys record in LiteMaaS
+#   6. Final pass: marks any remaining orphaned LiteMaaS keys inactive
 # =============================================================================
 
 set -e
@@ -300,8 +302,25 @@ while IFS= read -r key_token; do
           -d "{\"keys\": [\"$key_token\"]}")
 
         if echo "$DELETE_RESPONSE" | jq -e '\''.deleted_keys'\'' &> /dev/null; then
-            echo "✓ Deleted"
+            echo "✓ Deleted from LiteLLM"
             DELETED_COUNT=$((DELETED_COUNT + 1))
+
+            # Sync deletion to LiteMaaS api_keys table
+            # Find the LiteMaaS postgres pod and mark matching key as inactive
+            LITEMAAS_PG_POD=$(oc get pods -n "$NAMESPACE" -l app=litellm-postgres -o jsonpath='\''        {.items[0].metadata.name}'\'' 2>/dev/null | xargs)
+            if [ -n "$LITEMAAS_PG_POD" ]; then
+                LITEMAAS_DB_URL=$(oc exec -n "$NAMESPACE" deployment/litellm-backend -- sh -c "echo \$DATABASE_URL" 2>/dev/null)
+                if [ -n "$LITEMAAS_DB_URL" ]; then
+                    KEY_ALIAS=$(echo "$RESPONSE" | jq -r --arg token "$key_token" '\''.keys[] | select(.token == $token) | .key_alias // empty'\'')
+                    if [ -n "$KEY_ALIAS" ]; then
+                        SYNC_RESULT=$(oc exec -n "$NAMESPACE" "$LITEMAAS_PG_POD" -- psql "$LITEMAAS_DB_URL" -t -c "UPDATE api_keys SET is_active=false, revoked_at=NOW(), sync_status='\''error'\'', sync_error='\''Key deleted by cleanup cron'\'', updated_at=NOW() WHERE litellm_key_alias='\''$KEY_ALIAS'\'' AND is_active=true;" 2>/dev/null)
+                        SYNC_COUNT=$(echo "$SYNC_RESULT" | grep -oP '\''\d+'\'' | head -1)
+                        if [ "${SYNC_COUNT:-0}" -gt 0 ]; then
+                            echo "  ✓ Synced to LiteMaaS (alias: $KEY_ALIAS)"
+                        fi
+                    fi
+                fi
+            fi
         else
             echo "✗ Failed"
             echo "    Response: $DELETE_RESPONSE"
@@ -309,6 +328,20 @@ while IFS= read -r key_token; do
         fi
     fi
 done <<< "$KEYS_TO_DELETE"
+
+# Final sync pass: mark any remaining LiteMaaS keys inactive if their LiteLLM key no longer exists
+echo ""
+echo "Running final LiteMaaS sync pass..."
+LITEMAAS_PG_POD=$(oc get pods -n "$NAMESPACE" -l app=litellm-postgres -o jsonpath='\''{.items[0].metadata.name}'\'' 2>/dev/null | xargs)
+if [ -n "$LITEMAAS_PG_POD" ]; then
+    LITEMAAS_DB_URL=$(oc exec -n "$NAMESPACE" deployment/litellm-backend -- sh -c "echo \$DATABASE_URL" 2>/dev/null)
+    if [ -n "$LITEMAAS_DB_URL" ]; then
+        SYNC_SQL="UPDATE api_keys SET is_active=false, revoked_at=NOW(), sync_status='\''error'\'', sync_error='\''Key deleted from LiteLLM'\'', updated_at=NOW() WHERE is_active=true AND litellm_key_alias IS NOT NULL AND NOT EXISTS (SELECT 1 FROM \"LiteLLM_VerificationToken\" lv WHERE lv.key_alias = api_keys.litellm_key_alias);"
+        ORPHAN_RESULT=$(oc exec -n "$NAMESPACE" "$LITEMAAS_PG_POD" -- psql "$LITEMAAS_DB_URL" -t -c "$SYNC_SQL" 2>/dev/null)
+        ORPHAN_COUNT=$(echo "$ORPHAN_RESULT" | grep -oP '\''\d+'\'' | head -1)
+        echo "  LiteMaaS orphaned keys cleaned: ${ORPHAN_COUNT:-0}"
+    fi
+fi
 
 echo ""
 echo "========================================="
