@@ -252,6 +252,14 @@ nav a.active {
   line-height: 1;
 }
 
+/* Desktop: nav-links are always visible in a row */
+.nav-links {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
 @media (max-width: 700px) {
   nav {
     flex-wrap: wrap;
