@@ -732,6 +732,92 @@ oc rollout status deployment/litellm -n $NS</pre>
     </div>
   </div>
 
+  <!-- Issue 11: GPU resource exhaustion -->
+  <div class="issue" id="gpu-pending">
+    <div class="issue-header">
+      <div class="issue-num">11</div>
+      <div class="issue-title">Model predictor pod stuck in Pending — Insufficient GPU</div>
+    </div>
+
+    <div class="symptom">
+      <strong>Symptoms</strong>
+      A model predictor pod stays in <code>Pending</code> for hours or days.
+      <code>oc describe pod</code> shows: <em>"0/16 nodes are available: 2 Insufficient nvidia.com/gpu"</em>.
+      The model is not serving requests. This happens when all GPU nodes of the required instance type are fully allocated.
+    </div>
+
+    <h3 class="fix-label">Diagnose</h3>
+    <pre><span class="comment"># Find pending predictor pods</span>
+oc get pods -n llm-hosting --field-selector=status.phase=Pending
+
+<span class="comment"># Check the scheduling error</span>
+oc describe pod &lt;pending-pod-name&gt; -n llm-hosting | grep -A5 "Events:"
+
+<span class="comment"># Check GPU capacity vs allocation per node</span>
+oc get nodes -l 'node-role.kubernetes.io/worker-gpu' \
+  -o custom-columns="NAME:.metadata.name,INSTANCE:.metadata.labels['node\.kubernetes\.io/instance-type'],GPU:.status.capacity['nvidia\.com/gpu']"
+
+<span class="comment"># See which pods are using GPUs on a specific node</span>
+oc describe node &lt;node-name&gt; | grep -A20 "Allocated resources"</pre>
+
+    <h3 class="fix-label">Options</h3>
+    <pre><span class="comment"># Option 1: Scale down another model on the same node type to free a GPU slot</span>
+oc patch inferenceservice &lt;other-model&gt; -n llm-hosting \
+  --type merge -p '{"spec":{"predictor":{"maxReplicas":0,"minReplicas":0}}}'
+
+<span class="comment"># Option 2: Change the node selector to a different instance type with free GPUs</span>
+<span class="comment"># Edit the InferenceService in the models-aas GitOps repo and update nodeSelector</span>
+
+<span class="comment"># Option 3: Add more GPU nodes (requires cluster admin / AWS console)</span></pre>
+
+    <div class="info-box">
+      <p>The RHDP MaaS cluster has a fixed set of GPU nodes. GPU slots are finite — if all L4 nodes are full, any new model requiring an L4 will stay Pending until another model is scaled down or a new node is added. Coordinate with the infra team before adding new large models to avoid displacing existing ones.</p>
+    </div>
+  </div>
+
+  <!-- Issue 12: Duplicate model registration -->
+  <div class="issue" id="duplicate-model">
+    <div class="issue-header">
+      <div class="issue-num">12</div>
+      <div class="issue-title">Same model appears twice in LiteMaaS</div>
+    </div>
+
+    <div class="symptom">
+      <strong>Symptoms</strong>
+      A model name appears twice in the LiteMaaS models page or in <code>GET /model/info</code>. Users may get inconsistent responses — some requests go to one backend, others to the other. This usually happens after a model is added manually via the API and then also picked up by the sync, or when a model is re-registered without removing the old entry.
+    </div>
+
+    <h3 class="fix-label">Diagnose</h3>
+    <pre>MASTER_KEY=$(oc get secret litellm-secret -n litellm-rhpds \
+  -o jsonpath='{.data.LITELLM_MASTER_KEY}' | base64 -d)
+
+<span class="comment"># List all models and spot duplicates</span>
+curl -s https://litellm-prod.apps.maas.redhatworkshops.io/model/info \
+  -H "Authorization: Bearer $MASTER_KEY" | \
+  python3 -c "
+import sys,json
+d=json.load(sys.stdin)
+names=[m.get('model_name') for m in d.get('data',[])]
+dups=[n for n in names if names.count(n)>1]
+print('Duplicates:', set(dups))
+for m in d.get('data',[]):
+    if m.get('model_name') in dups:
+        print(m.get('model_name'), m.get('model_info',{}).get('id'))
+"</pre>
+
+    <h3 class="fix-label">Fix</h3>
+    <pre><span class="comment"># Delete the duplicate by its model_info.id</span>
+curl -X DELETE https://litellm-prod.apps.maas.redhatworkshops.io/model/delete \
+  -H "Authorization: Bearer $MASTER_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"id": "&lt;model-info-id-to-remove&gt;"}'
+
+<span class="comment"># Verify it is removed</span>
+curl -s https://litellm-prod.apps.maas.redhatworkshops.io/model/info \
+  -H "Authorization: Bearer $MASTER_KEY" | \
+  python3 -c "import sys,json; [print(m['model_name']) for m in json.load(sys.stdin).get('data',[])]"</pre>
+  </div>
+
   <!-- General Diagnostic Commands -->
   <div class="section">
     <h2>General Diagnostic Commands</h2>
