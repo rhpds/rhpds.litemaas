@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Infrastructure & Hardware — RHDP MaaS</title>
+  <meta name="description" content="RHDP MaaS infrastructure — GPU nodes, model deployment via OpenShift AI and KServe, InferenceService configuration, and hardware allocation per model.">
+  <link rel="canonical" href="https://rhpds.github.io/rhpds.litemaas/docs/infrastructure.html">
+  <link rel="stylesheet" href="assets/style.css">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Red Hat Text', 'Segoe UI', sans-serif; background: #f5f5f5; color: #151515; line-height: 1.6; }
+    header { background: #cc0000; color: white; padding: 1.5rem 3rem; }
+    header h1 { font-size: 1.5rem; font-weight: 700; }
+    header p { opacity: 0.85; font-size: 0.9rem; margin-top: 0.2rem; }
+    nav { background: #151515; padding: 0 3rem; display: flex; gap: 0; }
+    nav a { color: #e0e0e0; text-decoration: none; padding: 0.85rem 1.2rem; font-size: 0.9rem; display: block; transition: background 0.15s; }
+    nav a:hover, nav a.active { background: #cc0000; color: white; }
+    .container { max-width: 1100px; margin: 2rem auto; padding: 0 2rem; }
+    .card { background: white; border-radius: 8px; padding: 1.8rem; margin-bottom: 1.5rem; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+    .card h2 { font-size: 1.15rem; font-weight: 700; margin-bottom: 0.8rem; border-bottom: 2px solid #cc0000; padding-bottom: 0.4rem; }
+    .card h3 { font-size: 0.98rem; font-weight: 700; margin: 1.2rem 0 0.4rem; color: #333; }
+    .card p { color: #444; font-size: 0.9rem; margin-bottom: 0.7rem; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.87rem; margin: 0.8rem 0 1.2rem; }
+    th { background: #151515; color: white; padding: 0.6rem 1rem; text-align: left; font-weight: 600; }
+    td { padding: 0.55rem 1rem; border-bottom: 1px solid #e8e8e8; vertical-align: top; }
+    tr:nth-child(even) td { background: #f9f9f9; }
+    tr:hover td { background: #fef5f5; }
+    code { background: #f0f0f0; padding: 0.1rem 0.4rem; border-radius: 3px; font-size: 0.83rem; font-family: monospace; }
+    pre { background: #1e1e1e; color: #d4d4d4; padding: 1rem 1.3rem; border-radius: 6px; overflow-x: auto; font-size: 0.82rem; line-height: 1.5; margin: 0.6rem 0 1rem; position: relative; }
+    .c { color: #6a9955; }
+    .callout { border-left: 4px solid #0066cc; background: #e8f4fd; padding: 0.8rem 1.1rem; border-radius: 0 6px 6px 0; margin: 0.8rem 0; font-size: 0.88rem; color: #004080; }
+    .callout.warn { border-color: #f0ab00; background: #fff8e1; color: #5d3900; }
+    .tag { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 3px; font-size: 0.75rem; font-weight: 600; }
+    .tag-green { background: #d4edda; color: #155724; }
+    .tag-blue { background: #d1ecf1; color: #0c5460; }
+    .tag-orange { background: #fff3cd; color: #856404; }
+    .tag-purple { background: #e2d9f3; color: #4a235a; }
+    .gpu-card { display: flex; align-items: center; gap: 1rem; background: #f9f9f9; border-radius: 8px; padding: 1rem 1.2rem; margin: 0.5rem 0; border-left: 3px solid #0066cc; }
+    .gpu-name { font-weight: 700; font-size: 0.95rem; min-width: 100px; }
+    .gpu-spec { font-size: 0.82rem; color: #555; }
+    footer { background: #151515; color: #aaa; text-align: center; padding: 1.5rem; font-size: 0.85rem; margin-top: 3rem; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>RHDP MaaS — Infrastructure & Hardware</h1>
+  <p>GPU nodes, model deployment on OpenShift AI, and KServe InferenceService configuration</p>
+</header>
+
+<nav>
+  <button class="nav-hamburger" id="navToggle" aria-label="Toggle navigation">&#9776;</button>
+  <div class="nav-links" id="navLinks">
+    <a href="index.html">Home</a>
+    <a href="architecture.html">Architecture</a>
+    <a href="product/overview.html">Overview</a>
+    <a href="product/models.html">Models</a>
+    <a href="install/deployment.html">Install</a>
+    <a href="day2/operations.html">Day-2</a>
+    <a href="monitoring.html">Monitoring</a>
+    <a href="infrastructure.html" class="active">Infrastructure</a>
+    <a href="troubleshooting/common.html">Troubleshooting</a>
+  </div>
+</nav>
+
+<div class="container">
+
+  <div class="breadcrumb">
+    <a href="index.html">Home</a> <span>/</span> Infrastructure & Hardware
+  </div>
+
+  <!-- CLUSTER -->
+  <div class="card">
+    <h2>Cluster Overview</h2>
+    <p>RHDP MaaS runs on a dedicated OpenShift cluster on AWS us-west-2. The cluster has two types of GPU nodes running different NVIDIA GPU generations, chosen based on model size and VRAM requirements.</p>
+    <table>
+      <tr><th>Attribute</th><th>Value</th></tr>
+      <tr><td>Cluster</td><td><code>maas.redhatworkshops.io</code></td></tr>
+      <tr><td>Cloud</td><td>AWS us-west-2</td></tr>
+      <tr><td>OpenShift version</td><td>4.17 (Kubernetes 1.31)</td></tr>
+      <tr><td>GPU namespace</td><td><code>llm-hosting</code> — all model servers run here</td></tr>
+      <tr><td>Management namespace</td><td><code>litellm-rhpds</code> — LiteMaaS platform runs here</td></tr>
+    </table>
+  </div>
+
+  <!-- GPU NODES -->
+  <div class="card">
+    <h2>GPU Nodes</h2>
+    <p>The cluster has 9 GPU worker nodes across three AWS instance types, providing a mix of GPU VRAM capacities. All nodes have the label <code>node-role.kubernetes.io/worker-gpu</code>.</p>
+
+    <h3>Instance Types in Use</h3>
+
+    <div class="gpu-card">
+      <div>
+        <div class="gpu-name">g6e.12xlarge</div>
+        <div class="gpu-spec">2 nodes · 4× NVIDIA L40S · 48 GB VRAM each (192 GB total) · 48 vCPU · 384 GB RAM</div>
+      </div>
+      <span class="tag tag-purple">Large models</span>
+    </div>
+    <div class="gpu-card">
+      <div>
+        <div class="gpu-name">g6e.2xlarge</div>
+        <div class="gpu-spec">3 nodes · 1× NVIDIA L40S · 48 GB VRAM · 8 vCPU · 62 GB RAM</div>
+      </div>
+      <span class="tag tag-blue">Mid-size models</span>
+    </div>
+    <div class="gpu-card">
+      <div>
+        <div class="gpu-name">g6.2xlarge</div>
+        <div class="gpu-spec">2 nodes · 1× NVIDIA L4 · 24 GB VRAM · 8 vCPU · 30 GB RAM</div>
+      </div>
+      <span class="tag tag-green">Small models</span>
+    </div>
+    <div class="gpu-card">
+      <div>
+        <div class="gpu-name">g4dn.2xlarge</div>
+        <div class="gpu-spec">3 nodes · 1× NVIDIA T4 · 16 GB VRAM · 8 vCPU · 30 GB RAM</div>
+      </div>
+      <span class="tag tag-orange">Compact models</span>
+    </div>
+
+    <h3>GPU Hardware Reference</h3>
+    <table>
+      <tr><th>GPU</th><th>VRAM</th><th>Architecture</th><th>FP16 TFLOPS</th><th>Best for</th></tr>
+      <tr><td>NVIDIA L40S</td><td>48 GB GDDR6</td><td>Ada Lovelace</td><td>362</td><td>Large models, multi-GPU inference</td></tr>
+      <tr><td>NVIDIA L4</td><td>24 GB GDDR6</td><td>Ada Lovelace</td><td>121</td><td>Mid-size models, efficient inference</td></tr>
+      <tr><td>NVIDIA T4</td><td>16 GB GDDR6</td><td>Turing</td><td>65</td><td>Compact models, CPU-offload capable</td></tr>
+    </table>
+  </div>
+
+  <!-- MODEL PLACEMENT -->
+  <div class="card">
+    <h2>Model Placement — Current Allocation</h2>
+    <p>Each model is pinned to a specific node via KServe's node selector. The table below shows where each model is currently running, how many GPUs it uses, and on which AWS instance type.</p>
+
+    <table>
+      <tr><th>Model</th><th>Instance Type</th><th>GPU</th><th>VRAM</th><th>GPUs allocated</th><th>Replicas</th><th>Runtime</th></tr>
+      <tr>
+        <td><code>llama-scout-17b</code></td>
+        <td>g6e.12xlarge</td>
+        <td>L40S × 4</td>
+        <td>192 GB total</td>
+        <td>4</td>
+        <td>2 (HA)</td>
+        <td>vLLM</td>
+      </tr>
+      <tr>
+        <td><code>granite-3-2-8b-instruct</code></td>
+        <td>g6e.2xlarge</td>
+        <td>L40S × 1</td>
+        <td>48 GB</td>
+        <td>1</td>
+        <td>1</td>
+        <td>vLLM</td>
+      </tr>
+      <tr>
+        <td><code>codellama-7b-instruct</code></td>
+        <td>g6e.2xlarge</td>
+        <td>L40S × 1</td>
+        <td>48 GB</td>
+        <td>1</td>
+        <td>1</td>
+        <td>vLLM</td>
+      </tr>
+      <tr>
+        <td><code>granite-4-0-h-tiny</code></td>
+        <td>g6.2xlarge</td>
+        <td>L4 × 1</td>
+        <td>24 GB</td>
+        <td>1</td>
+        <td>1</td>
+        <td>vLLM</td>
+      </tr>
+      <tr>
+        <td><code>granite-docling-258m</code></td>
+        <td>g6.2xlarge</td>
+        <td>L4 × 1</td>
+        <td>24 GB</td>
+        <td>1</td>
+        <td>1</td>
+        <td>Docling Serve</td>
+      </tr>
+      <tr>
+        <td><code>llama-guard-3-1b</code></td>
+        <td>g4dn.2xlarge</td>
+        <td>T4 × 1</td>
+        <td>16 GB</td>
+        <td>1</td>
+        <td>1</td>
+        <td>vLLM</td>
+      </tr>
+      <tr>
+        <td><code>nomic-embed-text-v1-5</code></td>
+        <td>g4dn.2xlarge</td>
+        <td>T4 × 1</td>
+        <td>16 GB</td>
+        <td>1</td>
+        <td>1</td>
+        <td>TEI (GPU)</td>
+      </tr>
+    </table>
+
+    <div class="callout">
+      <strong>Why 4 GPUs for llama-scout-17b?</strong> Despite being a 17B parameter model, Llama Scout has a 400K token context window. The full KV cache for long contexts requires significantly more VRAM than the model weights alone. 4× L40S (192 GB total) ensures both the weights and context can be served without degradation.
+    </div>
+  </div>
+
+  <!-- HOW MODELS ARE DEPLOYED -->
+  <div class="card">
+    <h2>How Models are Deployed — OpenShift AI & KServe</h2>
+    <p>All model servers are deployed as <strong>KServe InferenceServices</strong> via OpenShift AI (RHOAI). Each model is a separate Kubernetes custom resource that KServe translates into a Deployment, Service, and optional HorizontalPodAutoscaler.</p>
+
+    <h3>Deployment Stack</h3>
+    <table>
+      <tr><th>Layer</th><th>Component</th><th>Role</th></tr>
+      <tr><td>Orchestration</td><td>OpenShift AI (RHOAI)</td><td>Manages KServe, model runtimes, GPU scheduling via NVIDIA GPU Operator</td></tr>
+      <tr><td>Serving framework</td><td>KServe</td><td>Translates InferenceService CRs into pods, handles scaling and routing</td></tr>
+      <tr><td>Inference runtime</td><td>vLLM</td><td>LLM inference engine with continuous batching, PagedAttention, prefix caching</td></tr>
+      <tr><td>Embedding runtime</td><td>TEI (Text Embeddings Inference)</td><td>GPU-accelerated embedding model serving</td></tr>
+      <tr><td>Docling runtime</td><td>Docling Serve</td><td>Document conversion service (PDF → Markdown/JSON)</td></tr>
+      <tr><td>GPU driver</td><td>NVIDIA GPU Operator</td><td>Manages drivers, DCGM exporter, device plugin across all GPU nodes</td></tr>
+    </table>
+
+    <h3>InferenceService Structure</h3>
+    <p>Each model is defined as an <code>InferenceService</code> custom resource. Here is an annotated example:</p>
+    <pre><span class="c"># Example: granite-3-2-8b-instruct InferenceService</span>
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: granite-3-2-8b-instruct
+  namespace: llm-hosting
+spec:
+  predictor:
+    model:
+      modelFormat:
+        name: vLLM               <span class="c"># tells KServe which runtime to use</span>
+      runtime: granite-3-2-8b-instruct  <span class="c"># references a ServingRuntime CR</span>
+      storageUri: oci://...      <span class="c"># model weights location (OCI registry or S3)</span>
+    nodeSelector:
+      node.kubernetes.io/instance-type: g6e.2xlarge  <span class="c"># pin to L40S node</span>
+    resources:
+      limits:
+        nvidia.com/gpu: "1"      <span class="c"># number of GPUs</span>
+        memory: 45Gi
+        cpu: "6"
+    <h3>ServingRuntime</h3>
+    <p>Each InferenceService references a <code>ServingRuntime</code> CR that defines the container image, environment variables, and default resource limits for that model family.</p>
+    <pre><span class="c"># List all serving runtimes in the namespace</span>
+oc get servingruntimes -n llm-hosting
+
+<span class="c"># Inspect a specific runtime</span>
+oc get servingruntime granite-3-2-8b-instruct -n llm-hosting -o yaml</pre>
+
+    <h3>GitOps Management</h3>
+    <p>All InferenceService and ServingRuntime manifests are stored in Git and synced to the cluster via OpenShift GitOps (ArgoCD). To add or update a model, commit the manifest to the repo — the sync happens automatically.</p>
+    <pre><span class="c"># Check sync status of model manifests</span>
+oc get application -n openshift-gitops | grep llm
+
+<span class="c"># Force a manual sync</span>
+argocd app sync llm-hosting-models</pre>
+  </div>
+
+  <!-- OPERATIONAL COMMANDS -->
+  <div class="card">
+    <h2>Operational Commands</h2>
+
+    <h3>Check all model pods and their nodes</h3>
+    <pre>oc get pods -n llm-hosting -o wide | grep predictor</pre>
+
+    <h3>Check GPU allocation per node</h3>
+    <pre><span class="c"># Total GPU capacity across GPU nodes</span>
+oc get nodes -l 'node-role.kubernetes.io/worker-gpu' \
+  -o custom-columns="NAME:.metadata.name,INSTANCE:.metadata.labels['node\.kubernetes\.io/instance-type'],GPU:.status.capacity['nvidia\.com/gpu']"
+
+<span class="c"># GPU currently allocated (requested by pods)</span>
+oc describe node &lt;node-name&gt; | grep -A5 "Allocated resources"</pre>
+
+    <h3>Check InferenceService status</h3>
+    <pre>oc get inferenceservice -n llm-hosting</pre>
+
+    <h3>View model server logs</h3>
+    <pre><span class="c"># Tail logs for a specific model</span>
+oc logs -n llm-hosting -l app=granite-3-2-8b-instruct --tail=50
+
+<span class="c"># Check vLLM startup — shows model load time and VRAM usage</span>
+oc logs -n llm-hosting &lt;predictor-pod-name&gt; | grep -E "GPU|VRAM|loaded|error"</pre>
+
+    <h3>Scale a model (increase replicas)</h3>
+    <pre><span class="c"># Scale via InferenceService (preferred — GitOps-managed)</span>
+oc patch inferenceservice llama-scout-17b -n llm-hosting \
+  --type merge -p '{"spec":{"predictor":{"minReplicas":3}}}'
+
+<span class="c"># Or scale the underlying deployment directly (not persisted in Git)</span>
+oc scale deployment llama-scout-17b-predictor -n llm-hosting --replicas=3</pre>
+  </div>
+
+  <div class="page-nav">
+    <a href="monitoring.html" class="pn-prev">
+      <span class="pn-label">← Previous</span>
+      <span class="pn-title">Monitoring</span>
+    </a>
+    <a href="troubleshooting/common.html" class="pn-next">
+      <span class="pn-label">Next →</span>
+      <span class="pn-title">Troubleshooting</span>
+    </a>
+  </div>
+
+</div>
+
+<footer>
+  RHDP Platform Team &nbsp;·&nbsp; <a href="https://github.com/rhpds/rhpds.litemaas" style="color:#aaa">github.com/rhpds/rhpds.litemaas</a>
+  <span class="footer-updated">Last updated: 2026-03-13</span>
+</footer>
+
+<button id="back-to-top" title="Back to top" aria-label="Back to top">&#8679;</button>
+
+<script>
+  document.getElementById('navToggle').addEventListener('click', function() {
+    document.getElementById('navLinks').classList.toggle('open');
+  });
+  var btt = document.getElementById('back-to-top');
+  window.addEventListener('scroll', function() {
+    btt.classList.toggle('visible', window.scrollY > 400);
+  });
+  btt.addEventListener('click', function() { window.scrollTo({ top: 0, behavior: 'smooth' }); });
+  document.querySelectorAll('pre').forEach(function(pre) {
+    var btn = document.createElement('button');
+    btn.className = 'copy-btn'; btn.textContent = 'Copy';
+    btn.addEventListener('click', function() {
+      navigator.clipboard.writeText(pre.innerText).then(function() {
+        btn.textContent = 'Copied!'; btn.classList.add('copied');
+        setTimeout(function() { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+      });
+    });
+    pre.appendChild(btn);
+  });
+</script>
+
+</body>
+</html>
