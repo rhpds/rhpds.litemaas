@@ -595,6 +595,72 @@ oc rollout restart deployment/litellm -n $NS
 oc rollout restart deployment/litellm-frontend -n $NS</pre>
   </div>
 
+  <!-- BACKUP & RESTORE -->
+  <div class="section" id="backup">
+    <h2>Backup & Restore</h2>
+    <p>LiteMaaS v0.4.0 includes a built-in backup and restore capability available directly from the admin portal. It covers the LiteMaaS database — all users, API keys, subscriptions, models, branding settings, and usage data.</p>
+
+    <h3>What Gets Backed Up</h3>
+    <table>
+      <tr><th>Data</th><th>Included</th></tr>
+      <tr><td>Users and roles</td><td>✅ Yes</td></tr>
+      <tr><td>Virtual API keys</td><td>✅ Yes</td></tr>
+      <tr><td>Model subscriptions</td><td>✅ Yes</td></tr>
+      <tr><td>Registered models and capabilities</td><td>✅ Yes</td></tr>
+      <tr><td>Branding settings (logos, title, subtitle)</td><td>✅ Yes</td></tr>
+      <tr><td>Usage analytics and spend logs</td><td>✅ Yes</td></tr>
+      <tr><td>System settings and defaults</td><td>✅ Yes</td></tr>
+      <tr><td>LiteLLM proxy config (pass-through endpoints, etc.)</td><td>⚠ Separate — use LiteLLM admin UI</td></tr>
+    </table>
+
+    <h3>Taking a Backup — via UI</h3>
+    <ol style="padding-left:1.5rem; font-size:0.9rem; color:#444; margin:0.5rem 0 1rem;">
+      <li>Log in to the LiteMaaS portal as admin: <a href="https://litellm-prod-frontend.apps.maas.redhatworkshops.io" target="_blank">litellm-prod-frontend.apps.maas.redhatworkshops.io</a></li>
+      <li>Navigate to <strong>Admin → Tools → Backup</strong></li>
+      <li>Click <strong>Create Backup</strong> — a <code>.sql.gz</code> file is generated</li>
+      <li>Click <strong>Download</strong> to save it locally</li>
+    </ol>
+
+    <h3>Taking a Backup — via API</h3>
+    <pre><span class="comment"># Create a backup</span>
+curl -X POST https://litellm-prod-admin.apps.maas.redhatworkshops.io/api/v1/admin/backup/create \
+  -H "Authorization: Bearer &lt;admin-jwt&gt;"
+
+<span class="comment"># List available backups</span>
+curl https://litellm-prod-admin.apps.maas.redhatworkshops.io/api/v1/admin/backup/list \
+  -H "Authorization: Bearer &lt;admin-jwt&gt;"
+
+<span class="comment"># Download a backup file</span>
+curl https://litellm-prod-admin.apps.maas.redhatworkshops.io/api/v1/admin/backup/download/&lt;filename&gt; \
+  -H "Authorization: Bearer &lt;admin-jwt&gt;" \
+  -o backup.sql.gz</pre>
+
+    <h3>Restoring from Backup — via UI</h3>
+    <div class="warn-box">
+      <p><strong>Warning:</strong> Restoring overwrites the current database. Take a fresh backup before restoring. The platform will be briefly unavailable during restore.</p>
+    </div>
+    <ol style="padding-left:1.5rem; font-size:0.9rem; color:#444; margin:0.5rem 0 1rem;">
+      <li>Navigate to <strong>Admin → Tools → Backup</strong></li>
+      <li>Select a backup from the list and click <strong>Restore</strong>, or upload a backup file</li>
+      <li>Confirm the restore — the backend restarts automatically when complete</li>
+    </ol>
+
+    <h3>Automated Backup — Bastion Cronjob (S3)</h3>
+    <p>For scheduled backups to S3, the <code>rhpds.litemaas</code> collection includes a setup script. This runs monthly on the bastion host and uploads compressed PostgreSQL dumps to an S3 bucket, keeping the last 12 (1 year of monthly backups).</p>
+    <pre><span class="comment"># Run on bastion — installs monthly backup cronjob to S3</span>
+./setup-litemaas-backup-cronjob.sh litellm-rhpds my-s3-bucket
+
+<span class="comment"># Prerequisites: AWS CLI + IAM instance profile on bastion with S3 write access</span></pre>
+
+    <h3>Manual Database Backup</h3>
+    <pre><span class="comment"># Dump the full database (litemaas_db + litellm_db share one PostgreSQL instance)</span>
+oc exec -n litellm-rhpds litellm-postgres-0 -- \
+  pg_dump -U litellm litellm | gzip > litemaas-backup-$(date +%Y%m%d).sql.gz
+
+<span class="comment"># Upload to S3</span>
+aws s3 cp litemaas-backup-$(date +%Y%m%d).sql.gz s3://my-bucket/backups/</pre>
+  </div>
+
   <div class="page-nav">
     <a href="../install/deployment.html" class="pn-prev">
       <span class="pn-label">← Previous</span>
