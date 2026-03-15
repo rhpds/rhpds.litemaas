@@ -17,10 +17,6 @@
     nav { background: #151515; padding: 0 3rem; display: flex; gap: 0; flex-wrap: wrap; }
     nav a { color: #e0e0e0; text-decoration: none; padding: 0.85rem 1.2rem; font-size: 0.9rem; display: block; transition: background 0.15s; }
     nav a:hover, nav a.active { background: #cc0000; color: white; }
-    nav .nav-group { position: relative; }
-    nav .nav-group:hover .nav-dropdown { display: block; }
-    .nav-dropdown { display: none; position: absolute; top: 100%; left: 0; background: #1f1f1f; min-width: 200px; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
-    .nav-dropdown a { display: block; padding: 0.7rem 1.2rem; border-bottom: 1px solid #333; }
     .container { max-width: 1100px; margin: 2rem auto; padding: 0 2rem; }
     .breadcrumb { font-size: 0.82rem; color: #666; margin-bottom: 1.5rem; }
     .breadcrumb a { color: #cc0000; text-decoration: none; }
@@ -70,33 +66,17 @@
 </header>
 
 <nav>
-  <a href="../index.html">Home</a>
-  <a href="../architecture.html">Architecture</a>
-  <div class="nav-group">
-    <a href="../product/overview.html">Product ▾</a>
-    <div class="nav-dropdown">
-      <a href="../product/overview.html">Overview</a>
-      <a href="../product/models.html">Models Reference</a>
-    </div>
-  </div>
-  <div class="nav-group">
-    <a href="deployment.html" class="active">Install ▾</a>
-    <div class="nav-dropdown">
-      <a href="deployment.html" class="active">Deployment Guide</a>
-    </div>
-  </div>
-  <div class="nav-group">
-    <a href="../day2/operations.html">Day-2 ▾</a>
-    <div class="nav-dropdown">
-      <a href="../day2/operations.html">Operations</a>
-      <a href="../day2/grafana.html">Grafana / Metrics</a>
-    </div>
-  </div>
-  <div class="nav-group">
-    <a href="../troubleshooting/common.html">Troubleshooting ▾</a>
-    <div class="nav-dropdown">
-      <a href="../troubleshooting/common.html">Common Issues</a>
-    </div>
+  <button class="nav-hamburger" id="navToggle" aria-label="Toggle navigation">&#9776;</button>
+  <div class="nav-links" id="navLinks">
+    <a href="../index.html">Home</a>
+    <a href="../architecture.html">Architecture</a>
+    <a href="../product/overview.html">Overview</a>
+    <a href="../product/models.html">Models</a>
+    <a href="deployment.html" class="active">Install</a>
+    <a href="../day2/operations.html">Day-2</a>
+    <a href="../monitoring.html">Monitoring</a>
+    <a href="../infrastructure.html">Infrastructure</a>
+    <a href="../troubleshooting/common.html">Troubleshooting</a>
   </div>
 </nav>
 
@@ -491,13 +471,9 @@ oc delete oauthclient litemaas</pre>
 
 <script>
   mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
-  document.querySelectorAll('.nav-group > a').forEach(function(a) {
-    a.addEventListener('click', function(e) {
-      if (window.innerWidth <= 700) {
-        e.preventDefault();
-        this.closest('.nav-group').classList.toggle('open');
-      }
-    });
+  document.getElementById('navToggle').addEventListener('click', function() {
+    document.getElementById('navLinks').classList.toggle('open');
+  });
   });
   var btt = document.getElementById('back-to-top');
   window.addEventListener('scroll', function() {
