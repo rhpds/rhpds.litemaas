@@ -732,10 +732,74 @@ oc rollout status deployment/litellm -n $NS</pre>
     </div>
   </div>
 
-  <!-- Issue 11: GPU resource exhaustion -->
-  <div class="issue" id="gpu-pending">
+  <!-- Issue 11: Data loss on pod restart -->
+  <div class="issue" id="data-loss-restart">
     <div class="issue-header">
       <div class="issue-num">11</div>
+      <div class="issue-title">All models and keys lost after LiteLLM pod restart</div>
+    </div>
+
+    <div class="symptom">
+      <strong>Symptoms</strong>
+      After a LiteLLM pod restart or rolling update, all registered models disappear from the portal.
+      All virtual keys stop working (HTTP 401). The LiteMaaS model list shows empty.
+      Everything appears to reset to a blank state on every restart.
+    </div>
+
+    <h3 class="fix-label">Root Cause</h3>
+    <p style="margin:0.5rem 0; font-size:0.88rem; color:#333;">
+      LiteLLM requires the <code>DATABASE_URL</code> environment variable to persist state to PostgreSQL.
+      <strong>Without it, LiteLLM uses in-memory storage</strong> — all models, keys, and configuration
+      exist only in the running pod and are lost the moment the pod restarts. This was a common issue
+      in deployments before v0.4.0 where <code>DATABASE_URL</code> was not set automatically.
+    </p>
+
+    <h3 class="fix-label">Diagnose</h3>
+    <pre><span class="comment"># Check if DATABASE_URL is set on the LiteLLM pod</span>
+oc exec -n litellm-rhpds deployment/litellm -- sh -c "echo \$DATABASE_URL"
+
+<span class="comment"># If empty or not set — this is the cause</span>
+<span class="comment"># Models and keys are stored in memory only and lost on restart</span></pre>
+
+    <h3 class="fix-label">Fix — Set DATABASE_URL</h3>
+    <pre><span class="comment"># Get the PostgreSQL connection string from the DB secret</span>
+DB_URL=$(oc get secret litemaas-db -n litellm-rhpds \
+  -o jsonpath='{.data.DATABASE_URL}' | base64 -d)
+
+<span class="comment"># Set it on the LiteLLM deployment</span>
+oc set env deployment/litellm -n litellm-rhpds DATABASE_URL="$DB_URL"
+
+oc rollout status deployment/litellm -n litellm-rhpds</pre>
+
+    <div class="info-box">
+      <p>
+        <strong>Fixed in v0.4.0:</strong> The <code>rhpds.litemaas</code> Ansible collection v0.3.2+
+        and the LiteMaaS Helm chart v0.4.0 both auto-construct and inject <code>DATABASE_URL</code>
+        from the PostgreSQL credentials when <code>postgresql.enabled: true</code>.
+        If you are on v0.4.0 and still see this issue, verify the secret <code>litemaas-db</code>
+        exists and contains a valid <code>DATABASE_URL</code> key.
+      </p>
+    </div>
+
+    <h3 class="fix-label">After fixing — re-register models</h3>
+    <pre><span class="comment"># Models need to be re-added via GitOps or the Ansible role</span>
+<span class="comment"># The model-serving ArgoCD app will re-create InferenceServices,</span>
+<span class="comment"># but LiteLLM model registrations must be re-added:</span>
+
+<span class="comment"># Option 1: Re-run the Ansible models role</span>
+ansible-playbook playbooks/manage_models.yml \
+  -e litellm_url="https://litellm-prod.apps.maas.redhatworkshops.io" \
+  -e litellm_master_key="sk-..."
+
+<span class="comment"># Option 2: Trigger a model sync from LiteMaaS backend</span>
+<span class="comment"># (if models were already in LiteLLM_ProxyModelTable)</span>
+oc rollout restart deployment/litellm-backend -n litellm-rhpds</pre>
+  </div>
+
+  <!-- Issue 12: GPU resource exhaustion -->
+  <div class="issue" id="gpu-pending">
+    <div class="issue-header">
+      <div class="issue-num">12</div>
       <div class="issue-title">Model predictor pod stuck in Pending — Insufficient GPU</div>
     </div>
 
@@ -775,10 +839,10 @@ oc patch inferenceservice &lt;other-model&gt; -n llm-hosting \
     </div>
   </div>
 
-  <!-- Issue 12: Duplicate model registration -->
+  <!-- Issue 13: Duplicate model registration -->
   <div class="issue" id="duplicate-model">
     <div class="issue-header">
-      <div class="issue-num">12</div>
+      <div class="issue-num">13</div>
       <div class="issue-title">Same model appears twice in LiteMaaS</div>
     </div>
 
