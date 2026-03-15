@@ -253,12 +253,63 @@ oc get servingruntimes -n llm-hosting
 oc get servingruntime granite-3-2-8b-instruct -n llm-hosting -o yaml</pre>
 
     <h3>GitOps Management</h3>
-    <p>All InferenceService and ServingRuntime manifests are stored in Git and synced to the cluster via OpenShift GitOps (ArgoCD). To add or update a model, commit the manifest to the repo — the sync happens automatically.</p>
-    <pre><span class="c"># Check sync status of model manifests</span>
-oc get application -n openshift-gitops | grep llm
+    <p>All InferenceService and ServingRuntime manifests are managed via the <a href="https://github.com/rhpds/models-aas" target="_blank">rhpds/models-aas</a> repository and synced automatically. See the GitOps section below for full details.</p>
+  </div>
 
-<span class="c"># Force a manual sync</span>
-argocd app sync llm-hosting-models</pre>
+  <!-- GITOPS SECTION -->
+  <div class="card">
+    <h2>GitOps — Model Deployment Repository</h2>
+    <p>Model servers are managed entirely through a dedicated GitOps repository, separate from the LiteMaaS platform repo. Any change committed to the repo is automatically applied to the cluster — no manual <code>oc apply</code> needed.</p>
+
+    <h3>ArgoCD Application</h3>
+    <table>
+      <tr><th>Field</th><th>Value</th></tr>
+      <tr><td>Application name</td><td><code>model-serving</code></td></tr>
+      <tr><td>ArgoCD namespace</td><td><code>openshift-gitops</code></td></tr>
+      <tr><td>Git repository</td><td><a href="https://github.com/rhpds/models-aas" target="_blank">github.com/rhpds/models-aas</a></td></tr>
+      <tr><td>Path in repo</td><td><code>model-serving/</code></td></tr>
+      <tr><td>Target revision</td><td><code>v1.0.5</code> (pinned tag)</td></tr>
+      <tr><td>Destination cluster</td><td><code>https://kubernetes.default.svc</code> (in-cluster)</td></tr>
+      <tr><td>Sync policy</td><td>Automated — commits sync without manual trigger</td></tr>
+      <tr><td>Health status</td><td>Healthy</td></tr>
+    </table>
+
+    <h3>How It Works</h3>
+    <p>ArgoCD watches the <code>model-serving/</code> directory at the pinned tag. When a commit changes a manifest, ArgoCD detects the drift and applies the changes automatically. The <code>Validate=false</code> annotation allows KServe CRDs to be applied even if CRD versions temporarily mismatch during cluster upgrades.</p>
+
+    <h3>Checking Sync Status</h3>
+    <pre><span class="c"># Check the model-serving app status</span>
+oc get applications.argoproj.io model-serving \
+  -n openshift-gitops \
+  -o custom-columns="NAME:.metadata.name,SYNC:.status.sync.status,HEALTH:.status.health.status"
+
+<span class="c"># See all managed resources (InferenceServices, ServingRuntimes, etc.)</span>
+oc get applications.argoproj.io model-serving -n openshift-gitops \
+  -o jsonpath='{range .status.resources[*]}{.kind}{"\t"}{.name}{"\n"}{end}'</pre>
+
+    <h3>Adding or Updating a Model</h3>
+    <pre><span class="c"># 1. Clone the models-aas repo</span>
+git clone https://github.com/rhpds/models-aas
+cd models-aas
+
+<span class="c"># 2. Add or edit the InferenceService in model-serving/</span>
+
+<span class="c"># 3. Commit and push — ArgoCD auto-syncs</span>
+git add model-serving/my-new-model.yaml
+git commit -m "Add my-new-model InferenceService"
+git push
+
+<span class="c"># 4. Watch the sync</span>
+oc get applications.argoproj.io model-serving -n openshift-gitops -w</pre>
+
+    <div class="callout warn">
+      <strong>Pinned tag:</strong> The ArgoCD app tracks tag <code>v1.0.5</code>, not <code>main</code>. New commits only deploy if the tag is updated or the ArgoCD app's <code>targetRevision</code> is changed. Coordinate with the team before updating the revision.
+    </div>
+
+    <h3>Forcing a Manual Sync</h3>
+    <pre><span class="c"># Force reconciliation if the app shows OutOfSync</span>
+oc patch applications.argoproj.io model-serving -n openshift-gitops \
+  --type merge -p '{"operation":{"sync":{"syncStrategy":{"apply":{"force":false}}}}}'</pre>
   </div>
 
   <!-- OPERATIONAL COMMANDS -->
