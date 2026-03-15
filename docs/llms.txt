@@ -1,12 +1,12 @@
-# RHDP LiteMaaS Documentation
+# RHDP MaaS Documentation
 
-> LiteMaaS is a Model-as-a-Service platform deployed on OpenShift for Red Hat Demo Platform (RHDP). It provides workshop attendees and developers with managed access to AI/LLM models through virtual API keys, with usage tracking, rate limiting, and budget controls.
+> RHDP MaaS is the Red Hat Demo Platform's Model-as-a-Service implementation, built on LiteMaaS — an open-source platform developed by the Red Hat AI Services BU. It provides users with managed access to AI/LLM models through virtual API keys, with usage tracking, rate limiting, and budget controls.
 
-## What is LiteMaaS
+## What is RHDP MaaS
 
-LiteMaaS wraps LiteLLM (an open-source AI proxy) with a management layer: a React frontend portal, a Fastify backend API, and PostgreSQL for state. Model servers run on OpenShift AI (KServe). The platform is deployed using the rhpds.litemaas Ansible collection.
+RHDP MaaS is RHDP's deployment and implementation of LiteMaaS. LiteMaaS is the upstream open-source software (github.com/rh-aiservices-bu/litemaas) that wraps LiteLLM (an open-source AI proxy) with a management layer: a React frontend portal, a Fastify backend API, and PostgreSQL for state. Model servers run on OpenShift AI (KServe). The RHDP-specific deployment is managed using the rhpds.litemaas Ansible collection.
 
-Users never interact with model servers directly. LiteMaaS sits in between — managing who can access which models, enforcing budgets and rate limits, and providing every user a simple OpenAI-compatible API endpoint without managing any infrastructure.
+Users never interact with model servers directly. RHDP MaaS sits in between — managing who can access which models, enforcing budgets and rate limits, and providing every user a simple OpenAI-compatible API endpoint without managing any infrastructure.
 
 ## Documentation
 

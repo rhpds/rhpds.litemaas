@@ -163,9 +163,9 @@ oc rollout status deployment/litellm-frontend -n ${NS}</pre>
 
     <div class="warn-box">
       <p>
-        <strong>Frontend version mismatch:</strong> If the frontend shows a stale version after upgrade, check
-        that the init container image (if used for static asset injection) matches the new frontend tag.
-        A mismatch between the main container and init container is a common cause of version confusion.
+        <strong>Frontend showing stale version after upgrade:</strong> Do a hard refresh in the browser
+        (<kbd>Cmd+Shift+R</kbd> / <kbd>Ctrl+Shift+R</kbd>). If the issue persists, check that the
+        frontend deployment is using the new image tag.
         See <a href="../troubleshooting/common.html">Troubleshooting</a> for the fix.
       </p>
     </div>
