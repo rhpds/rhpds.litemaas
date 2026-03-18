@@ -641,6 +641,66 @@ oc exec -n litellm-rhpds litellm-postgres-0 -- \
 aws s3 cp litemaas-backup-$(date +%Y%m%d).sql.gz s3://my-bucket/backups/</pre>
   </div>
 
+  <div class="section">
+    <h2>Usage Analytics</h2>
+    <p>Query usage statistics directly from the PostgreSQL database. Requires <code>oc exec</code> access to the postgres pod.</p>
+
+    <h3>Unique users &amp; tokens — monthly breakdown</h3>
+    <pre><span class="comment"># Get unique users, total tokens, and request count per month (last 3 months)</span>
+oc exec -n litellm-rhpds litellm-postgres-0 -- \
+  psql -U litellm -d litellm -t -c "
+SELECT
+  TO_CHAR(DATE_TRUNC('month', \"startTime\"), 'YYYY-MM') as month,
+  COUNT(DISTINCT \"user\")  as unique_users,
+  SUM(total_tokens)        as total_tokens,
+  COUNT(*)                 as requests
+FROM \"LiteLLM_SpendLogs\"
+WHERE \"startTime\" >= NOW() - INTERVAL '3 months'
+GROUP BY 1
+ORDER BY 1 DESC;"</pre>
+
+    <h3>Unique users — last 30 days (via API)</h3>
+    <pre><span class="comment"># Requires MASTER_KEY env var</span>
+curl -sk "https://&lt;LITELLM_URL&gt;/spend/users?start_date=$(date -v-30d '+%Y-%m-%d')&amp;end_date=$(date '+%Y-%m-%d')" \
+  -H "Authorization: Bearer $MASTER_KEY" | \
+  python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+users = d if isinstance(d, list) else d.get('data', [])
+print(f'Unique users (last 30d): {len(users)}')
+for u in sorted(users, key=lambda x: x.get('spend', 0), reverse=True)[:10]:
+    print(f'  {u.get(\"user_id\",\"?\")} — \${u.get(\"spend\",0):.4f}')
+"</pre>
+
+    <h3>Top models by token consumption</h3>
+    <pre>oc exec -n litellm-rhpds litellm-postgres-0 -- \
+  psql -U litellm -d litellm -t -c "
+SELECT
+  model,
+  COUNT(*)            as requests,
+  SUM(total_tokens)   as total_tokens,
+  SUM(prompt_tokens)  as prompt_tokens,
+  SUM(completion_tokens) as completion_tokens
+FROM \"LiteLLM_SpendLogs\"
+WHERE \"startTime\" >= NOW() - INTERVAL '30 days'
+GROUP BY model
+ORDER BY total_tokens DESC
+LIMIT 10;"</pre>
+
+    <h3>Daily active users — last 7 days</h3>
+    <pre>oc exec -n litellm-rhpds litellm-postgres-0 -- \
+  psql -U litellm -d litellm -t -c "
+SELECT
+  TO_CHAR(DATE_TRUNC('day', \"startTime\"), 'YYYY-MM-DD') as day,
+  COUNT(DISTINCT \"user\") as unique_users,
+  COUNT(*)                as requests,
+  SUM(total_tokens)       as tokens
+FROM \"LiteLLM_SpendLogs\"
+WHERE \"startTime\" >= NOW() - INTERVAL '7 days'
+GROUP BY 1
+ORDER BY 1 DESC;"</pre>
+  </div>
+
   <div class="page-nav">
     <a href="../install/deployment.html" class="pn-prev">
       <span class="pn-label">← Previous</span>
