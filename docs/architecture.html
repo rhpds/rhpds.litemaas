@@ -77,30 +77,51 @@
   <div class="card" id="overview">
     <h2>1 — What LiteMaaS Does <a href="#overview" class="anchor-link" aria-label="Link to this section">#</a></h2>
     <p>LiteMaaS gives every user a single API endpoint to access AI models — no infrastructure to manage, no credentials to share. Behind the scenes it handles access control, rate limiting, and spend tracking across all models.</p>
+
+    <h3>LiteMaaS vs LiteLLM</h3>
+    <p><strong>LiteLLM</strong> is the open-source AI proxy engine that sits between users and model servers. It handles routing, quota enforcement, and spend logging. <strong>LiteMaaS</strong> is RHDP's platform built on top of LiteLLM — it adds a web portal, subscription management, per-user API key provisioning, branding, and OIDC authentication. Think of LiteLLM as the engine and LiteMaaS as the car.</p>
+
+    <h3>Two Clusters — Two Access Patterns</h3>
+    <p>RHDP MaaS now spans two clusters with different access models:</p>
+    <table>
+      <tr><th></th><th>AWS Cluster (Primary)</th><th>Intel Gaudi Cluster (Rackspace DFW3)</th></tr>
+      <tr><td>Cluster</td><td><code>maas.redhatworkshops.io</code></td><td><code>maas00.rs-dfw3.infra.demo.redhat.com</code></td></tr>
+      <tr><td>Access</td><td>Via LiteMaaS portal + LiteLLM proxy</td><td>Direct KServe route (no proxy)</td></tr>
+      <tr><td>Auth</td><td><code>sk-...</code> virtual key from LiteMaaS</td><td>API key — contact Ashok</td></tr>
+      <tr><td>Hardware</td><td>NVIDIA L40S / L4 / T4 (AWS GPU nodes)</td><td>8× Intel Gaudi 3 (Dell XE9680)</td></tr>
+    </table>
+
     <div class="mermaid">
 graph LR
     U["👤 Users"]
 
-    subgraph LM["LiteMaaS Platform"]
+    subgraph LM["LiteMaaS Platform — AWS"]
         UI["🖥 Web UI\nmodel catalog · API keys\nusage · settings"]
         API["⚙️ Backend API\nsubscriptions · auth\nanalytics · admin"]
         PROXY["🔀 LiteLLM Proxy\nroutes requests\nenforces quotas\nlogs spend"]
     end
 
-    subgraph OAI["OpenShift AI — KServe"]
+    subgraph OAI["OpenShift AI — KServe (AWS)"]
         M1["💬 Chat models"]
         M2["🔢 Embedding model"]
         M3["📄 Document Conversion"]
     end
 
+    subgraph GAUDI["KServe Direct — Intel Gaudi (Rackspace)"]
+        G1["💬 deepseek-r1-distill-qwen-14b"]
+        G2["💬 qwen3-14b"]
+    end
+
     U -->|browse & manage| UI
     U -->|"inference calls\nsk-... key"| PROXY
+    U -->|"direct KServe route\nno proxy"| GAUDI
     UI <-->|API| API
     API <--> PROXY
     PROXY --> M1 & M2 & M3
 
     style LM fill:#fff8f8,stroke:#cc0000,stroke-width:2px
     style OAI fill:#e3f2fd,stroke:#0066cc,stroke-width:2px
+    style GAUDI fill:#e6f2ff,stroke:#0071c5,stroke-width:2px
     style U fill:#fce4ec,stroke:#cc0000,stroke-width:1px
     </div>
   </div>
@@ -251,7 +272,7 @@ graph LR
 
 <footer>
   RHDP Platform Team &nbsp;·&nbsp; <a href="https://github.com/rhpds/rhpds.litemaas" style="color:#aaa">github.com/rhpds/rhpds.litemaas</a>
-  <span class="footer-updated">Last updated: 2026-03-13</span>
+  <span class="footer-updated">Last updated: 2026-03-19</span>
 </footer>
 
 <button id="back-to-top" title="Back to top" aria-label="Back to top">&#8679;</button>
