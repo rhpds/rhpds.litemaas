@@ -517,6 +517,66 @@ embeddings = OpenAIEmbeddings(
 )</pre>
   </div>
 
+  <!-- Intel Gaudi Cluster Models -->
+  <div class="section">
+    <h2>Intel Gaudi 3 Cluster — Direct KServe Endpoints</h2>
+    <p>The Rackspace DFW3 cluster (<code>maas00.rs-dfw3.infra.demo.redhat.com</code>) runs models on 8× Intel Gaudi 3 accelerators via KServe directly — no LiteMaaS proxy. Endpoints are OpenAI-compatible. For access credentials, contact Ashok.</p>
+
+    <div class="callout" style="border-color: #0071c5; background: #e6f2ff; color: #003d80;">
+      <strong>Direct KServe access:</strong> These endpoints do not go through LiteMaaS/LiteLLM. Use the KServe route URL directly with your API key.
+    </div>
+
+    <!-- DeepSeek R1 Distill Qwen 14B -->
+    <div class="model-card">
+      <div class="model-card-header">
+        <div>
+          <h3>DeepSeek R1 Distill Qwen 14B <span class="badge badge-blue">Chat</span> <span class="badge badge-purple" style="background:#e6f2ff;color:#0071c5;border:1px solid #0071c5;">Intel Gaudi 3</span></h3>
+          <p style="color:#555; font-size:0.85rem; margin-top:0.3rem;">Reasoning-focused model distilled from DeepSeek R1 into a Qwen2.5 14B base. Strong chain-of-thought performance, code generation, and math. Runs on Gaudi 3 via vLLM.</p>
+        </div>
+      </div>
+      <div class="model-meta">
+        <div class="model-meta-item"><strong>Model ID</strong>deepseek-r1-distill-qwen-14b</div>
+        <div class="model-meta-item"><strong>Parameters</strong>14B</div>
+        <div class="model-meta-item"><strong>Runtime</strong>vLLM on Gaudi 3</div>
+        <div class="model-meta-item"><strong>Cluster</strong>maas00.rs-dfw3</div>
+        <div class="model-meta-item"><strong>KServe route</strong>deepseek-r1-distill-qwen-14b-llm-hosting.apps.maas00.rs-dfw3.infra.demo.redhat.com</div>
+      </div>
+      <pre><span class="comment"># Chat completion via KServe direct endpoint</span>
+curl https://deepseek-r1-distill-qwen-14b-llm-hosting.apps.maas00.rs-dfw3.infra.demo.redhat.com/v1/chat/completions \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "deepseek-r1-distill-qwen-14b",
+    "messages": [{"role": "user", "content": "Solve step by step: what is 15% of 240?"}]
+  }'</pre>
+    </div>
+
+    <!-- Qwen3 14B -->
+    <div class="model-card">
+      <div class="model-card-header">
+        <div>
+          <h3>Qwen3 14B <span class="badge badge-blue">Chat</span> <span class="badge badge-purple" style="background:#e6f2ff;color:#0071c5;border:1px solid #0071c5;">Intel Gaudi 3</span></h3>
+          <p style="color:#555; font-size:0.85rem; margin-top:0.3rem;">Alibaba's third-generation Qwen model at 14B parameters. Strong multilingual capabilities, coding, and instruction following. Runs on Gaudi 3 via vLLM.</p>
+        </div>
+      </div>
+      <div class="model-meta">
+        <div class="model-meta-item"><strong>Model ID</strong>qwen3-14b</div>
+        <div class="model-meta-item"><strong>Parameters</strong>14B</div>
+        <div class="model-meta-item"><strong>Runtime</strong>vLLM on Gaudi 3</div>
+        <div class="model-meta-item"><strong>Cluster</strong>maas00.rs-dfw3</div>
+        <div class="model-meta-item"><strong>KServe route</strong>qwen3-14b-llm-hosting.apps.maas00.rs-dfw3.infra.demo.redhat.com</div>
+      </div>
+      <pre><span class="comment"># Chat completion via KServe direct endpoint</span>
+curl https://qwen3-14b-llm-hosting.apps.maas00.rs-dfw3.infra.demo.redhat.com/v1/chat/completions \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "qwen3-14b",
+    "messages": [{"role": "user", "content": "Explain prefix caching in LLMs."}]
+  }'</pre>
+    </div>
+  </div>
+
   <!-- Available Models API -->
   <div class="section">
     <h2>Listing Available Models via API</h2>
@@ -543,7 +603,7 @@ curl https://litellm-prod.apps.maas.redhatworkshops.io/model/info \
 
 <footer>
   <p>RHDP LiteMaaS Documentation &mdash; Red Hat Demo Platform &mdash; maas.redhatworkshops.io</p>
-  <span class="footer-updated">Last updated: 2026-03-13</span>
+  <span class="footer-updated">Last updated: 2026-03-19</span>
 </footer>
 
 <button id="back-to-top" title="Back to top" aria-label="Back to top">&#8679;</button>

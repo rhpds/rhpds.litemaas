@@ -72,7 +72,10 @@
 
     <h3>Access</h3>
     <div class="callout">
-      <strong>Production Grafana:</strong> <a href="https://grafana-route-llm-hosting.apps.maas.redhatworkshops.io" target="_blank">grafana-route-llm-hosting.apps.maas.redhatworkshops.io</a> — uses reencrypt TLS. Running for 94 days.
+      <strong>AWS Cluster (Primary):</strong> <a href="https://grafana-route-llm-hosting.apps.maas.redhatworkshops.io" target="_blank">grafana-route-llm-hosting.apps.maas.redhatworkshops.io</a> — uses reencrypt TLS. Running for 94 days.
+    </div>
+    <div class="callout" style="border-color: #0071c5; background: #e6f2ff; color: #003d80; margin-top: 0.5rem;">
+      <strong>Intel Gaudi Cluster (Rackspace DFW3):</strong> <a href="https://grafana-route-llm-hosting.apps.maas00.rs-dfw3.infra.demo.redhat.com" target="_blank">grafana-route-llm-hosting.apps.maas00.rs-dfw3.infra.demo.redhat.com</a> — same stack deployed to <code>llm-hosting</code> namespace. For credentials, contact Ashok.
     </div>
     <pre><span class="c"># Get Grafana route</span>
 oc get route grafana-route -n llm-hosting
@@ -302,7 +305,7 @@ ssh bastion 'sudo /usr/local/bin/cleanup-litemaas-keys-litellm-rhpds.sh'</pre>
 
 <footer>
   RHDP Platform Team &nbsp;·&nbsp; <a href="https://github.com/rhpds/rhpds.litemaas" style="color:#aaa">github.com/rhpds/rhpds.litemaas</a>
-  <span class="footer-updated">Last updated: 2026-03-13</span>
+  <span class="footer-updated">Last updated: 2026-03-19</span>
 </footer>
 
 <button id="back-to-top" title="Back to top" aria-label="Back to top">&#8679;</button>
