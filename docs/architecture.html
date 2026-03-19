@@ -114,7 +114,8 @@ graph LR
 
     U -->|browse & manage| UI
     U -->|"inference calls\nsk-... key"| PROXY
-    U -->|"direct KServe route\nno proxy"| GAUDI
+    U -->|"direct KServe route\nno proxy"| G1
+    U -->|"direct KServe route\nno proxy"| G2
     UI <-->|API| API
     API <--> PROXY
     PROXY --> M1 & M2 & M3
