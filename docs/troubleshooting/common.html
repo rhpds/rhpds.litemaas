@@ -899,6 +899,49 @@ oc exec -n $NS $LITELLM_POD -- \
   sh -c 'redis-cli -h $REDIS_HOST ping 2>/dev/null || echo "Redis not reachable"'</pre>
   </div>
 
+  <!-- Intel Gaudi Cluster Troubleshooting -->
+  <div class="section">
+    <h2>Intel Gaudi Cluster — Troubleshooting</h2>
+    <p>The Gaudi cluster at <code>maas00.rs-dfw3.infra.demo.redhat.com</code> runs models via direct KServe routes — there is no LiteMaaS or LiteLLM proxy. Use these commands when troubleshooting Gaudi-specific issues. For access credentials, contact Ashok.</p>
+
+    <h3>Check model status</h3>
+    <pre><span class="comment"># List InferenceServices and their ready state</span>
+oc get inferenceservice -n llm-hosting
+
+<span class="comment"># Detailed status for a specific model</span>
+oc describe inferenceservice deepseek-r1-distill-qwen-14b -n llm-hosting</pre>
+
+    <h3>Test endpoint directly</h3>
+    <pre><span class="comment"># Test the KServe route directly</span>
+curl -s https://deepseek-r1-distill-qwen-14b-llm-hosting.apps.maas00.rs-dfw3.infra.demo.redhat.com/v1/models \
+  -H "Authorization: Bearer YOUR_API_KEY"
+
+<span class="comment"># Quick chat test</span>
+curl -s https://qwen3-14b-llm-hosting.apps.maas00.rs-dfw3.infra.demo.redhat.com/v1/chat/completions \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"qwen3-14b","messages":[{"role":"user","content":"ping"}]}'</pre>
+
+    <h3>Check Gaudi hardware and pods</h3>
+    <pre><span class="comment"># Check Gaudi device allocation on the node</span>
+oc describe node maas00-sno | grep -A5 "habana\|Allocated"
+
+<span class="comment"># Check predictor pod logs</span>
+oc logs -n llm-hosting -l serving.kserve.io/inferenceservice=deepseek-r1-distill-qwen-14b --tail=50
+
+<span class="comment"># Check Habana AI operator</span>
+oc get pods -n habana-ai-operator</pre>
+
+    <h3>Check Grafana for Gaudi metrics</h3>
+    <pre><span class="comment"># Get Grafana route</span>
+oc get route grafana-route -n llm-hosting
+<span class="comment"># URL: https://grafana-route-llm-hosting.apps.maas00.rs-dfw3.infra.demo.redhat.com</span></pre>
+
+    <div class="callout warn">
+      <strong>Common Gaudi issue:</strong> If a model pod is stuck in <code>Pending</code>, check if the <code>habana.ai/gaudi</code> resource limit is set correctly in the InferenceService and that the Habana AI Operator is running. The node only has 8 Gaudi cards — if all are allocated, new pods will not schedule.
+    </div>
+  </div>
+
   <div class="page-nav">
     <a href="../monitoring.html" class="pn-prev">
       <span class="pn-label">← Previous</span>
@@ -909,7 +952,7 @@ oc exec -n $NS $LITELLM_POD -- \
 
 <footer>
   <p>RHDP LiteMaaS Documentation &mdash; Red Hat Demo Platform &mdash; maas.redhatworkshops.io</p>
-  <span class="footer-updated">Last updated: 2026-03-13</span>
+  <span class="footer-updated">Last updated: 2026-03-19</span>
 </footer>
 
 <button id="back-to-top" title="Back to top" aria-label="Back to top">&#8679;</button>
