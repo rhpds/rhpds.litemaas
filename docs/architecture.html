@@ -81,13 +81,13 @@
     <h3>LiteMaaS vs LiteLLM</h3>
     <p><strong>LiteLLM</strong> is the open-source AI proxy engine that sits between users and model servers. It handles routing, quota enforcement, and spend logging. <strong>LiteMaaS</strong> is RHDP's platform built on top of LiteLLM — it adds a web portal, subscription management, per-user API key provisioning, branding, and OIDC authentication. Think of LiteLLM as the engine and LiteMaaS as the car.</p>
 
-    <h3>Two Clusters — Two Access Patterns</h3>
-    <p>RHDP MaaS now spans two clusters with different access models:</p>
+    <h3>Two Clusters — Same Access Pattern</h3>
+    <p>RHDP MaaS now spans two clusters, but users access all models the same way — through the single LiteMaaS portal and LiteLLM proxy. The Gaudi cluster models are registered in LiteLLM exactly like AWS models. No different endpoint, no different key.</p>
     <table>
       <tr><th></th><th>AWS Cluster (Primary)</th><th>Intel Gaudi Cluster (Rackspace DFW3)</th></tr>
       <tr><td>Cluster</td><td><code>maas.redhatworkshops.io</code></td><td><code>maas00.rs-dfw3.infra.demo.redhat.com</code></td></tr>
-      <tr><td>Access</td><td>Via LiteMaaS portal + LiteLLM proxy</td><td>Direct KServe route (no proxy)</td></tr>
-      <tr><td>Auth</td><td><code>sk-...</code> virtual key from LiteMaaS</td><td>API key — contact Ashok</td></tr>
+      <tr><td>Access</td><td>Via LiteMaaS portal + LiteLLM proxy</td><td>Via same LiteMaaS portal + LiteLLM proxy</td></tr>
+      <tr><td>Auth</td><td><code>sk-...</code> virtual key from LiteMaaS</td><td>Same <code>sk-...</code> virtual key</td></tr>
       <tr><td>Hardware</td><td>NVIDIA L40S / L4 / T4 (AWS GPU nodes)</td><td>8× Intel Gaudi 3 (Dell XE9680)</td></tr>
     </table>
 
@@ -95,7 +95,7 @@
 graph LR
     U["👤 Users"]
 
-    subgraph LM["LiteMaaS Platform — AWS"]
+    subgraph LM["LiteMaaS Platform"]
         UI["🖥 Web UI\nmodel catalog · API keys\nusage · settings"]
         API["⚙️ Backend API\nsubscriptions · auth\nanalytics · admin"]
         PROXY["🔀 LiteLLM Proxy\nroutes requests\nenforces quotas\nlogs spend"]
@@ -107,18 +107,17 @@ graph LR
         M3["📄 Document Conversion"]
     end
 
-    subgraph GAUDI["KServe Direct — Intel Gaudi (Rackspace)"]
+    subgraph GAUDI["OpenShift AI — KServe (Intel Gaudi · Rackspace)"]
         G1["💬 deepseek-r1-distill-qwen-14b"]
         G2["💬 qwen3-14b"]
     end
 
     U -->|browse & manage| UI
     U -->|"inference calls\nsk-... key"| PROXY
-    U -->|"direct KServe route\nno proxy"| G1
-    U -->|"direct KServe route\nno proxy"| G2
     UI <-->|API| API
     API <--> PROXY
     PROXY --> M1 & M2 & M3
+    PROXY --> G1 & G2
 
     style LM fill:#fff8f8,stroke:#cc0000,stroke-width:2px
     style OAI fill:#e3f2fd,stroke:#0066cc,stroke-width:2px

@@ -102,7 +102,7 @@
       <tr><td>Grafana</td><td><a href="https://grafana-route-llm-hosting.apps.maas00.rs-dfw3.infra.demo.redhat.com" target="_blank">grafana-route-llm-hosting.apps.maas00.rs-dfw3.infra.demo.redhat.com</a></td></tr>
     </table>
     <div class="callout">
-      <strong>No LiteMaaS on Gaudi cluster:</strong> The Intel Gaudi cluster exposes KServe InferenceService endpoints directly — there is no LiteLLM proxy layer. Access models via their KServe routes directly using OpenAI-compatible endpoints.
+      <strong>Same access for all clusters:</strong> Models on the Intel Gaudi cluster are registered in the same LiteMaaS/LiteLLM instance as AWS models. Users access them via the same portal, same endpoint, and same <code>sk-...</code> virtual key — no difference in how you connect.
     </div>
   </div>
 
