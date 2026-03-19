@@ -519,11 +519,11 @@ embeddings = OpenAIEmbeddings(
 
   <!-- Intel Gaudi Cluster Models -->
   <div class="section">
-    <h2>Intel Gaudi 3 Cluster — Direct KServe Endpoints</h2>
+    <h2>Intel Gaudi 3 Cluster — Via LiteMaaS Proxy</h2>
     <p>The Rackspace DFW3 cluster (<code>maas00.rs-dfw3.infra.demo.redhat.com</code>) runs models on 8× Intel Gaudi 3 accelerators via KServe directly — no LiteMaaS proxy. Endpoints are OpenAI-compatible. For access credentials, contact Ashok.</p>
 
     <div class="callout" style="border-color: #0071c5; background: #e6f2ff; color: #003d80;">
-      <strong>Direct KServe access:</strong> These endpoints do not go through LiteMaaS/LiteLLM. Use the KServe route URL directly with your API key.
+      <strong>Access:</strong> These models are registered in LiteMaaS and accessed via the same portal and <code>sk-...</code> virtual key as all other models. The LiteLLM proxy routes requests to the Gaudi cluster backend.
     </div>
 
     <!-- DeepSeek R1 Distill Qwen 14B -->
@@ -539,10 +539,10 @@ embeddings = OpenAIEmbeddings(
         <div class="model-meta-item"><strong>Parameters</strong>14B</div>
         <div class="model-meta-item"><strong>Runtime</strong>vLLM on Gaudi 3</div>
         <div class="model-meta-item"><strong>Cluster</strong>maas00.rs-dfw3</div>
-        <div class="model-meta-item"><strong>KServe route</strong>deepseek-r1-distill-qwen-14b-llm-hosting.apps.maas00.rs-dfw3.infra.demo.redhat.com</div>
+        <div class="model-meta-item"><strong>Backend</strong>deepseek-r1-distill-qwen-14b-llm-hosting.apps.maas00.rs-dfw3.infra.demo.redhat.com</div>
       </div>
       <pre><span class="comment"># Chat completion via KServe direct endpoint</span>
-curl https://deepseek-r1-distill-qwen-14b-llm-hosting.apps.maas00.rs-dfw3.infra.demo.redhat.com/v1/chat/completions \
+curl https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -564,10 +564,10 @@ curl https://deepseek-r1-distill-qwen-14b-llm-hosting.apps.maas00.rs-dfw3.infra.
         <div class="model-meta-item"><strong>Parameters</strong>14B</div>
         <div class="model-meta-item"><strong>Runtime</strong>vLLM on Gaudi 3</div>
         <div class="model-meta-item"><strong>Cluster</strong>maas00.rs-dfw3</div>
-        <div class="model-meta-item"><strong>KServe route</strong>qwen3-14b-llm-hosting.apps.maas00.rs-dfw3.infra.demo.redhat.com</div>
+        <div class="model-meta-item"><strong>Backend</strong>qwen3-14b-llm-hosting.apps.maas00.rs-dfw3.infra.demo.redhat.com</div>
       </div>
       <pre><span class="comment"># Chat completion via KServe direct endpoint</span>
-curl https://qwen3-14b-llm-hosting.apps.maas00.rs-dfw3.infra.demo.redhat.com/v1/chat/completions \
+curl https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
