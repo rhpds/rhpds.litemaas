@@ -46,7 +46,7 @@
 
 <header>
   <h1>RHDP MaaS — Infrastructure & Hardware</h1>
-  <p>GPU nodes, model deployment on OpenShift AI, and KServe InferenceService configuration</p>
+  <p>Multi-cluster deployment on AWS (NVIDIA GPU) and on-prem bare metal (Intel Gaudi 3)</p>
 </header>
 
 <nav>
@@ -70,10 +70,12 @@
     <a href="index.html">Home</a> <span>/</span> Infrastructure & Hardware
   </div>
 
-  <!-- CLUSTER -->
+  <!-- CLUSTER OVERVIEW -->
   <div class="card">
     <h2>Cluster Overview</h2>
-    <p>RHDP MaaS runs on a dedicated OpenShift cluster on AWS us-west-2. The cluster has two types of GPU nodes running different NVIDIA GPU generations, chosen based on model size and VRAM requirements.</p>
+    <p>RHDP MaaS runs across two clusters — a primary AWS cluster for NVIDIA GPU workloads and an on-prem Intel Gaudi 3 cluster for bare-metal AI acceleration.</p>
+
+    <h3>AWS Cluster — Primary (NVIDIA GPU)</h3>
     <table>
       <tr><th>Attribute</th><th>Value</th></tr>
       <tr><td>Cluster</td><td><code>maas.redhatworkshops.io</code></td></tr>
@@ -81,13 +83,33 @@
       <tr><td>OpenShift version</td><td>4.17 (Kubernetes 1.31)</td></tr>
       <tr><td>GPU namespace</td><td><code>llm-hosting</code> — all model servers run here</td></tr>
       <tr><td>Management namespace</td><td><code>litellm-rhpds</code> — LiteMaaS platform runs here</td></tr>
+      <tr><td>Grafana</td><td><a href="https://grafana-route-llm-hosting.apps.maas.redhatworkshops.io" target="_blank">grafana-route-llm-hosting.apps.maas.redhatworkshops.io</a></td></tr>
     </table>
+
+    <h3>Intel Gaudi Cluster — Rackspace Bare Metal</h3>
+    <table>
+      <tr><th>Attribute</th><th>Value</th></tr>
+      <tr><td>Cluster</td><td><code>maas00.rs-dfw3.infra.demo.redhat.com</code></td></tr>
+      <tr><td>Location</td><td>Rackspace DFW3 data center (bare metal)</td></tr>
+      <tr><td>Topology</td><td>Single Node OpenShift (SNO)</td></tr>
+      <tr><td>Server</td><td>Dell PowerEdge XE9680</td></tr>
+      <tr><td>AI accelerator</td><td>8× Intel Gaudi 3 (device ID 1060)</td></tr>
+      <tr><td>CPU</td><td>256 cores</td></tr>
+      <tr><td>RAM</td><td>~2 TB</td></tr>
+      <tr><td>Driver version</td><td>Habana Labs 1.22.1</td></tr>
+      <tr><td>Firmware</td><td>hl-gaudi3-1.22.0-fw-61.3.2</td></tr>
+      <tr><td>GPU namespace</td><td><code>llm-hosting</code></td></tr>
+      <tr><td>Grafana</td><td><a href="https://grafana-route-llm-hosting.apps.maas00.rs-dfw3.infra.demo.redhat.com" target="_blank">grafana-route-llm-hosting.apps.maas00.rs-dfw3.infra.demo.redhat.com</a></td></tr>
+    </table>
+    <div class="callout">
+      <strong>No LiteMaaS on Gaudi cluster:</strong> The Intel Gaudi cluster exposes KServe InferenceService endpoints directly — there is no LiteLLM proxy layer. Access models via their KServe routes directly using OpenAI-compatible endpoints.
+    </div>
   </div>
 
-  <!-- GPU NODES -->
+  <!-- AWS GPU NODES -->
   <div class="card">
-    <h2>GPU Nodes</h2>
-    <p>The cluster has 9 GPU worker nodes across three AWS instance types, providing a mix of GPU VRAM capacities. All nodes have the label <code>node-role.kubernetes.io/worker-gpu</code>.</p>
+    <h2>AWS — GPU Nodes</h2>
+    <p>The AWS cluster has 9 GPU worker nodes across three AWS instance types, providing a mix of GPU VRAM capacities. All nodes have the label <code>node-role.kubernetes.io/worker-gpu</code>.</p>
 
     <h3>Instance Types in Use</h3>
 
@@ -127,6 +149,54 @@
       <tr><td>NVIDIA L4</td><td>24 GB GDDR6</td><td>Ada Lovelace</td><td>121</td><td>Mid-size models, efficient inference</td></tr>
       <tr><td>NVIDIA T4</td><td>16 GB GDDR6</td><td>Turing</td><td>65</td><td>Compact models, CPU-offload capable</td></tr>
     </table>
+  </div>
+
+  <!-- GAUDI HARDWARE -->
+  <div class="card">
+    <h2>Intel Gaudi 3 — Hardware Details</h2>
+    <p>The Rackspace cluster is a single Dell PowerEdge XE9680 server with 8 Intel Gaudi 3 AI accelerators managed by the Habana AI Operator on OpenShift.</p>
+    <div class="callout warn">
+      <strong>Credentials:</strong> Contact Ashok for access credentials to the Intel Gaudi cluster.
+    </div>
+
+    <div class="gpu-card" style="border-left-color: #0071c5;">
+      <div>
+        <div class="gpu-name" style="color:#0071c5;">Intel Gaudi 3</div>
+        <div class="gpu-spec">8 accelerators · 96 GB HBM2e each (768 GB total) · 8× 21 TFLOPS BF16 · NIC integrated on-chip · 900 GB/s HBM bandwidth</div>
+      </div>
+      <span class="tag tag-blue">On-prem SNO</span>
+    </div>
+
+    <h3>Hardware Comparison</h3>
+    <table>
+      <tr><th>Attribute</th><th>Intel Gaudi 3</th><th>NVIDIA L40S (AWS)</th></tr>
+      <tr><td>VRAM per card</td><td>96 GB HBM2e</td><td>48 GB GDDR6</td></tr>
+      <tr><td>Cards in server</td><td>8</td><td>up to 4 (g6e.12xlarge)</td></tr>
+      <tr><td>Total VRAM</td><td>768 GB</td><td>192 GB</td></tr>
+      <tr><td>BF16 performance</td><td>~1,835 TFLOPS (8 cards)</td><td>~1,448 TFLOPS (4 cards)</td></tr>
+      <tr><td>Inference runtime</td><td>vLLM on Gaudi / TGI-Gaudi</td><td>vLLM</td></tr>
+      <tr><td>Operator</td><td>Habana AI Operator</td><td>NVIDIA GPU Operator</td></tr>
+    </table>
+
+    <h3>Gaudi-Specific Serving Runtimes</h3>
+    <table>
+      <tr><th>Runtime</th><th>Type</th><th>Used for</th></tr>
+      <tr><td><code>vllm-gaudi-runtime</code></td><td>vLLM on Gaudi</td><td>Base runtime for Gaudi vLLM deployments</td></tr>
+      <tr><td><code>llama-4-scout-tgi-gaudi</code></td><td>TGI on Gaudi</td><td>Llama 4 Scout via HuggingFace TGI</td></tr>
+      <tr><td><code>gpt-oss-20b-tgi-gaudi</code></td><td>TGI on Gaudi</td><td>GPT-OSS 20B via HuggingFace TGI</td></tr>
+    </table>
+
+    <h3>Gaudi Model Placement</h3>
+    <table>
+      <tr><th>Model</th><th>Runtime</th><th>Gaudi cards</th><th>Status</th></tr>
+      <tr><td><code>deepseek-r1-distill-qwen-14b</code></td><td>vLLM on Gaudi</td><td>TBD</td><td><span class="tag tag-green">Ready</span></td></tr>
+      <tr><td><code>qwen3-14b</code></td><td>vLLM on Gaudi</td><td>TBD</td><td><span class="tag tag-green">Ready</span></td></tr>
+    </table>
+
+    <div class="callout">
+      <strong>Check live allocation:</strong>
+      <pre style="margin:0.4rem 0 0">oc get inferenceservice -n llm-hosting --context=gaudi</pre>
+    </div>
   </div>
 
   <!-- MODEL PLACEMENT -->
@@ -361,7 +431,7 @@ oc scale deployment llama-scout-17b-predictor -n llm-hosting --replicas=3</pre>
 
 <footer>
   RHDP Platform Team &nbsp;·&nbsp; <a href="https://github.com/rhpds/rhpds.litemaas" style="color:#aaa">github.com/rhpds/rhpds.litemaas</a>
-  <span class="footer-updated">Last updated: 2026-03-13</span>
+  <span class="footer-updated">Last updated: 2026-03-19</span>
 </footer>
 
 <button id="back-to-top" title="Back to top" aria-label="Back to top">&#8679;</button>
