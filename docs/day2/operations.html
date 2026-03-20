@@ -389,10 +389,47 @@ for m in json.load(sys.stdin).get('data', []):
   python3 -c "import sys,json; [print(m['id']) for m in json.load(sys.stdin)['data']]"</pre>
 
     <p>
-      By default LiteLLM uses <strong>round-robin</strong> routing. To change the strategy (e.g. least-busy, lowest-latency),
-      set <code>routing_strategy</code> in the LiteLLM config. See the
+      By default LiteLLM uses <strong>simple-shuffle</strong> (random) routing. Other strategies available: <code>least-busy</code>, <code>latency-based-routing</code>, <code>usage-based-routing-v2</code>.
+      Change via Admin UI → Router Settings or the API. See the
       <a href="https://docs.litellm.ai/docs/routing" target="_blank" rel="noopener">LiteLLM Router docs</a> for options.
     </p>
+
+    <h3>View live load balancer state for a model</h3>
+    <p>Use <code>?model=</code> to scope the health check to a specific model group and see which backends are currently active or in cooldown:</p>
+    <pre><span class="comment"># Live in-memory state — healthy = serving traffic, unhealthy = in cooldown</span>
+curl -sk "https://&lt;LITELLM_URL&gt;/health?model=qwen3-14b" \
+  -H "Authorization: Bearer $MASTER_KEY" | python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+for ep in d.get('healthy_endpoints', []):
+    if isinstance(ep, dict):
+        print('✓ HEALTHY:', ep.get('api_base','?'))
+for ep in d.get('unhealthy_endpoints', []):
+    if isinstance(ep, dict):
+        print('✗ UNHEALTHY (cooldown):', ep.get('api_base','?'))
+"</pre>
+    <p>Run this during events to verify both backends are active. A backend enters cooldown after <code>allowed_fails</code> consecutive failures (default: 3) and recovers after <code>cooldown_time</code> seconds (default: 5s).</p>
+
+    <h3>Test that requests distribute across backends</h3>
+    <p>The <code>x-litellm-model-id</code> response header identifies which backend served each request — useful for confirming the router is distributing load:</p>
+    <pre><span class="comment"># Send 10 requests and count how many hit each backend
+# Replace the IDs with your actual model IDs from /model/info</span>
+for i in $(seq 1 10); do
+  curl -sk -X POST "https://&lt;LITELLM_URL&gt;/v1/chat/completions" \
+    -H "Authorization: Bearer $MASTER_KEY" \
+    -H "Content-Type: application/json" \
+    -d '{"model":"qwen3-14b","messages":[{"role":"user","content":"hi"}],"max_tokens":1}' \
+    -D - -o /dev/null | grep -i "x-litellm-model-id"
+done | sort | uniq -c</pre>
+
+    <h3>View full router settings</h3>
+    <pre>curl -sk "https://&lt;LITELLM_URL&gt;/router/settings" \
+  -H "Authorization: Bearer $MASTER_KEY" | python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+for f in d.get('fields', []):
+    print(f'{f[\"field_name\"]}: {f[\"field_value\"]}')
+"</pre>
   </div>
 
   <!-- AUTO_SYNC -->
