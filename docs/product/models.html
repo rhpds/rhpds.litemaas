@@ -577,6 +577,43 @@ curl https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions \
     </div>
   </div>
 
+    <!-- GPT OSS 120B -->
+    <div class="model-card">
+      <div class="model-card-header">
+          <h3>GPT OSS 120B <span class="badge badge-blue">Chat</span></h3>
+          <p style="color:#555; font-size:0.85rem; margin-top:0.3rem;">Large open-source 120B parameter model for complex generation and reasoning tasks.</p>
+      </div>
+      <div class="model-meta">
+        <div class="model-meta-item"><strong>Model ID</strong>gpt-oss-120b</div>
+        <div class="model-meta-item"><strong>Backend</strong>IBM WatsonX (us-south.ml.cloud.ibm.com)</div>
+        <div class="model-meta-item"><strong>Context</strong>—</div>
+      </div>
+      <pre><span class="comment"># Chat completion</span>
+curl https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"model": "gpt-oss-120b", "messages": [{"role": "user", "content": "Summarise this document."}]}'</pre>
+    </div>
+
+    <!-- Microsoft Phi-4 -->
+    <div class="model-card">
+      <div class="model-card-header">
+          <h3>Microsoft Phi-4 <span class="badge badge-blue">Chat</span></h3>
+          <p style="color:#555; font-size:0.85rem; margin-top:0.3rem;">Compact but high-quality model with strong reasoning and coding capabilities. Efficient for its size.</p>
+      </div>
+      <div class="model-meta">
+        <div class="model-meta-item"><strong>Model ID</strong>microsoft-phi-4</div>
+        <div class="model-meta-item"><strong>Backend</strong>microsoft-phi-4-llm-hosting.apps.smc00.rs-dfw3.infra.demo.redhat.com</div>
+        <div class="model-meta-item"><strong>Context</strong>16K</div>
+      </div>
+      <pre><span class="comment"># Chat completion</span>
+curl https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"model": "microsoft-phi-4", "messages": [{"role": "user", "content": "Write a Python function to sort a list."}]}'</pre>
+    </div>
+  </div>
+
   <!-- Available Models API -->
   <div class="section">
     <h2>Listing Available Models via API</h2>
