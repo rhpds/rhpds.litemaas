@@ -7,6 +7,7 @@
   <meta name="description" content="RHDP LiteMaaS day-2 operations — upgrading images, scaling replicas, adding models, key cleanup cronjob, LITELLM_AUTO_SYNC, DB sync, and admin management.">
   <link rel="canonical" href="https://rhpds.github.io/rhpds.litemaas/docs/day2/operations.html">
   <link rel="stylesheet" href="../assets/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Red Hat Text', 'Segoe UI', sans-serif; background: #f5f5f5; color: #151515; line-height: 1.6; }
@@ -53,6 +54,7 @@
     .toc a { color: #cc0000; text-decoration: none; font-size: 0.88rem; }
     .toc a:hover { text-decoration: underline; }
     footer { background: #151515; color: #aaa; text-align: center; padding: 1.5rem; font-size: 0.85rem; margin-top: 3rem; }
+    .mermaid { margin: 1.5rem 0; background: #f9f9f9; border-radius: 8px; padding: 1rem; cursor: zoom-in; }
   </style>
 </head>
 <body>
@@ -355,6 +357,25 @@ oc exec -n litellm-rhpds litellm-postgres-0 -- \
       Users see one model; LiteLLM round-robins requests across all registered backends.
     </p>
     <p>This is useful when the same model is hosted on two GPU servers and you want to distribute traffic without any disruption to existing users.</p>
+
+    <p>Click the diagram to expand.</p>
+    <div class="mermaid">
+graph LR
+    U[User Request] --> R[LiteLLM Router<br/>model: qwen3-14b]
+    R -->|primary path| A[maas00<br/>qwen3-14b]
+    R -->|primary path| B[smc00<br/>qwen3-14b]
+
+    subgraph fallback [Fallback Alternative]
+      R2[LiteLLM Router<br/>model: qwen3-14b] -->|backend down| FB[Fallback Model<br/>e.g. qwen3-7b]
+    end
+
+    style A fill:#d4edda,stroke:#28a745
+    style B fill:#d4edda,stroke:#28a745
+    style FB fill:#fff3cd,stroke:#f0a500
+    style R fill:#e8f4fd,stroke:#0066cc
+    style R2 fill:#e8f4fd,stroke:#0066cc
+    </div>
+
 
     <h3>Add a second backend for an existing model (zero disruption)</h3>
     <pre><span class="comment"># The existing model keeps running. Adding a second entry with the same model_name
@@ -853,6 +874,30 @@ ORDER BY 1 DESC;"</pre>
     a.className = 'anchor-link'; a.href = '#' + h.id; a.textContent = '#'; a.setAttribute('aria-label', 'Link to section');
     h.appendChild(a);
   });
+  // Diagram click to expand
+  document.addEventListener('click', function(e) {
+    var diagram = e.target.closest('.mermaid');
+    if (diagram && !e.target.closest('#diagramModal')) {
+      var modal = document.getElementById('diagramModal');
+      var inner = document.getElementById('diagramModalInner');
+      inner.innerHTML = diagram.innerHTML;
+      modal.classList.add('open');
+    }
+  });
+  function closeModal() {
+    document.getElementById('diagramModal').classList.remove('open');
+  }
+  document.getElementById('diagramModal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+  });
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeModal();
+  });
+  mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
 </script>
+<div class="diagram-modal" id="diagramModal">
+  <button class="diagram-modal-close" onclick="closeModal()">&#x2715;</button>
+  <div class="diagram-modal-inner" id="diagramModalInner"></div>
+</div>
 </body>
 </html>
