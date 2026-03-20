@@ -285,13 +285,13 @@ oc rollout restart deployment/litellm-backend -n litellm-rhpds</pre>
     <p>Click the diagram to expand.</p>
     <div class="mermaid">
 graph TD
-    A[LiteLLM Proxy\nLiteLLM_ProxyModelTable] -->|LITELLM_AUTO_SYNC| B[LiteMaaS Backend\nmodels table]
-    B --> C[User Portal\nModel Catalog]
+    A[LiteLLM Proxy<br/>LiteLLM_ProxyModelTable] -->|LITELLM_AUTO_SYNC| B[LiteMaaS Backend<br/>models table]
+    B --> C[User Portal - Model Catalog]
     
-    D[Manual: /model/new API\nor Admin UI] --> A
+    D[Add via UI or API] --> A
     
     subgraph sync [When out of sync]
-      E[Model in LiteLLM\nbut NOT in LiteMaaS] -->|subscription foreign key error| F[User can\'t subscribe]
+      E[Model in LiteLLM only] -->|subscription foreign key error| F[User cannot subscribe]
     end
     
     style A fill:#e8f4fd,stroke:#0066cc
