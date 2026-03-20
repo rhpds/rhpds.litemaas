@@ -68,3 +68,26 @@ Key variables: ocp4_workload_litemaas_namespace, ocp4_workload_litemaas_oauth_en
 - admin — Full platform control (assigned via promote-admin.sh or psql)
 - adminReadonly — Read-only access to all admin views
 - user — Browse models, subscribe, manage own API keys (auto-assigned on first OAuth login)
+
+## Load Balancing
+
+LiteLLM has a built-in router that activates automatically when two or more model entries share the same `model_name`. No explicit router configuration is required — registering a second backend with the same name is all it takes. Users continue to call the same model name and see no change.
+
+**How it works:** Registering the same `model_name` twice creates an automatic load-balanced group. The router distributes requests across all backends in the group using the configured strategy (default: `simple-shuffle`, i.e. random selection).
+
+**Health check — live backend state:**
+```
+GET /health?model=<model_name>
+```
+Scoped to a specific model group. Returns `healthy_endpoints` (currently serving traffic) and `unhealthy_endpoints` (in cooldown after failures). A backend enters cooldown after `allowed_fails` consecutive failures (default: 3) and recovers after `cooldown_time` seconds (default: 5s). Useful for verifying both backends are active during events.
+
+**Router settings:**
+```
+GET /router/settings
+```
+Returns current routing strategy and all tunable parameters. Key fields: `routing_strategy` (default: `simple-shuffle`; alternatives: `least-busy`, `latency-based-routing`, `usage-based-routing-v2`), `cooldown_time`, `allowed_fails`. Settings can be changed via Admin UI → Router Settings or the LiteLLM API.
+
+**Identifying which backend served a request:**
+Every response includes the `x-litellm-model-id` response header, which contains the internal ID of the specific backend that served the request. Useful for confirming the router is distributing load across both backends.
+
+Reference: https://rhpds.github.io/rhpds.litemaas/docs/day2/operations.html#load-balancing
