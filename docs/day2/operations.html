@@ -256,15 +256,15 @@ oc scale deployment/litellm-frontend --replicas=3 -n litellm-rhpds</pre>
     <p>Click the diagram to expand.</p>
     <div class="mermaid">
 graph LR
-    A[AgnosticD provisions lab] -->|creates| B[Virtual Key\nsk-... in LiteLLM]
-    B -->|linked to| C[LiteMaaS API Key\nin backend DB]
+    A[AgnosticD provisions lab] -->|creates| B[Virtual Key sk-...]
+    B -->|linked to| C[LiteMaaS API Key]
     C -->|user uses key| D[API calls]
     
-    E[Lab destroyed] -->|triggers| F[ocp4_workload_litellm_virtual_keys\nACTION=destroy]
+    E[Lab destroyed] -->|triggers| F[ocp4_workload_litellm_virtual_keys<br/>ACTION=destroy]
     F -->|deletes| B
     F -->|deletes| C
     
-    G[Cleanup Cronjob\nnightly] -->|finds orphaned keys| H[Keys in LiteMaaS\nbut not in LiteLLM]
+    G[Nightly Cleanup Cronjob] -->|finds orphaned keys| H[Orphaned Keys]
     G -->|deletes| H
     
     style A fill:#d4edda,stroke:#28a745
