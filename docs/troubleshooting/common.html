@@ -126,20 +126,10 @@
       are stored in LiteLLM's internal <code>LiteLLM_ModelTable</code> only. The two databases must be explicitly synced.
     </div>
 
-    <h3 class="fix-label">Fix — Run the Sync Playbook</h3>
-    <pre><span class="comment"># Get credentials</span>
-NS=litellm-rhpds
-LITELLM_URL=$(oc get route litellm-prod -n $NS -o jsonpath='https://{.spec.host}')
-LITELLM_KEY=$(oc get secret litellm-secret -n $NS \
-  -o jsonpath='{.data.LITELLM_MASTER_KEY}' | base64 -d)
-
-<span class="comment"># Run the model sync playbook</span>
-ansible-playbook playbooks/manage_models.yml \
-  -e litellm_url="${LITELLM_URL}" \
-  -e litellm_master_key="${LITELLM_KEY}" \
-  -e ocp4_workload_litemaas_models_namespace="${NS}" \
-  -e ocp4_workload_litemaas_models_sync_from_litellm=true \
-  -e '{"ocp4_workload_litemaas_models_list": []}'</pre>
+    <h3 class="fix-label">Fix — Trigger sync via Admin UI or API</h3>
+    <p>Go to <strong>LiteMaaS Frontend → Admin → Models</strong> and verify the model appears. If missing, add it via the UI or use the API:</p>
+    <pre>export ADMIN_KEY=sk-1234567890abcdef1234 && export LITELLM_URL=https://litellm-prod.apps.maas.redhatworkshops.io</pre>
+    <pre>curl -sk -X POST "$LITELLM_URL/model/new" -H "Authorization: Bearer $ADMIN_KEY" -H "Content-Type: application/json" -d '{"model_name":"my-model","litellm_params":{"model":"openai/my-model","api_base":"http://my-model-predictor.llm-hosting.svc.cluster.local/v1","custom_llm_provider":"openai"}}'</pre>
 
     <h3 class="fix-label">Fix — Via Admin API Sync Endpoint</h3>
     <pre><span class="comment"># If the backend exposes a sync endpoint:</span>
@@ -201,14 +191,8 @@ curl -s "https://$ROUTE/model/info" \
   -H "Authorization: Bearer $LITELLM_KEY" | \
   jq ".data[] | select(.model_name == \"${MODEL_ID}\")"</pre>
 
-    <h3 class="fix-label">Fix — Sync Model to LiteMaaS DB</h3>
-    <pre><span class="comment"># Option 1: Run sync playbook (syncs ALL models)</span>
-ansible-playbook playbooks/manage_models.yml \
-  -e litellm_url="https://$ROUTE" \
-  -e litellm_master_key="${LITELLM_KEY}" \
-  -e ocp4_workload_litemaas_models_namespace="${NS}" \
-  -e ocp4_workload_litemaas_models_sync_from_litellm=true \
-  -e '{"ocp4_workload_litemaas_models_list": []}'
+    <h3 class="fix-label">Fix — Add model via Admin UI or API</h3>
+    <p>Go to <strong>LiteMaaS Frontend → Admin → Models → Add Model</strong>, or use the API:</p>
 
 <span class="comment"># Option 2: Insert directly (for emergency fix)</span>
 oc exec -n $NS litellm-postgres-0 -- \
@@ -762,18 +746,8 @@ oc rollout status deployment/litellm -n litellm-rhpds</pre>
     </div>
 
     <h3 class="fix-label">After fixing — re-register models</h3>
-    <pre><span class="comment"># Models need to be re-added via GitOps or the Ansible role</span>
-<span class="comment"># The model-serving ArgoCD app will re-create InferenceServices,</span>
-<span class="comment"># but LiteLLM model registrations must be re-added:</span>
-
-<span class="comment"># Option 1: Re-run the Ansible models role</span>
-ansible-playbook playbooks/manage_models.yml \
-  -e litellm_url="https://litellm-prod.apps.maas.redhatworkshops.io" \
-  -e litellm_master_key="sk-..."
-
-<span class="comment"># Option 2: Trigger a model sync from LiteMaaS backend</span>
-<span class="comment"># (if models were already in LiteLLM_ProxyModelTable)</span>
-oc rollout restart deployment/litellm-backend -n litellm-rhpds</pre>
+    <p>The model-serving ArgoCD app will re-create InferenceServices, but LiteLLM model registrations must be re-added via the <strong>Admin UI → Models → Add Model</strong> or the API. Then restart the backend to trigger sync:</p>
+    <pre>oc rollout restart deployment/litellm-backend -n litellm-rhpds</pre>
   </div>
 
   <!-- Issue 12: GPU resource exhaustion -->
