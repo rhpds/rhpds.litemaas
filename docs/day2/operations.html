@@ -346,6 +346,55 @@ oc exec -n litellm-rhpds litellm-postgres-0 -- \
     </table>
   </div>
 
+  <!-- Load Balancing / Router -->
+  <div class="section" id="load-balancing">
+    <h2>Load Balancing Across Multiple Endpoints</h2>
+    <p>
+      LiteLLM automatically load balances when two or more models share the same <code>model_name</code>.
+      No explicit router configuration is needed — registering a second endpoint with the same name is all it takes.
+      Users see one model; LiteLLM round-robins requests across all registered backends.
+    </p>
+    <p>This is useful when the same model is hosted on two GPU servers and you want to distribute traffic without any disruption to existing users.</p>
+
+    <h3>Add a second backend for an existing model (zero disruption)</h3>
+    <pre><span class="comment"># The existing model keeps running. Adding a second entry with the same model_name
+# automatically creates a load-balanced group. Existing users are not affected.</span>
+MASTER_KEY=$(oc get secret litellm-secret -n litellm-rhpds \
+  -o jsonpath='{.data.LITELLM_MASTER_KEY}' | base64 -d)
+
+curl -sk -X POST "https://&lt;LITELLM_URL&gt;/model/new" \
+  -H "Authorization: Bearer $MASTER_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model_name": "qwen3-14b",
+    "litellm_params": {
+      "model": "openai/qwen3-14b",
+      "api_base": "https://qwen3-14b-llm-hosting.apps.server2.example.com/v1",
+      "custom_llm_provider": "openai"
+    }
+  }'</pre>
+
+    <h3>Verify both backends are registered</h3>
+    <pre>curl -sk "https://&lt;LITELLM_URL&gt;/model/info" \
+  -H "Authorization: Bearer $MASTER_KEY" | python3 -c "
+import sys, json
+for m in json.load(sys.stdin).get('data', []):
+    if m['model_name'] == 'qwen3-14b':
+        print(m['litellm_params'].get('api_base'))
+"</pre>
+
+    <h3>Verify users still see only one model</h3>
+    <pre>curl -sk "https://&lt;LITELLM_URL&gt;/v1/models" \
+  -H "Authorization: Bearer $MASTER_KEY" | \
+  python3 -c "import sys,json; [print(m['id']) for m in json.load(sys.stdin)['data']]"</pre>
+
+    <p>
+      By default LiteLLM uses <strong>round-robin</strong> routing. To change the strategy (e.g. least-busy, lowest-latency),
+      set <code>routing_strategy</code> in the LiteLLM config. See the
+      <a href="https://docs.litellm.ai/docs/routing" target="_blank" rel="noopener">LiteLLM Router docs</a> for options.
+    </p>
+  </div>
+
   <!-- AUTO_SYNC -->
   <div class="section" id="auto-sync">
     <h2>LITELLM_AUTO_SYNC</h2>
