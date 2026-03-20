@@ -136,87 +136,27 @@
 
   <div class="section" id="adding-models">
     <h2>Adding Models</h2>
-    <p>Models must be registered in <strong>two places</strong>: the LiteLLM proxy (which handles actual inference routing) and the LiteMaaS backend database (which powers the user-facing model catalog). Failing to sync both causes the "subscription foreign key violation" error.</p>
+    <p>Models must be registered in <strong>two places</strong>: the LiteLLM proxy (routing) and the LiteMaaS backend DB (user-facing catalog). Use either the Admin UI or the API — both sync automatically via <code>LITELLM_AUTO_SYNC</code>.</p>
 
-    <h3>Method 1: LiteLLM Admin UI + Manual Sync (Quick)</h3>
+    <h3>Option 1: Admin UI (recommended)</h3>
     <ol>
-      <li>Log in to the LiteLLM admin UI at the API route URL (e.g., <code>https://litellm-prod.apps.maas.redhatworkshops.io</code>)</li>
-      <li>Navigate to <strong>Models &rarr; Add Model</strong></li>
+      <li>Go to <a href="https://litellm-prod-frontend.apps.maas.redhatworkshops.io" target="_blank">LiteMaaS Frontend</a> → <strong>Admin → Models → Add Model</strong></li>
       <li>Fill in:
         <ul>
-          <li><strong>Provider:</strong> OpenAI-Compatible (for RHOAI KServe models)</li>
-          <li><strong>Model Name:</strong> e.g., <code>llama-3-1-70b-instruct</code></li>
-          <li><strong>API Base:</strong> Internal KServe service URL, e.g., <code>http://llama-3-1-70b-predictor.llm-hosting.svc.cluster.local/v1</code></li>
-          <li><strong>API Key:</strong> Service account token or <code>sk-placeholder</code> if no auth required</li>
+          <li><strong>Provider:</strong> OpenAI-Compatible</li>
+          <li><strong>Model Name:</strong> e.g. <code>my-new-model</code></li>
+          <li><strong>API Base:</strong> KServe internal URL — e.g. <code>http://my-model-predictor.llm-hosting.svc.cluster.local/v1</code></li>
+          <li><strong>API Key:</strong> Service account token, or leave blank if no auth required</li>
         </ul>
       </li>
       <li>Click <strong>Test Connect</strong>, then <strong>Add Model</strong></li>
-      <li>Run the sync playbook to push the model to LiteMaaS backend DB</li>
     </ol>
-    <pre><span class="comment"># After adding via UI, sync to LiteMaaS backend database</span>
-LITELLM_URL=$(oc get route litellm-prod -n litellm-rhpds \
-  -o jsonpath='https://{.spec.host}')
-LITELLM_KEY=$(oc get secret litellm-secret -n litellm-rhpds \
-  -o jsonpath='{.data.LITELLM_MASTER_KEY}' | base64 -d)
 
-ansible-playbook playbooks/manage_models.yml \
-  -e litellm_url="${LITELLM_URL}" \
-  -e litellm_master_key="${LITELLM_KEY}" \
-  -e ocp4_workload_litemaas_models_namespace=litellm-rhpds \
-  -e ocp4_workload_litemaas_models_sync_from_litellm=true \
-  -e '{"ocp4_workload_litemaas_models_list": []}'</pre>
+    <h3>Option 2: API</h3>
+    <pre>curl -sk -X POST "$LITELLM_URL/model/new" -H "Authorization: Bearer $ADMIN_KEY" -H "Content-Type: application/json" -d '{"model_name":"my-new-model","litellm_params":{"model":"openai/my-new-model","api_base":"http://my-model-predictor.llm-hosting.svc.cluster.local/v1","custom_llm_provider":"openai"}}'</pre>
 
-    <h3>Method 2: Ansible Playbook (Full)</h3>
-    <pre><span class="comment"># Create a model config file</span>
-cat > new-model.yml &lt;&lt;'EOF'
-litellm_url: "https://litellm-prod.apps.maas.redhatworkshops.io"
-litellm_master_key: "sk-xxxxx"
-ocp4_workload_litemaas_models_namespace: "litellm-rhpds"
-ocp4_workload_litemaas_models_backend_enabled: true
-ocp4_workload_litemaas_models_list:
-  - model_name: "llama-3-1-70b-instruct"
-    litellm_model: "openai/llama-3-1-70b-instruct"
-    api_base: "http://llama-3-1-70b-predictor.llm-hosting.svc.cluster.local/v1"
-    api_key: "sk-placeholder"
-    display_name: "Llama 3.1 70B Instruct"
-    description: "Meta Llama 3.1 70B instruction-tuned model"
-    provider: "openshift-ai"
-    category: "chat"
-    context_length: 131072
-    rpm: 30
-    tpm: 500000
-EOF
-
-ansible-playbook playbooks/manage_models.yml -e @new-model.yml</pre>
-
-    <h3>Verify Model Registration</h3>
-    <pre><span class="comment"># Check LiteLLM has the model</span>
-curl -X GET "${LITELLM_URL}/model/info" \
-  -H "Authorization: Bearer ${LITELLM_KEY}" | \
-  jq '.data[] | select(.model_name == "llama-3-1-70b-instruct") | .model_name'
-
-<span class="comment"># Check LiteMaaS backend DB has the model</span>
-oc exec -n litellm-rhpds litellm-postgres-0 -- \
-  psql -U litellm -d litellm -c \
-  "SELECT id, name, provider, availability FROM models WHERE id = 'llama-3-1-70b-instruct';"</pre>
-
-    <h3>Model Parameters Reference</h3>
-    <table>
-      <thead><tr><th>Parameter</th><th>Required</th><th>Default</th><th>Description</th></tr></thead>
-      <tbody>
-        <tr><td><code>model_name</code></td><td>Yes</td><td>—</td><td>Unique identifier passed to LiteLLM and used as model ID</td></tr>
-        <tr><td><code>litellm_model</code></td><td>Yes</td><td>—</td><td>LiteLLM model format: <code>openai/model-id</code> for OpenAI-compatible endpoints</td></tr>
-        <tr><td><code>api_base</code></td><td>Yes</td><td>—</td><td>Inference endpoint URL. Use internal ClusterIP for KServe models.</td></tr>
-        <tr><td><code>api_key</code></td><td>Yes</td><td>—</td><td>Auth token. Use <code>sk-placeholder</code> if the endpoint requires no auth.</td></tr>
-        <tr><td><code>display_name</code></td><td>No</td><td>model_name</td><td>Human-readable name shown in LiteMaaS UI</td></tr>
-        <tr><td><code>provider</code></td><td>No</td><td>openshift-ai</td><td>Provider label (informational)</td></tr>
-        <tr><td><code>category</code></td><td>No</td><td>general</td><td>Type: <code>chat</code>, <code>code</code>, <code>general</code>, <code>embeddings</code></td></tr>
-        <tr><td><code>context_length</code></td><td>No</td><td>null</td><td>Context window in tokens (display only)</td></tr>
-        <tr><td><code>rpm</code></td><td>No</td><td>null</td><td>Requests per minute limit enforced by LiteLLM</td></tr>
-        <tr><td><code>tpm</code></td><td>No</td><td>null</td><td>Tokens per minute limit enforced by LiteLLM</td></tr>
-        <tr><td><code>supports_streaming</code></td><td>No</td><td>true</td><td>Enable streaming responses</td></tr>
-      </tbody>
-    </table>
+    <h3>Verify the model is visible to users</h3>
+    <pre>curl -sk "$LITELLM_URL/v1/models" -H "Authorization: Bearer $ADMIN_KEY" | python3 -c "import sys,json; [print(m['id']) for m in json.load(sys.stdin)['data']]"</pre>
   </div>
 
   <!-- Load Balancing / Router -->
