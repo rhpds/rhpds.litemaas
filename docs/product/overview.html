@@ -329,7 +329,7 @@ graph LR
     P -->|2. Subscribe to models| P
     P -->|3. Create virtual key sk-...| L[LiteLLM Proxy]
     U -->|4. API call with sk-...| L
-    L -->|5. Validate key & route| M[Model Server\nKServe/vLLM]
+    L -->|5. Validate key & route| M[Model Server<br/>KServe/vLLM]
     M -->|6. Inference response| U
     L -->|Track spend| DB[(PostgreSQL)]
     
