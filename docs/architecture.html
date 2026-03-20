@@ -222,14 +222,14 @@ graph LR
   <!-- 5. KEY CREATION -->
   <div class="card" id="keys">
     <h2>5 — Per-Workshop Key Creation <a href="#keys" class="anchor-link" aria-label="Link to this section">#</a></h2>
-    <p>Runs automatically for every workshop participant. The <code>rhpds.litellm_virtual_keys</code> collection (v0.2.0) creates a scoped API key with models, budget, and rate limits defined in the AgnosticV catalog.</p>
+    <p>Runs automatically for every workshop participant. The <code>rhpds.litellm_virtual_keys</code> collection (v1.3.1) creates a scoped API key with models, budget, and rate limits defined in the AgnosticV catalog.</p>
     <div class="mermaid">
 graph LR
     USER["👤 Workshop Participant\norders lab from catalog"]
     AV["📋 AgnosticV\ndefines: models · budget\nduration · rate limits"]
     BAB["⚙️ Babylon"]
 
-    subgraph C2["rhpds.litellm_virtual_keys  v0.2.0"]
+    subgraph C2["rhpds.litellm_virtual_keys  v1.3.1"]
         K1["ocp4_workload_litellm_bastion_profile\n— configures bastion access"]
         K2["ocp4_workload_litellm_virtual_keys\n— validates models exist\n— creates sk-... key per user\n— sets budget + TPM/RPM limits\n— delivers key in lab credentials"]
     end
