@@ -249,80 +249,28 @@ graph LR
     </div>
 
 
-    <h3>Add a second backend for an existing model (zero disruption)</h3>
-    <pre><span class="comment"># The existing model keeps running. Adding a second entry with the same model_name
-# automatically creates a load-balanced group. Existing users are not affected.</span>
-MASTER_KEY=$(oc get secret litellm-secret -n litellm-rhpds \
-  -o jsonpath='{.data.LITELLM_MASTER_KEY}' | base64 -d)
+    <p>Set your admin key once, then use it for all commands below:</p>
+    <pre>export ADMIN_KEY=sk-8arPhbPZ6YwrCb24I71ChA
+export LITELLM_URL=https://litellm-prod.apps.maas.redhatworkshops.io</pre>
 
-curl -sk -X POST "https://&lt;LITELLM_URL&gt;/model/new" \
-  -H "Authorization: Bearer $MASTER_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model_name": "qwen3-14b",
-    "litellm_params": {
-      "model": "openai/qwen3-14b",
-      "api_base": "https://qwen3-14b-llm-hosting.apps.server2.example.com/v1",
-      "custom_llm_provider": "openai"
-    }
-  }'</pre>
+    <h3>Add a second backend (zero disruption)</h3>
+    <p>Same <code>model_name</code>, different <code>api_base</code> — load balancing activates automatically:</p>
+    <pre>curl -sk -X POST "$LITELLM_URL/model/new" -H "Authorization: Bearer $ADMIN_KEY" -H "Content-Type: application/json" -d '{"model_name":"qwen3-14b","litellm_params":{"model":"openai/qwen3-14b","api_base":"https://qwen3-14b-llm-hosting.apps.server2.example.com/v1","custom_llm_provider":"openai"}}'</pre>
 
-    <h3>Verify both backends are registered</h3>
-    <pre>curl -sk "https://&lt;LITELLM_URL&gt;/model/info" \
-  -H "Authorization: Bearer $MASTER_KEY" | python3 -c "
-import sys, json
-for m in json.load(sys.stdin).get('data', []):
-    if m['model_name'] == 'qwen3-14b':
-        print(m['litellm_params'].get('api_base'))
-"</pre>
+    <h3>Check live health of both backends</h3>
+    <p>Run this during events — shows which backends are active and which are in cooldown:</p>
+    <pre>curl -sk "$LITELLM_URL/health?model=qwen3-14b" -H "Authorization: Bearer $ADMIN_KEY" | python3 -c "import sys,json; d=json.load(sys.stdin); [print('OK  ',e['api_base']) for e in d.get('healthy_endpoints',[]) if isinstance(e,dict)]; [print('DOWN',e['api_base']) for e in d.get('unhealthy_endpoints',[]) if isinstance(e,dict)]"</pre>
+    <p>Expected output — two lines, one per backend:</p>
+    <pre class="output">OK   https://qwen3-14b-llm-hosting.apps.maas00.rs-dfw3.infra.demo.redhat.com/v1
+OK   https://qwen3-14b-llm-hosting.apps.smc00.rs-dfw3.infra.demo.redhat.com/v1</pre>
 
-    <h3>Verify users still see only one model</h3>
-    <pre>curl -sk "https://&lt;LITELLM_URL&gt;/v1/models" \
-  -H "Authorization: Bearer $MASTER_KEY" | \
-  python3 -c "import sys,json; [print(m['id']) for m in json.load(sys.stdin)['data']]"</pre>
+    <h3>Confirm router is distributing requests</h3>
+    <p>Each response includes <code>x-litellm-model-id</code> — different IDs = different backends:</p>
+    <pre>for i in 1 2 3 4 5; do curl -sk -X POST "$LITELLM_URL/v1/chat/completions" -H "Authorization: Bearer $ADMIN_KEY" -H "Content-Type: application/json" -d '{"model":"qwen3-14b","messages":[{"role":"user","content":"hi"}],"max_tokens":1}' -D - -o /dev/null | grep -i "x-litellm-model-id"; done | sort | uniq -c</pre>
 
-    <p>
-      By default LiteLLM uses <strong>simple-shuffle</strong> (random) routing. Other strategies available: <code>least-busy</code>, <code>latency-based-routing</code>, <code>usage-based-routing-v2</code>.
-      Change via Admin UI &rarr; Router Settings or the API. See the
-      <a href="https://docs.litellm.ai/docs/routing" target="_blank" rel="noopener">LiteLLM Router docs</a> for options.
-    </p>
-
-    <h3>View live load balancer state for a model</h3>
-    <p>Use <code>?model=</code> to scope the health check to a specific model group and see which backends are currently active or in cooldown:</p>
-    <pre><span class="comment"># Live in-memory state — healthy = serving traffic, unhealthy = in cooldown</span>
-curl -sk "https://&lt;LITELLM_URL&gt;/health?model=qwen3-14b" \
-  -H "Authorization: Bearer $MASTER_KEY" | python3 -c "
-import sys, json
-d = json.load(sys.stdin)
-for ep in d.get('healthy_endpoints', []):
-    if isinstance(ep, dict):
-        print('HEALTHY:', ep.get('api_base','?'))
-for ep in d.get('unhealthy_endpoints', []):
-    if isinstance(ep, dict):
-        print('UNHEALTHY (cooldown):', ep.get('api_base','?'))
-"</pre>
-    <p>Run this during events to verify both backends are active. A backend enters cooldown after <code>allowed_fails</code> consecutive failures (default: 3) and recovers after <code>cooldown_time</code> seconds (default: 5s).</p>
-
-    <h3>Test that requests distribute across backends</h3>
-    <p>The <code>x-litellm-model-id</code> response header identifies which backend served each request — useful for confirming the router is distributing load:</p>
-    <pre><span class="comment"># Send 10 requests and count how many hit each backend
-# Replace the IDs with your actual model IDs from /model/info</span>
-for i in $(seq 1 10); do
-  curl -sk -X POST "https://&lt;LITELLM_URL&gt;/v1/chat/completions" \
-    -H "Authorization: Bearer $MASTER_KEY" \
-    -H "Content-Type: application/json" \
-    -d '{"model":"qwen3-14b","messages":[{"role":"user","content":"hi"}],"max_tokens":1}' \
-    -D - -o /dev/null | grep -i "x-litellm-model-id"
-done | sort | uniq -c</pre>
-
-    <h3>View full router settings</h3>
-    <pre>curl -sk "https://&lt;LITELLM_URL&gt;/router/settings" \
-  -H "Authorization: Bearer $MASTER_KEY" | python3 -c "
-import sys, json
-d = json.load(sys.stdin)
-for f in d.get('fields', []):
-    print(f'{f[\"field_name\"]}: {f[\"field_value\"]}')
-"</pre>
+    <h3>View router settings</h3>
+    <p>Current strategy and tunable parameters. Change via <strong>Admin UI → Router Settings</strong>.</p>
+    <pre>curl -sk "$LITELLM_URL/router/settings" -H "Authorization: Bearer $ADMIN_KEY" | python3 -c "import sys,json; cv=json.load(sys.stdin).get('current_values',{}); [print(f'{k}: {v}') for k,v in cv.items() if v is not None and v != {} and v != []]"</pre>
   </div>
 
   <!-- AUTO_SYNC -->
