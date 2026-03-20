@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LiteMaaS — Analytics &amp; Backup</title>
+  <meta name="description" content="RHDP LiteMaaS analytics and backup — usage analytics, backup operations, built-in backup and restore via the admin portal.">
+  <link rel="canonical" href="https://rhpds.github.io/rhpds.litemaas/docs/day2/analytics.html">
+  <link rel="stylesheet" href="../assets/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Red Hat Text', 'Segoe UI', sans-serif; background: #f5f5f5; color: #151515; line-height: 1.6; }
+    header { background: #cc0000; color: white; padding: 1.5rem 3rem; display: flex; align-items: center; gap: 1.5rem; }
+    header h1 { font-size: 1.5rem; font-weight: 700; }
+    header p { opacity: 0.85; font-size: 0.9rem; margin-top: 0.2rem; }
+    nav { background: #151515; padding: 0 3rem; display: flex; gap: 0; flex-wrap: wrap; }
+    nav a { color: #e0e0e0; text-decoration: none; padding: 0.85rem 1.2rem; font-size: 0.9rem; display: block; transition: background 0.15s; }
+    nav a:hover, nav a.active { background: #cc0000; color: white; }
+    .container { max-width: 1100px; margin: 2rem auto; padding: 0 2rem; }
+    .breadcrumb { font-size: 0.82rem; color: #666; margin-bottom: 1.5rem; }
+    .breadcrumb a { color: #cc0000; text-decoration: none; }
+    .breadcrumb a:hover { text-decoration: underline; }
+    h1.page-title { font-size: 1.8rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .page-subtitle { color: #555; margin-bottom: 2rem; font-size: 1rem; }
+    .section { background: white; border-radius: 8px; padding: 2rem; margin-bottom: 1.5rem; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+    .section h2 { font-size: 1.2rem; font-weight: 700; margin-bottom: 1rem; color: #151515; border-bottom: 2px solid #cc0000; padding-bottom: 0.5rem; }
+    .section h3 { font-size: 1rem; font-weight: 700; margin: 1.4rem 0 0.5rem; color: #333; }
+    .section h4 { font-size: 0.92rem; font-weight: 700; margin: 1rem 0 0.4rem; color: #444; }
+    .section p { margin-bottom: 0.8rem; color: #333; font-size: 0.92rem; }
+    .section ul, .section ol { padding-left: 1.5rem; margin-bottom: 0.8rem; }
+    .section li { margin-bottom: 0.4rem; color: #333; font-size: 0.92rem; }
+    pre { background: #1e1e1e; color: #d4d4d4; padding: 1.2rem 1.5rem; border-radius: 6px; overflow-x: auto; font-size: 0.82rem; line-height: 1.5; margin: 0.8rem 0; }
+    pre .comment { color: #6a9955; }
+    pre .string { color: #ce9178; }
+    pre .keyword { color: #569cd6; }
+    pre .var { color: #9cdcfe; }
+    code { font-family: 'Courier New', monospace; font-size: 0.85em; background: #f0f0f0; padding: 0.1em 0.3em; border-radius: 3px; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.86rem; }
+    th { background: #151515; color: white; padding: 0.6rem 0.8rem; text-align: left; font-weight: 600; }
+    td { padding: 0.6rem 0.8rem; border-bottom: 1px solid #e8e8e8; vertical-align: top; }
+    tr:nth-child(even) { background: #f9f9f9; }
+    td code { background: #f0f0f0; padding: 0.1em 0.3em; border-radius: 3px; font-size: 0.82rem; }
+    .info-box { background: #e8f4fd; border-left: 4px solid #0066cc; padding: 1rem 1.5rem; border-radius: 0 6px 6px 0; margin: 1rem 0; }
+    .info-box p { margin: 0; font-size: 0.88rem; color: #004080; }
+    .warn-box { background: #fff8e1; border-left: 4px solid #f0a500; padding: 1rem 1.5rem; border-radius: 0 6px 6px 0; margin: 1rem 0; }
+    .warn-box p { margin: 0; font-size: 0.88rem; color: #5d3900; }
+    .danger-box { background: #fce8e8; border-left: 4px solid #cc0000; padding: 1rem 1.5rem; border-radius: 0 6px 6px 0; margin: 1rem 0; }
+    .danger-box p { margin: 0; font-size: 0.88rem; color: #7a0000; }
+    .toc { background: #f9f9f9; border: 1px solid #e0e0e0; border-radius: 8px; padding: 1.2rem 1.5rem; margin-bottom: 2rem; }
+    .toc h3 { font-size: 0.9rem; font-weight: 700; margin-bottom: 0.8rem; }
+    .toc ul { padding-left: 1.2rem; margin: 0; }
+    .toc li { margin-bottom: 0.3rem; }
+    .toc a { color: #cc0000; text-decoration: none; font-size: 0.88rem; }
+    .toc a:hover { text-decoration: underline; }
+    footer { background: #151515; color: #aaa; text-align: center; padding: 1.5rem; font-size: 0.85rem; margin-top: 3rem; }
+    .footer-updated { display: block; margin-top: 0.3rem; font-size: 0.8rem; color: #777; }
+    .page-nav { display: flex; justify-content: space-between; margin: 2rem 0; gap: 1rem; }
+    .page-nav a { display: flex; flex-direction: column; padding: 1rem 1.5rem; background: white; border-radius: 8px; text-decoration: none; color: #151515; box-shadow: 0 1px 4px rgba(0,0,0,0.1); flex: 1; max-width: 48%; transition: box-shadow 0.15s; }
+    .page-nav a:hover { box-shadow: 0 3px 10px rgba(0,0,0,0.15); }
+    .pn-label { font-size: 0.78rem; color: #888; margin-bottom: 0.2rem; }
+    .pn-title { font-size: 0.95rem; font-weight: 600; color: #cc0000; }
+    .pn-prev { align-items: flex-start; }
+    .pn-next { align-items: flex-end; }
+    .nav-hamburger { display: none; background: none; border: none; color: #e0e0e0; font-size: 1.5rem; cursor: pointer; padding: 0.85rem 1.2rem; }
+    @media (max-width: 768px) {
+      header { padding: 1rem 1.5rem; }
+      nav { padding: 0; flex-direction: column; }
+      .nav-hamburger { display: block; }
+      .nav-links { display: none; flex-direction: column; width: 100%; }
+      .nav-links.open { display: flex; }
+      .nav-links a { padding: 0.7rem 1.5rem; border-top: 1px solid #2a2a2a; }
+      .container { padding: 0 1rem; }
+      .page-nav { flex-direction: column; }
+      .page-nav a { max-width: 100%; }
+    }
+    .anchor-link { opacity: 0; margin-left: 0.4rem; color: #cc0000; font-size: 0.8rem; text-decoration: none; }
+    .section h2:hover .anchor-link, .section h3:hover .anchor-link { opacity: 1; }
+    .copy-btn { position: absolute; right: 0.5rem; top: 0.5rem; background: #333; color: #ccc; border: none; border-radius: 4px; padding: 0.2rem 0.6rem; font-size: 0.75rem; cursor: pointer; opacity: 0; transition: opacity 0.15s; }
+    pre { position: relative; }
+    pre:hover .copy-btn { opacity: 1; }
+    .copy-btn.copied { background: #28a745; color: white; }
+    .back-to-top { position: fixed; bottom: 2rem; right: 2rem; background: #cc0000; color: white; border: none; border-radius: 50%; width: 2.5rem; height: 2.5rem; font-size: 1.2rem; cursor: pointer; opacity: 0; transition: opacity 0.3s; z-index: 100; }
+    .back-to-top.visible { opacity: 1; }
+    .mermaid { margin: 1.5rem 0; background: #f9f9f9; border-radius: 8px; padding: 1rem; cursor: zoom-in; }
+    .diagram-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center; }
+    .diagram-modal.open { display: flex; }
+    .diagram-modal-inner { background: white; border-radius: 8px; padding: 2rem; max-width: 90vw; max-height: 90vh; overflow: auto; }
+    .diagram-modal-close { position: absolute; top: 1rem; right: 1rem; background: white; border: none; font-size: 1.5rem; cursor: pointer; border-radius: 50%; width: 2rem; height: 2rem; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>RHDP LiteMaaS</h1>
+    <p>Model as a Service for Red Hat Demo Platform</p>
+  </div>
+</header>
+
+<nav>
+  <button class="nav-hamburger" id="navToggle" aria-label="Toggle navigation">&#9776;</button>
+  <div class="nav-links" id="navLinks">
+    <a href="../index.html">Home</a>
+    <a href="../architecture.html">Architecture</a>
+    <a href="../product/overview.html">Overview</a>
+    <a href="../product/models.html">Models</a>
+    <a href="../install/deployment.html">Install</a>
+    <a href="operations.html">Day-2</a>
+    <a href="model-routing.html">Model Routing</a>
+    <a href="analytics.html" class="active">Analytics &amp; Backup</a>
+    <a href="../monitoring.html">Monitoring</a>
+    <a href="../infrastructure.html">Infrastructure</a>
+    <a href="../troubleshooting/common.html">Troubleshooting</a>
+  </div>
+</nav>
+
+<div class="container">
+
+  <div class="breadcrumb">
+    <a href="../index.html">Home</a> / <a href="operations.html">Day-2</a> / Analytics &amp; Backup
+  </div>
+
+  <h1 class="page-title">Analytics &amp; Backup</h1>
+  <p class="page-subtitle">Usage analytics queries, built-in backup and restore via the admin portal, and automated backup via S3 cronjob.</p>
+
+  <div class="toc">
+    <h3>On This Page</h3>
+    <ul>
+      <li><a href="#backup-ops">Backup Operations</a></li>
+      <li><a href="#backup-restore">Backup &amp; Restore</a></li>
+      <li><a href="#usage-analytics">Usage Analytics</a></li>
+    </ul>
+  </div>
+
+  <div class="section" id="backup-ops">
+    <h2>Backup Operations</h2>
+
+    <h3>Setup Automated Monthly Backup</h3>
+    <pre><span class="comment"># Requires S3 bucket with IAM role attached to bastion EC2 instance</span>
+./setup-litemaas-backup-cronjob.sh litellm-rhpds maas-db-backup</pre>
+
+    <h3>Manual Database Backup</h3>
+    <pre><span class="comment"># Backup LiteMaaS + LiteLLM shared database</span>
+oc exec -n litellm-rhpds litellm-postgres-0 -- \
+  pg_dump -U litellm litellm | gzip > litellm-backup-$(date +%Y%m%d).sql.gz
+
+<span class="comment"># Upload to S3</span>
+aws s3 cp litellm-backup-$(date +%Y%m%d).sql.gz \
+  s3://maas-db-backup/litemaas-backups/</pre>
+
+    <h3>List and Verify Backups</h3>
+    <pre>aws s3 ls s3://maas-db-backup/litemaas-backups/ --human-readable | sort -r</pre>
+  </div>
+
+  <!-- Backup & Restore -->
+
+  <div class="section" id="backup-restore">
+    <h2>Backup &amp; Restore</h2>
+    <p>LiteMaaS v0.4.0 includes a built-in backup and restore capability available directly from the admin portal. It covers the LiteMaaS database — all users, API keys, subscriptions, models, branding settings, and usage data.</p>
+
+    <h3>What Gets Backed Up</h3>
+    <table>
+      <tr><th>Data</th><th>Included</th></tr>
+      <tr><td>Users and roles</td><td>Yes</td></tr>
+      <tr><td>Virtual API keys</td><td>Yes</td></tr>
+      <tr><td>Model subscriptions</td><td>Yes</td></tr>
+      <tr><td>Registered models and capabilities</td><td>Yes</td></tr>
+      <tr><td>Branding settings (logos, title, subtitle)</td><td>Yes</td></tr>
+      <tr><td>Usage analytics and spend logs</td><td>Yes</td></tr>
+      <tr><td>System settings and defaults</td><td>Yes</td></tr>
+      <tr><td>LiteLLM proxy config (pass-through endpoints, etc.)</td><td>Separate — use LiteLLM admin UI</td></tr>
+    </table>
+
+    <h3>Taking a Backup — via UI</h3>
+    <ol style="padding-left:1.5rem; font-size:0.9rem; color:#444; margin:0.5rem 0 1rem;">
+      <li>Log in to the LiteMaaS portal as admin: <a href="https://litellm-prod-frontend.apps.maas.redhatworkshops.io" target="_blank">litellm-prod-frontend.apps.maas.redhatworkshops.io</a></li>
+      <li>Navigate to <strong>Admin &rarr; Tools &rarr; Backup</strong></li>
+      <li>Click <strong>Create Backup</strong> — a <code>.sql.gz</code> file is generated</li>
+      <li>Click <strong>Download</strong> to save it locally</li>
+    </ol>
+
+    <h3>Taking a Backup — via API</h3>
+    <pre><span class="comment"># Create a backup</span>
+curl -X POST https://litellm-prod-admin.apps.maas.redhatworkshops.io/api/v1/admin/backup/create \
+  -H "Authorization: Bearer &lt;admin-jwt&gt;"
+
+<span class="comment"># List available backups</span>
+curl https://litellm-prod-admin.apps.maas.redhatworkshops.io/api/v1/admin/backup/list \
+  -H "Authorization: Bearer &lt;admin-jwt&gt;"
+
+<span class="comment"># Download a backup file</span>
+curl https://litellm-prod-admin.apps.maas.redhatworkshops.io/api/v1/admin/backup/download/&lt;filename&gt; \
+  -H "Authorization: Bearer &lt;admin-jwt&gt;" \
+  -o backup.sql.gz</pre>
+
+    <h3>Restoring from Backup — via UI</h3>
+    <div class="warn-box">
+      <p><strong>Warning:</strong> Restoring overwrites the current database. Take a fresh backup before restoring. The platform will be briefly unavailable during restore.</p>
+    </div>
+    <ol style="padding-left:1.5rem; font-size:0.9rem; color:#444; margin:0.5rem 0 1rem;">
+      <li>Navigate to <strong>Admin &rarr; Tools &rarr; Backup</strong></li>
+      <li>Select a backup from the list and click <strong>Restore</strong>, or upload a backup file</li>
+      <li>Confirm the restore — the backend restarts automatically when complete</li>
+    </ol>
+
+    <h3>Automated Backup — Bastion Cronjob (S3)</h3>
+    <p>For scheduled backups to S3, the <code>rhpds.litemaas</code> collection includes a setup script. This runs monthly on the bastion host and uploads compressed PostgreSQL dumps to an S3 bucket, keeping the last 12 (1 year of monthly backups).</p>
+    <pre><span class="comment"># Run on bastion — installs monthly backup cronjob to S3</span>
+./setup-litemaas-backup-cronjob.sh litellm-rhpds my-s3-bucket
+
+<span class="comment"># Prerequisites: AWS CLI + IAM instance profile on bastion with S3 write access</span></pre>
+
+    <h3>Manual Database Backup</h3>
+    <pre><span class="comment"># Dump the full database (litemaas_db + litellm_db share one PostgreSQL instance)</span>
+oc exec -n litellm-rhpds litellm-postgres-0 -- \
+  pg_dump -U litellm litellm | gzip > litemaas-backup-$(date +%Y%m%d).sql.gz
+
+<span class="comment"># Upload to S3</span>
+aws s3 cp litemaas-backup-$(date +%Y%m%d).sql.gz s3://my-bucket/backups/</pre>
+  </div>
+
+  <!-- Usage Analytics -->
+
+  <div class="section" id="usage-analytics">
+    <h2>Usage Analytics</h2>
+    <p>There are two ways to query usage statistics, each with different trade-offs:</p>
+    <ul>
+      <li><strong>LiteLLM API</strong> — no cluster access needed, returns spend data. Works for anyone with the master key.</li>
+      <li><strong>PostgreSQL direct</strong> — requires <code>oc exec</code> on the postgres pod, but returns token counts which the API does not expose without an Enterprise licence.</li>
+    </ul>
+
+    <h3>Unique users &amp; spend — last 30 days (API)</h3>
+    <p>Use this when you need a quick user count or want to see who is spending the most. No cluster access required.</p>
+    <pre><span class="comment"># Set your master key first</span>
+export LITELLM_URL=https://litellm-prod.apps.maas.redhatworkshops.io
+export MASTER_KEY=sk-...
+
+curl -sk "$LITELLM_URL/spend/users?start_date=$(date -v-30d '+%Y-%m-%d')&amp;end_date=$(date '+%Y-%m-%d')" \
+  -H "Authorization: Bearer $MASTER_KEY" | python3 -c "
+import sys, json
+users = json.load(sys.stdin)
+users = users if isinstance(users, list) else users.get('data', [])
+print(f'Unique users (last 30d): {len(users)}')
+for u in sorted(users, key=lambda x: x.get('spend', 0), reverse=True)[:10]:
+    print(f'  {u.get(\"user_email\", u.get(\"user_id\",\"?\"))} -- \${u.get(\"spend\",0):.2f}')
+"</pre>
+
+    <h3>Spend by model — last 30 days (API)</h3>
+    <p>Shows cost breakdown per model. Useful for understanding which models are driving spend.</p>
+    <pre>curl -sk "$LITELLM_URL/global/spend/models?start_date=$(date -v-30d '+%Y-%m-%d')&amp;end_date=$(date '+%Y-%m-%d')" \
+  -H "Authorization: Bearer $MASTER_KEY" | python3 -c "
+import sys, json
+for m in sorted(json.load(sys.stdin), key=lambda x: x.get('total_spend',0), reverse=True):
+    print(f'  {m[\"model\"]}: \${m[\"total_spend\"]:.2f}')
+"</pre>
+
+    <h3>Total spend (API)</h3>
+    <pre>curl -sk "$LITELLM_URL/global/spend?start_date=$(date -v-30d '+%Y-%m-%d')&amp;end_date=$(date '+%Y-%m-%d')" \
+  -H "Authorization: Bearer $MASTER_KEY" | python3 -m json.tool</pre>
+
+    <h3>Unique users &amp; tokens — monthly breakdown (DB)</h3>
+    <p>Use this when you need <strong>token counts</strong>. The LiteLLM API does not expose tokens without an Enterprise licence — query the database directly instead.</p>
+    <pre><span class="comment"># Requires oc exec access to the postgres pod</span>
+oc exec -n litellm-rhpds litellm-postgres-0 -- \
+  psql -U litellm -d litellm -t -c "
+SELECT
+  TO_CHAR(DATE_TRUNC('month', \"startTime\"), 'YYYY-MM') as month,
+  COUNT(DISTINCT \"user\")  as unique_users,
+  SUM(total_tokens)        as total_tokens,
+  COUNT(*)                 as requests
+FROM \"LiteLLM_SpendLogs\"
+WHERE \"startTime\" >= NOW() - INTERVAL '3 months'
+GROUP BY 1
+ORDER BY 1 DESC;"</pre>
+
+    <h3>Top models by token consumption (DB)</h3>
+    <pre>oc exec -n litellm-rhpds litellm-postgres-0 -- \
+  psql -U litellm -d litellm -t -c "
+SELECT
+  model,
+  COUNT(*)               as requests,
+  SUM(total_tokens)      as total_tokens,
+  SUM(prompt_tokens)     as prompt_tokens,
+  SUM(completion_tokens) as completion_tokens
+FROM \"LiteLLM_SpendLogs\"
+WHERE \"startTime\" >= NOW() - INTERVAL '30 days'
+GROUP BY model
+ORDER BY total_tokens DESC
+LIMIT 10;"</pre>
+
+    <h3>Daily active users — last 7 days (DB)</h3>
+    <pre>oc exec -n litellm-rhpds litellm-postgres-0 -- \
+  psql -U litellm -d litellm -t -c "
+SELECT
+  TO_CHAR(DATE_TRUNC('day', \"startTime\"), 'YYYY-MM-DD') as day,
+  COUNT(DISTINCT \"user\") as unique_users,
+  COUNT(*)                as requests,
+  SUM(total_tokens)       as tokens
+FROM \"LiteLLM_SpendLogs\"
+WHERE \"startTime\" >= NOW() - INTERVAL '7 days'
+GROUP BY 1
+ORDER BY 1 DESC;"</pre>
+  </div>
+
+  <div class="page-nav">
+    <a href="model-routing.html" class="pn-prev">
+      <span class="pn-label">&larr; Previous</span>
+      <span class="pn-title">Model Routing</span>
+    </a>
+    <a href="../monitoring.html" class="pn-next">
+      <span class="pn-label">Next &rarr;</span>
+      <span class="pn-title">Monitoring</span>
+    </a>
+  </div>
+
+</div>
+
+<footer>
+  <p>RHDP LiteMaaS Documentation &mdash; Red Hat Demo Platform &mdash; maas.redhatworkshops.io</p>
+  <span class="footer-updated">Last updated: 2026-03-20</span>
+</footer>
+
+<button class="back-to-top" id="backToTop" title="Back to top">&#8679;</button>
+
+<script>
+  document.getElementById('navToggle').addEventListener('click', function() {
+    document.getElementById('navLinks').classList.toggle('open');
+  });
+  var btt = document.getElementById('backToTop');
+  window.addEventListener('scroll', function() {
+    btt.classList.toggle('visible', window.scrollY > 400);
+  });
+  btt.addEventListener('click', function() { window.scrollTo({ top: 0, behavior: 'smooth' }); });
+  document.querySelectorAll('pre').forEach(function(pre) {
+    var btn = document.createElement('button');
+    btn.className = 'copy-btn'; btn.textContent = 'Copy';
+    btn.addEventListener('click', function() {
+      navigator.clipboard.writeText(pre.innerText).then(function() {
+        btn.textContent = 'Copied!'; btn.classList.add('copied');
+        setTimeout(function() { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+      });
+    });
+    pre.appendChild(btn);
+  });
+  document.querySelectorAll('.section h2, .section h3').forEach(function(h) {
+    if (!h.id) h.id = h.textContent.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    var a = document.createElement('a');
+    a.className = 'anchor-link'; a.href = '#' + h.id; a.textContent = '#'; a.setAttribute('aria-label', 'Link to section');
+    h.appendChild(a);
+  });
+  mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+</script>
+<div class="diagram-modal" id="diagramModal">
+  <button class="diagram-modal-close" onclick="closeModal()">&#x2715;</button>
+  <div class="diagram-modal-inner" id="diagramModalInner"></div>
+</div>
+</body>
+</html>

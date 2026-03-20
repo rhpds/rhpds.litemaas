@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LiteMaaS — Model Routing</title>
+  <meta name="description" content="RHDP LiteMaaS model routing — adding models, load balancing across endpoints, LITELLM_AUTO_SYNC, and DB sync between LiteMaaS and LiteLLM.">
+  <link rel="canonical" href="https://rhpds.github.io/rhpds.litemaas/docs/day2/model-routing.html">
+  <link rel="stylesheet" href="../assets/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Red Hat Text', 'Segoe UI', sans-serif; background: #f5f5f5; color: #151515; line-height: 1.6; }
+    header { background: #cc0000; color: white; padding: 1.5rem 3rem; display: flex; align-items: center; gap: 1.5rem; }
+    header h1 { font-size: 1.5rem; font-weight: 700; }
+    header p { opacity: 0.85; font-size: 0.9rem; margin-top: 0.2rem; }
+    nav { background: #151515; padding: 0 3rem; display: flex; gap: 0; flex-wrap: wrap; }
+    nav a { color: #e0e0e0; text-decoration: none; padding: 0.85rem 1.2rem; font-size: 0.9rem; display: block; transition: background 0.15s; }
+    nav a:hover, nav a.active { background: #cc0000; color: white; }
+    .container { max-width: 1100px; margin: 2rem auto; padding: 0 2rem; }
+    .breadcrumb { font-size: 0.82rem; color: #666; margin-bottom: 1.5rem; }
+    .breadcrumb a { color: #cc0000; text-decoration: none; }
+    .breadcrumb a:hover { text-decoration: underline; }
+    h1.page-title { font-size: 1.8rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .page-subtitle { color: #555; margin-bottom: 2rem; font-size: 1rem; }
+    .section { background: white; border-radius: 8px; padding: 2rem; margin-bottom: 1.5rem; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+    .section h2 { font-size: 1.2rem; font-weight: 700; margin-bottom: 1rem; color: #151515; border-bottom: 2px solid #cc0000; padding-bottom: 0.5rem; }
+    .section h3 { font-size: 1rem; font-weight: 700; margin: 1.4rem 0 0.5rem; color: #333; }
+    .section h4 { font-size: 0.92rem; font-weight: 700; margin: 1rem 0 0.4rem; color: #444; }
+    .section p { margin-bottom: 0.8rem; color: #333; font-size: 0.92rem; }
+    .section ul, .section ol { padding-left: 1.5rem; margin-bottom: 0.8rem; }
+    .section li { margin-bottom: 0.4rem; color: #333; font-size: 0.92rem; }
+    pre { background: #1e1e1e; color: #d4d4d4; padding: 1.2rem 1.5rem; border-radius: 6px; overflow-x: auto; font-size: 0.82rem; line-height: 1.5; margin: 0.8rem 0; }
+    pre .comment { color: #6a9955; }
+    pre .string { color: #ce9178; }
+    pre .keyword { color: #569cd6; }
+    pre .var { color: #9cdcfe; }
+    code { font-family: 'Courier New', monospace; font-size: 0.85em; background: #f0f0f0; padding: 0.1em 0.3em; border-radius: 3px; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.86rem; }
+    th { background: #151515; color: white; padding: 0.6rem 0.8rem; text-align: left; font-weight: 600; }
+    td { padding: 0.6rem 0.8rem; border-bottom: 1px solid #e8e8e8; vertical-align: top; }
+    tr:nth-child(even) { background: #f9f9f9; }
+    td code { background: #f0f0f0; padding: 0.1em 0.3em; border-radius: 3px; font-size: 0.82rem; }
+    .info-box { background: #e8f4fd; border-left: 4px solid #0066cc; padding: 1rem 1.5rem; border-radius: 0 6px 6px 0; margin: 1rem 0; }
+    .info-box p { margin: 0; font-size: 0.88rem; color: #004080; }
+    .warn-box { background: #fff8e1; border-left: 4px solid #f0a500; padding: 1rem 1.5rem; border-radius: 0 6px 6px 0; margin: 1rem 0; }
+    .warn-box p { margin: 0; font-size: 0.88rem; color: #5d3900; }
+    .danger-box { background: #fce8e8; border-left: 4px solid #cc0000; padding: 1rem 1.5rem; border-radius: 0 6px 6px 0; margin: 1rem 0; }
+    .danger-box p { margin: 0; font-size: 0.88rem; color: #7a0000; }
+    .toc { background: #f9f9f9; border: 1px solid #e0e0e0; border-radius: 8px; padding: 1.2rem 1.5rem; margin-bottom: 2rem; }
+    .toc h3 { font-size: 0.9rem; font-weight: 700; margin-bottom: 0.8rem; }
+    .toc ul { padding-left: 1.2rem; margin: 0; }
+    .toc li { margin-bottom: 0.3rem; }
+    .toc a { color: #cc0000; text-decoration: none; font-size: 0.88rem; }
+    .toc a:hover { text-decoration: underline; }
+    footer { background: #151515; color: #aaa; text-align: center; padding: 1.5rem; font-size: 0.85rem; margin-top: 3rem; }
+    .footer-updated { display: block; margin-top: 0.3rem; font-size: 0.8rem; color: #777; }
+    .page-nav { display: flex; justify-content: space-between; margin: 2rem 0; gap: 1rem; }
+    .page-nav a { display: flex; flex-direction: column; padding: 1rem 1.5rem; background: white; border-radius: 8px; text-decoration: none; color: #151515; box-shadow: 0 1px 4px rgba(0,0,0,0.1); flex: 1; max-width: 48%; transition: box-shadow 0.15s; }
+    .page-nav a:hover { box-shadow: 0 3px 10px rgba(0,0,0,0.15); }
+    .pn-label { font-size: 0.78rem; color: #888; margin-bottom: 0.2rem; }
+    .pn-title { font-size: 0.95rem; font-weight: 600; color: #cc0000; }
+    .pn-prev { align-items: flex-start; }
+    .pn-next { align-items: flex-end; }
+    .nav-hamburger { display: none; background: none; border: none; color: #e0e0e0; font-size: 1.5rem; cursor: pointer; padding: 0.85rem 1.2rem; }
+    @media (max-width: 768px) {
+      header { padding: 1rem 1.5rem; }
+      nav { padding: 0; flex-direction: column; }
+      .nav-hamburger { display: block; }
+      .nav-links { display: none; flex-direction: column; width: 100%; }
+      .nav-links.open { display: flex; }
+      .nav-links a { padding: 0.7rem 1.5rem; border-top: 1px solid #2a2a2a; }
+      .container { padding: 0 1rem; }
+      .page-nav { flex-direction: column; }
+      .page-nav a { max-width: 100%; }
+    }
+    .anchor-link { opacity: 0; margin-left: 0.4rem; color: #cc0000; font-size: 0.8rem; text-decoration: none; }
+    .section h2:hover .anchor-link, .section h3:hover .anchor-link { opacity: 1; }
+    .copy-btn { position: absolute; right: 0.5rem; top: 0.5rem; background: #333; color: #ccc; border: none; border-radius: 4px; padding: 0.2rem 0.6rem; font-size: 0.75rem; cursor: pointer; opacity: 0; transition: opacity 0.15s; }
+    pre { position: relative; }
+    pre:hover .copy-btn { opacity: 1; }
+    .copy-btn.copied { background: #28a745; color: white; }
+    .back-to-top { position: fixed; bottom: 2rem; right: 2rem; background: #cc0000; color: white; border: none; border-radius: 50%; width: 2.5rem; height: 2.5rem; font-size: 1.2rem; cursor: pointer; opacity: 0; transition: opacity 0.3s; z-index: 100; }
+    .back-to-top.visible { opacity: 1; }
+    .mermaid { margin: 1.5rem 0; background: #f9f9f9; border-radius: 8px; padding: 1rem; cursor: zoom-in; }
+    .diagram-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center; }
+    .diagram-modal.open { display: flex; }
+    .diagram-modal-inner { background: white; border-radius: 8px; padding: 2rem; max-width: 90vw; max-height: 90vh; overflow: auto; }
+    .diagram-modal-close { position: absolute; top: 1rem; right: 1rem; background: white; border: none; font-size: 1.5rem; cursor: pointer; border-radius: 50%; width: 2rem; height: 2rem; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>RHDP LiteMaaS</h1>
+    <p>Model as a Service for Red Hat Demo Platform</p>
+  </div>
+</header>
+
+<nav>
+  <button class="nav-hamburger" id="navToggle" aria-label="Toggle navigation">&#9776;</button>
+  <div class="nav-links" id="navLinks">
+    <a href="../index.html">Home</a>
+    <a href="../architecture.html">Architecture</a>
+    <a href="../product/overview.html">Overview</a>
+    <a href="../product/models.html">Models</a>
+    <a href="../install/deployment.html">Install</a>
+    <a href="operations.html">Day-2</a>
+    <a href="model-routing.html" class="active">Model Routing</a>
+    <a href="analytics.html">Analytics &amp; Backup</a>
+    <a href="../monitoring.html">Monitoring</a>
+    <a href="../infrastructure.html">Infrastructure</a>
+    <a href="../troubleshooting/common.html">Troubleshooting</a>
+  </div>
+</nav>
+
+<div class="container">
+
+  <div class="breadcrumb">
+    <a href="../index.html">Home</a> / <a href="operations.html">Day-2</a> / Model Routing
+  </div>
+
+  <h1 class="page-title">Model Routing</h1>
+  <p class="page-subtitle">Adding models, load balancing across multiple endpoints, auto-sync configuration, and database synchronization between LiteMaaS and LiteLLM.</p>
+
+  <div class="toc">
+    <h3>On This Page</h3>
+    <ul>
+      <li><a href="#adding-models">Adding Models</a></li>
+      <li><a href="#load-balancing">Load Balancing Across Multiple Endpoints</a></li>
+      <li><a href="#auto-sync">LITELLM_AUTO_SYNC</a></li>
+      <li><a href="#db-sync">DB Sync Between LiteMaaS and LiteLLM</a></li>
+    </ul>
+  </div>
+
+  <div class="section" id="adding-models">
+    <h2>Adding Models</h2>
+    <p>Models must be registered in <strong>two places</strong>: the LiteLLM proxy (which handles actual inference routing) and the LiteMaaS backend database (which powers the user-facing model catalog). Failing to sync both causes the "subscription foreign key violation" error.</p>
+
+    <h3>Method 1: LiteLLM Admin UI + Manual Sync (Quick)</h3>
+    <ol>
+      <li>Log in to the LiteLLM admin UI at the API route URL (e.g., <code>https://litellm-prod.apps.maas.redhatworkshops.io</code>)</li>
+      <li>Navigate to <strong>Models &rarr; Add Model</strong></li>
+      <li>Fill in:
+        <ul>
+          <li><strong>Provider:</strong> OpenAI-Compatible (for RHOAI KServe models)</li>
+          <li><strong>Model Name:</strong> e.g., <code>llama-3-1-70b-instruct</code></li>
+          <li><strong>API Base:</strong> Internal KServe service URL, e.g., <code>http://llama-3-1-70b-predictor.llm-hosting.svc.cluster.local/v1</code></li>
+          <li><strong>API Key:</strong> Service account token or <code>sk-placeholder</code> if no auth required</li>
+        </ul>
+      </li>
+      <li>Click <strong>Test Connect</strong>, then <strong>Add Model</strong></li>
+      <li>Run the sync playbook to push the model to LiteMaaS backend DB</li>
+    </ol>
+    <pre><span class="comment"># After adding via UI, sync to LiteMaaS backend database</span>
+LITELLM_URL=$(oc get route litellm-prod -n litellm-rhpds \
+  -o jsonpath='https://{.spec.host}')
+LITELLM_KEY=$(oc get secret litellm-secret -n litellm-rhpds \
+  -o jsonpath='{.data.LITELLM_MASTER_KEY}' | base64 -d)
+
+ansible-playbook playbooks/manage_models.yml \
+  -e litellm_url="${LITELLM_URL}" \
+  -e litellm_master_key="${LITELLM_KEY}" \
+  -e ocp4_workload_litemaas_models_namespace=litellm-rhpds \
+  -e ocp4_workload_litemaas_models_sync_from_litellm=true \
+  -e '{"ocp4_workload_litemaas_models_list": []}'</pre>
+
+    <h3>Method 2: Ansible Playbook (Full)</h3>
+    <pre><span class="comment"># Create a model config file</span>
+cat > new-model.yml &lt;&lt;'EOF'
+litellm_url: "https://litellm-prod.apps.maas.redhatworkshops.io"
+litellm_master_key: "sk-xxxxx"
+ocp4_workload_litemaas_models_namespace: "litellm-rhpds"
+ocp4_workload_litemaas_models_backend_enabled: true
+ocp4_workload_litemaas_models_list:
+  - model_name: "llama-3-1-70b-instruct"
+    litellm_model: "openai/llama-3-1-70b-instruct"
+    api_base: "http://llama-3-1-70b-predictor.llm-hosting.svc.cluster.local/v1"
+    api_key: "sk-placeholder"
+    display_name: "Llama 3.1 70B Instruct"
+    description: "Meta Llama 3.1 70B instruction-tuned model"
+    provider: "openshift-ai"
+    category: "chat"
+    context_length: 131072
+    rpm: 30
+    tpm: 500000
+EOF
+
+ansible-playbook playbooks/manage_models.yml -e @new-model.yml</pre>
+
+    <h3>Verify Model Registration</h3>
+    <pre><span class="comment"># Check LiteLLM has the model</span>
+curl -X GET "${LITELLM_URL}/model/info" \
+  -H "Authorization: Bearer ${LITELLM_KEY}" | \
+  jq '.data[] | select(.model_name == "llama-3-1-70b-instruct") | .model_name'
+
+<span class="comment"># Check LiteMaaS backend DB has the model</span>
+oc exec -n litellm-rhpds litellm-postgres-0 -- \
+  psql -U litellm -d litellm -c \
+  "SELECT id, name, provider, availability FROM models WHERE id = 'llama-3-1-70b-instruct';"</pre>
+
+    <h3>Model Parameters Reference</h3>
+    <table>
+      <thead><tr><th>Parameter</th><th>Required</th><th>Default</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>model_name</code></td><td>Yes</td><td>—</td><td>Unique identifier passed to LiteLLM and used as model ID</td></tr>
+        <tr><td><code>litellm_model</code></td><td>Yes</td><td>—</td><td>LiteLLM model format: <code>openai/model-id</code> for OpenAI-compatible endpoints</td></tr>
+        <tr><td><code>api_base</code></td><td>Yes</td><td>—</td><td>Inference endpoint URL. Use internal ClusterIP for KServe models.</td></tr>
+        <tr><td><code>api_key</code></td><td>Yes</td><td>—</td><td>Auth token. Use <code>sk-placeholder</code> if the endpoint requires no auth.</td></tr>
+        <tr><td><code>display_name</code></td><td>No</td><td>model_name</td><td>Human-readable name shown in LiteMaaS UI</td></tr>
+        <tr><td><code>provider</code></td><td>No</td><td>openshift-ai</td><td>Provider label (informational)</td></tr>
+        <tr><td><code>category</code></td><td>No</td><td>general</td><td>Type: <code>chat</code>, <code>code</code>, <code>general</code>, <code>embeddings</code></td></tr>
+        <tr><td><code>context_length</code></td><td>No</td><td>null</td><td>Context window in tokens (display only)</td></tr>
+        <tr><td><code>rpm</code></td><td>No</td><td>null</td><td>Requests per minute limit enforced by LiteLLM</td></tr>
+        <tr><td><code>tpm</code></td><td>No</td><td>null</td><td>Tokens per minute limit enforced by LiteLLM</td></tr>
+        <tr><td><code>supports_streaming</code></td><td>No</td><td>true</td><td>Enable streaming responses</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Load Balancing / Router -->
+
+  <div class="section" id="load-balancing">
+    <h2>Load Balancing Across Multiple Endpoints</h2>
+    <p>
+      LiteLLM automatically load balances when two or more models share the same <code>model_name</code>.
+      No explicit router configuration is needed — registering a second endpoint with the same name is all it takes.
+      Users see one model; LiteLLM round-robins requests across all registered backends.
+    </p>
+    <p>This is useful when the same model is hosted on two GPU servers and you want to distribute traffic without any disruption to existing users.</p>
+
+    <p>Click the diagram to expand.</p>
+    <div class="mermaid">
+graph LR
+    U[User Request] --> R[LiteLLM Router<br/>model: qwen3-14b]
+    R -->|primary path| A[maas00<br/>qwen3-14b]
+    R -->|primary path| B[smc00<br/>qwen3-14b]
+
+    subgraph fallback [Fallback Alternative]
+      R2[LiteLLM Router<br/>model: qwen3-14b] -->|backend down| FB[Fallback Model<br/>e.g. qwen3-7b]
+    end
+
+    style A fill:#d4edda,stroke:#28a745
+    style B fill:#d4edda,stroke:#28a745
+    style FB fill:#fff3cd,stroke:#f0a500
+    style R fill:#e8f4fd,stroke:#0066cc
+    style R2 fill:#e8f4fd,stroke:#0066cc
+    </div>
+
+
+    <h3>Add a second backend for an existing model (zero disruption)</h3>
+    <pre><span class="comment"># The existing model keeps running. Adding a second entry with the same model_name
+# automatically creates a load-balanced group. Existing users are not affected.</span>
+MASTER_KEY=$(oc get secret litellm-secret -n litellm-rhpds \
+  -o jsonpath='{.data.LITELLM_MASTER_KEY}' | base64 -d)
+
+curl -sk -X POST "https://&lt;LITELLM_URL&gt;/model/new" \
+  -H "Authorization: Bearer $MASTER_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model_name": "qwen3-14b",
+    "litellm_params": {
+      "model": "openai/qwen3-14b",
+      "api_base": "https://qwen3-14b-llm-hosting.apps.server2.example.com/v1",
+      "custom_llm_provider": "openai"
+    }
+  }'</pre>
+
+    <h3>Verify both backends are registered</h3>
+    <pre>curl -sk "https://&lt;LITELLM_URL&gt;/model/info" \
+  -H "Authorization: Bearer $MASTER_KEY" | python3 -c "
+import sys, json
+for m in json.load(sys.stdin).get('data', []):
+    if m['model_name'] == 'qwen3-14b':
+        print(m['litellm_params'].get('api_base'))
+"</pre>
+
+    <h3>Verify users still see only one model</h3>
+    <pre>curl -sk "https://&lt;LITELLM_URL&gt;/v1/models" \
+  -H "Authorization: Bearer $MASTER_KEY" | \
+  python3 -c "import sys,json; [print(m['id']) for m in json.load(sys.stdin)['data']]"</pre>
+
+    <p>
+      By default LiteLLM uses <strong>simple-shuffle</strong> (random) routing. Other strategies available: <code>least-busy</code>, <code>latency-based-routing</code>, <code>usage-based-routing-v2</code>.
+      Change via Admin UI &rarr; Router Settings or the API. See the
+      <a href="https://docs.litellm.ai/docs/routing" target="_blank" rel="noopener">LiteLLM Router docs</a> for options.
+    </p>
+
+    <h3>View live load balancer state for a model</h3>
+    <p>Use <code>?model=</code> to scope the health check to a specific model group and see which backends are currently active or in cooldown:</p>
+    <pre><span class="comment"># Live in-memory state — healthy = serving traffic, unhealthy = in cooldown</span>
+curl -sk "https://&lt;LITELLM_URL&gt;/health?model=qwen3-14b" \
+  -H "Authorization: Bearer $MASTER_KEY" | python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+for ep in d.get('healthy_endpoints', []):
+    if isinstance(ep, dict):
+        print('HEALTHY:', ep.get('api_base','?'))
+for ep in d.get('unhealthy_endpoints', []):
+    if isinstance(ep, dict):
+        print('UNHEALTHY (cooldown):', ep.get('api_base','?'))
+"</pre>
+    <p>Run this during events to verify both backends are active. A backend enters cooldown after <code>allowed_fails</code> consecutive failures (default: 3) and recovers after <code>cooldown_time</code> seconds (default: 5s).</p>
+
+    <h3>Test that requests distribute across backends</h3>
+    <p>The <code>x-litellm-model-id</code> response header identifies which backend served each request — useful for confirming the router is distributing load:</p>
+    <pre><span class="comment"># Send 10 requests and count how many hit each backend
+# Replace the IDs with your actual model IDs from /model/info</span>
+for i in $(seq 1 10); do
+  curl -sk -X POST "https://&lt;LITELLM_URL&gt;/v1/chat/completions" \
+    -H "Authorization: Bearer $MASTER_KEY" \
+    -H "Content-Type: application/json" \
+    -d '{"model":"qwen3-14b","messages":[{"role":"user","content":"hi"}],"max_tokens":1}' \
+    -D - -o /dev/null | grep -i "x-litellm-model-id"
+done | sort | uniq -c</pre>
+
+    <h3>View full router settings</h3>
+    <pre>curl -sk "https://&lt;LITELLM_URL&gt;/router/settings" \
+  -H "Authorization: Bearer $MASTER_KEY" | python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+for f in d.get('fields', []):
+    print(f'{f[\"field_name\"]}: {f[\"field_value\"]}')
+"</pre>
+  </div>
+
+  <!-- AUTO_SYNC -->
+
+  <div class="section" id="auto-sync">
+    <h2>LITELLM_AUTO_SYNC</h2>
+    <p>
+      The <code>LITELLM_AUTO_SYNC</code> environment variable controls whether the LiteMaaS backend automatically
+      synchronizes its model database from LiteLLM on startup and at periodic intervals. When enabled, the backend
+      pulls the current model list from LiteLLM and updates its own <code>models</code> table accordingly.
+    </p>
+
+    <h3>Check Current Setting</h3>
+    <pre>oc exec -n litellm-rhpds deployment/litellm-backend -- \
+  sh -c 'echo LITELLM_AUTO_SYNC=$LITELLM_AUTO_SYNC'</pre>
+
+    <h3>Enable Auto-Sync</h3>
+    <pre><span class="comment"># Set env var on the backend deployment</span>
+oc set env deployment/litellm-backend \
+  LITELLM_AUTO_SYNC=true \
+  -n litellm-rhpds
+
+<span class="comment"># Restart to apply</span>
+oc rollout restart deployment/litellm-backend -n litellm-rhpds</pre>
+
+    <h3>When to Use Auto-Sync</h3>
+    <table>
+      <thead><tr><th>Scenario</th><th>Recommendation</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Models added only via Ansible playbook</td>
+          <td>Auto-sync unnecessary — playbook handles both LiteLLM and backend DB</td>
+        </tr>
+        <tr>
+          <td>Models frequently added/removed via LiteLLM admin UI</td>
+          <td>Enable auto-sync to avoid running the sync playbook after each change</td>
+        </tr>
+        <tr>
+          <td>Production with tight change control</td>
+          <td>Disable auto-sync, use explicit sync playbook so changes are deliberate</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="warn-box">
+      <p>
+        <strong>Auto-sync and model deletion:</strong> If a model is deleted from LiteLLM and auto-sync is enabled,
+        the backend will remove it from its database too — which will cascade-delete user subscriptions to that model.
+        Be cautious about deleting models from LiteLLM when users have active subscriptions.
+      </p>
+    </div>
+  </div>
+
+  <!-- DB Sync -->
+
+  <div class="section" id="db-sync">
+    <h2>DB Sync Between LiteMaaS and LiteLLM</h2>
+    <p>
+      LiteMaaS maintains its own database tables (users, subscriptions, api_keys, models) that must stay in sync
+      with LiteLLM's <code>LiteLLM_VerificationToken</code> and <code>LiteLLM_ModelTable</code> tables.
+      Divergence between the two databases is the root cause of most operational issues.
+    </p>
+
+    <h3>Understanding the Two Databases</h3>
+    <p>Both LiteMaaS backend and LiteLLM proxy connect to the <strong>same PostgreSQL instance</strong> (<code>litellm-postgres-0</code>), but use different schemas/tables:</p>
+    <table>
+      <thead><tr><th>Table</th><th>Owner</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td><code>users</code></td><td>LiteMaaS backend</td><td>User accounts, roles, OAuth IDs</td></tr>
+        <tr><td><code>models</code></td><td>LiteMaaS backend</td><td>Model catalog with capability metadata</td></tr>
+        <tr><td><code>subscriptions</code></td><td>LiteMaaS backend</td><td>User-to-model subscription records</td></tr>
+        <tr><td><code>api_keys</code></td><td>LiteMaaS backend</td><td>Virtual key tracking with LiteLLM alias references</td></tr>
+        <tr><td><code>LiteLLM_VerificationToken</code></td><td>LiteLLM proxy</td><td>The actual virtual key records with spend/limits</td></tr>
+        <tr><td><code>LiteLLM_ModelTable</code></td><td>LiteLLM proxy</td><td>LiteLLM's internal model registry</td></tr>
+        <tr><td><code>LiteLLM_SpendLogs</code></td><td>LiteLLM proxy</td><td>Per-request spend audit trail</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Check for Orphaned Keys (LiteMaaS keys with no LiteLLM record)</h3>
+    <pre>oc exec -n litellm-rhpds litellm-postgres-0 -- \
+  psql -U litellm -d litellm -c "
+SELECT ak.id, ak.litellm_key_alias, ak.is_active, ak.created_at
+FROM api_keys ak
+WHERE ak.is_active = true
+  AND ak.litellm_key_alias IS NOT NULL
+  AND NOT EXISTS (
+    SELECT 1 FROM \"LiteLLM_VerificationToken\" lv
+    WHERE lv.key_alias = ak.litellm_key_alias
+  )
+LIMIT 20;"</pre>
+
+    <h3>Fix Orphaned Keys</h3>
+    <pre><span class="comment"># Mark orphaned LiteMaaS keys as inactive</span>
+oc exec -n litellm-rhpds litellm-postgres-0 -- \
+  psql -U litellm -d litellm -c "
+UPDATE api_keys
+SET is_active = false,
+    revoked_at = NOW(),
+    sync_status = 'error',
+    sync_error = 'Key not found in LiteLLM - manual cleanup',
+    updated_at = NOW()
+WHERE is_active = true
+  AND litellm_key_alias IS NOT NULL
+  AND NOT EXISTS (
+    SELECT 1 FROM \"LiteLLM_VerificationToken\" lv
+    WHERE lv.key_alias = api_keys.litellm_key_alias
+  );"</pre>
+
+    <h3>Check for Models in LiteLLM but Not in LiteMaaS</h3>
+    <pre><span class="comment"># List LiteLLM models missing from LiteMaaS models table</span>
+curl -X GET "${LITELLM_URL}/model/info" \
+  -H "Authorization: Bearer ${LITELLM_KEY}" | \
+  jq '.data[].model_name' | sort > /tmp/litellm-models.txt
+
+oc exec -n litellm-rhpds litellm-postgres-0 -- \
+  psql -U litellm -d litellm -t -c "SELECT id FROM models;" | \
+  sort > /tmp/litemaas-models.txt
+
+<span class="comment"># Show models in LiteLLM but not in LiteMaaS</span>
+diff /tmp/litellm-models.txt /tmp/litemaas-models.txt</pre>
+
+    <h3>Trigger Manual Sync</h3>
+    <pre><span class="comment"># Backend exposes a sync endpoint (admin auth required)</span>
+ADMIN_KEY=$(oc get secret backend-secret -n litellm-rhpds \
+  -o jsonpath='{.data.ADMIN_API_KEY}' | base64 -d)
+BACKEND_URL=$(oc get route litellm-prod-admin -n litellm-rhpds \
+  -o jsonpath='https://{.spec.host}')
+
+curl -X POST "${BACKEND_URL}/api/admin/sync-models" \
+  -H "Authorization: Bearer ${ADMIN_KEY}"</pre>
+  </div>
+
+  <div class="page-nav">
+    <a href="operations.html" class="pn-prev">
+      <span class="pn-label">&larr; Previous</span>
+      <span class="pn-title">Day-2 Operations</span>
+    </a>
+    <a href="analytics.html" class="pn-next">
+      <span class="pn-label">Next &rarr;</span>
+      <span class="pn-title">Analytics &amp; Backup</span>
+    </a>
+  </div>
+
+</div>
+
+<footer>
+  <p>RHDP LiteMaaS Documentation &mdash; Red Hat Demo Platform &mdash; maas.redhatworkshops.io</p>
+  <span class="footer-updated">Last updated: 2026-03-20</span>
+</footer>
+
+<button class="back-to-top" id="backToTop" title="Back to top">&#8679;</button>
+
+<script>
+  document.getElementById('navToggle').addEventListener('click', function() {
+    document.getElementById('navLinks').classList.toggle('open');
+  });
+  var btt = document.getElementById('backToTop');
+  window.addEventListener('scroll', function() {
+    btt.classList.toggle('visible', window.scrollY > 400);
+  });
+  btt.addEventListener('click', function() { window.scrollTo({ top: 0, behavior: 'smooth' }); });
+  document.querySelectorAll('pre').forEach(function(pre) {
+    var btn = document.createElement('button');
+    btn.className = 'copy-btn'; btn.textContent = 'Copy';
+    btn.addEventListener('click', function() {
+      navigator.clipboard.writeText(pre.innerText).then(function() {
+        btn.textContent = 'Copied!'; btn.classList.add('copied');
+        setTimeout(function() { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+      });
+    });
+    pre.appendChild(btn);
+  });
+  document.querySelectorAll('.section h2, .section h3').forEach(function(h) {
+    if (!h.id) h.id = h.textContent.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    var a = document.createElement('a');
+    a.className = 'anchor-link'; a.href = '#' + h.id; a.textContent = '#'; a.setAttribute('aria-label', 'Link to section');
+    h.appendChild(a);
+  });
+  // Diagram click to expand
+  document.addEventListener('click', function(e) {
+    var diagram = e.target.closest('.mermaid');
+    if (diagram && !e.target.closest('#diagramModal')) {
+      var modal = document.getElementById('diagramModal');
+      var inner = document.getElementById('diagramModalInner');
+      inner.innerHTML = diagram.innerHTML;
+      modal.classList.add('open');
+    }
+  });
+  function closeModal() {
+    document.getElementById('diagramModal').classList.remove('open');
+  }
+  document.getElementById('diagramModal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+  });
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeModal();
+  });
+  mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+</script>
+<div class="diagram-modal" id="diagramModal">
+  <button class="diagram-modal-close" onclick="closeModal()">&#x2715;</button>
+  <div class="diagram-modal-inner" id="diagramModalInner"></div>
+</div>
+</body>
+</html>

@@ -14,7 +14,7 @@ Users never interact with model servers directly. RHDP MaaS sits in between — 
 - [Product Overview](https://rhpds.github.io/rhpds.litemaas/docs/product/overview.html): What LiteMaaS does, key features, role hierarchy, and user flow.
 - [Models Reference](https://rhpds.github.io/rhpds.litemaas/docs/product/models.html): Model capability types (Chat, Embeddings, Document Conversion), API endpoints, curl and SDK examples.
 - [Deployment Guide](https://rhpds.github.io/rhpds.litemaas/docs/install/deployment.html): Prerequisites, Ansible collection variables, step-by-step deployment, post-install checklist.
-- [Day-2 Operations](https://rhpds.github.io/rhpds.litemaas/docs/day2/operations.html): Upgrading, scaling, adding models, key sync, admin operations.
+- [Day-2 Operations](https://rhpds.github.io/rhpds.litemaas/docs/day2/operations.html): Upgrading, scaling, key cleanup, admin management. Split across 3 sub-pages: operations.html (core ops), model-routing.html (adding models, load balancing, AUTO_SYNC, DB sync), analytics.html (backup, restore, usage analytics).
 - [Grafana & Metrics](https://rhpds.github.io/rhpds.litemaas/docs/day2/grafana.html): Grafana dashboards for RHOAI, vLLM metrics, ServiceMonitors, GPU monitoring.
 - [Monitoring](https://rhpds.github.io/rhpds.litemaas/docs/monitoring.html): Grafana dashboards (vLLM, GPU, OpenVino), ServiceMonitors, benchmark tool, key cleanup cronjob.
 - [Troubleshooting](https://rhpds.github.io/rhpds.litemaas/docs/troubleshooting/common.html): 10 common issues with exact fix commands.
@@ -28,7 +28,8 @@ Users never interact with model servers directly. RHDP MaaS sits in between — 
 - PostgreSQL 16 with 10Gi storage (litemaas_db + litellm_db on same server)
 - Model servers on OpenShift AI (KServe) in llm-hosting namespace
 - Deployment: rhpds.litemaas Ansible collection v0.3.2
-- Key creation: rhpds.litellm_virtual_keys Ansible collection v0.2.0
+- Key creation: rhpds.litellm_virtual_keys Ansible collection v1.3.1
+- Docling Serve: v1.14.3 (quay.io/docling-project/docling-serve-cu128:v1.14.3)
 - GitHub: https://github.com/rhpds/rhpds.litemaas
 - Upstream: https://github.com/rh-aiservices-bu/litemaas
 
@@ -39,15 +40,19 @@ Users never interact with model servers directly. RHDP MaaS sits in between — 
 - Admin API: https://litellm-prod-admin.apps.maas.redhatworkshops.io/api
 - Grafana: https://grafana-route-llm-hosting.apps.maas.redhatworkshops.io
 
-## Available Models (as of v0.4.0)
+## Available Models (as of 2026-03)
 
-- granite-3-2-8b-instruct — IBM Granite 3.2 8B, Chat, 128K context, vLLM on KServe
-- llama-scout-17b — Meta Llama Scout 17B MoE, Chat, 400K context, 2 replicas
-- granite-4-0-h-tiny — IBM Granite 4.0 Tiny, Chat, low-latency
-- codellama-7b-instruct — Meta CodeLlama 7B, Chat, 16K context, code generation
-- llama-guard-3-1b — Meta Llama Guard 3 1B, Safety classification
-- nomic-embed-text-v1-5 — Nomic Embed Text, Embeddings, 768-dim, OpenVino
-- granite-docling-258m — IBM Granite Docling 258M, Document Conversion (PDF to Markdown)
+- granite-3-2-8b-instruct — IBM Granite 3.2 8B, Chat, 128K context
+- granite-4-0-h-tiny — IBM Granite 4.0 H Tiny, Chat, tool calling
+- llama-scout-17b — Meta Llama 4 Scout 17B, Chat, 400K context, MoE
+- deepseek-r1-distill-qwen-14b — DeepSeek R1 Distill Qwen 14B, Chat, reasoning
+- gpt-oss-120b — GPT OSS 120B, Chat, large model
+- microsoft-phi-4 — Microsoft Phi-4, Chat, compact
+- qwen3-14b — Alibaba Qwen 3 14B, Chat, multilingual (LOAD BALANCED: 2 replicas on maas00 and smc00)
+- codellama-7b-instruct — Meta CodeLlama 7B, Code chat
+- Llama-Guard-3-1B — Meta Llama Guard 3 1B, Safety classification
+- nomic-embed-text-v1-5 — Nomic Embed Text, Embeddings
+- granite-docling-258m — IBM Granite Docling 258M, Document Conversion, Docling Serve v1.14.3, endpoint: /docling/v1/convert/source
 
 ## Architecture Summary
 
@@ -90,4 +95,4 @@ Returns current routing strategy and all tunable parameters. Key fields: `routin
 **Identifying which backend served a request:**
 Every response includes the `x-litellm-model-id` response header, which contains the internal ID of the specific backend that served the request. Useful for confirming the router is distributing load across both backends.
 
-Reference: https://rhpds.github.io/rhpds.litemaas/docs/day2/operations.html#load-balancing
+Reference: https://rhpds.github.io/rhpds.litemaas/docs/day2/model-routing.html#load-balancing
