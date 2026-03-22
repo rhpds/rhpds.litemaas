@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LiteMaaS — LiteLLM Router &amp; Load Balancing</title>
-  <meta name="description" content="RHDP LiteMaaS LiteLLM Router and load balancing — distributing traffic across multiple GPU backends and configuring fallback.">
-  <link rel="canonical" href="https://rhpds.github.io/rhpds.litemaas/docs/day2/model-routing.html">
+  <title>LiteMaaS — Model Management</title>
+  <meta name="description" content="RHDP LiteMaaS model management — adding models, LITELLM_AUTO_SYNC, and DB synchronization between LiteMaaS and LiteLLM.">
+  <link rel="canonical" href="https://rhpds.github.io/rhpds.litemaas/docs/day2/model-management.html">
   <link rel="stylesheet" href="../assets/style.css">
   <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
   <style>
@@ -109,8 +109,8 @@
     <a href="../product/models.html">Models</a>
     <a href="../install/deployment.html">Install</a>
     <a href="operations.html">Day-2</a>
-    <a href="model-routing.html" class="active">Model Routing</a>
-    <a href="model-management.html">Model Management</a>
+    <a href="model-routing.html">Model Routing</a>
+    <a href="model-management.html" class="active">Model Management</a>
     <a href="analytics.html">Analytics &amp; Backup</a>
     <a href="../monitoring.html">Monitoring</a>
     <a href="../infrastructure.html">Infrastructure</a>
@@ -121,41 +121,48 @@
 <div class="container">
 
   <div class="breadcrumb">
-    <a href="../index.html">Home</a> / <a href="operations.html">Day-2</a> / Model Routing
+    <a href="../index.html">Home</a> / <a href="operations.html">Day-2</a> / Model Management
   </div>
 
-  <h1 class="page-title">LiteLLM Router &amp; Load Balancing</h1>
-  <p class="page-subtitle">Distributing traffic across multiple GPU backends and configuring fallback when a server goes down.</p>
+  <h1 class="page-title">Model Management</h1>
+  <p class="page-subtitle">Managing the model registry — adding, syncing, and keeping LiteLLM and LiteMaaS databases in sync.</p>
 
   <div class="toc">
     <h3>On This Page</h3>
     <ul>
-      <li><a href="#what-is-the-router">What Is the LiteLLM Router?</a></li>
       <li><a href="#when-to-use">When to Use This</a></li>
-      <li><a href="#load-balancing">Load Balancing — Adding Multiple Backends</a></li>
-      <li><a href="#fallback">Fallback — Primary + Standby</a></li>
+      <li><a href="#adding-models">Adding Models</a></li>
+      <li><a href="#auto-sync">LITELLM_AUTO_SYNC</a></li>
+      <li><a href="#db-sync">DB Sync Between LiteMaaS and LiteLLM</a></li>
     </ul>
   </div>
 
-  <!-- What Is the Router -->
+  <!-- Intro -->
 
-  <div class="section" id="what-is-the-router">
-    <h2>What Is the LiteLLM Router?</h2>
+  <div class="section" id="intro">
+    <h2>Overview</h2>
     <p>
-      The LiteLLM Router is a Python <code>Router</code> class that runs <strong>inside the LiteLLM proxy process</strong> — it is not a separate service or sidecar.
-      When the proxy starts, it reads all registered model deployments and groups them by <code>model_name</code>.
+      Models must be registered in <strong>two places</strong>: the LiteLLM proxy (routing and inference) and the LiteMaaS backend database (user-facing catalog and subscriptions).
+      This page covers how to register new models after deploying an InferenceService, how to enable automatic DB synchronization, and how to fix divergence between the two databases when it occurs.
     </p>
-    <p>For each incoming request, the Router:</p>
-    <ul>
-      <li>Selects a backend from the group using the configured strategy (default: round-robin)</li>
-      <li>Tracks backend health — failed requests trigger a cooldown period</li>
-      <li>Retries on transient errors and routes around backends in cooldown</li>
-      <li>Runs fallback logic if a primary group is exhausted</li>
-    </ul>
-    <p>
-      Because state (health, cooldown timers, request counts) is held <strong>in memory per pod</strong>, each replica makes independent routing decisions.
-      There is no shared routing state across replicas.
-    </p>
+    <p>Click the diagram to expand.</p>
+    <div class="mermaid">
+graph TD
+    A[LiteLLM Proxy<br/>LiteLLM_ProxyModelTable] -->|LITELLM_AUTO_SYNC| B[LiteMaaS Backend<br/>models table]
+    B --> C[User Portal - Model Catalog]
+
+    D[Add via UI or API] --> A
+
+    subgraph sync [When out of sync]
+      E[Model in LiteLLM only] -->|subscription foreign key error| F[User cannot subscribe]
+    end
+
+    style A fill:#e8f4fd,stroke:#0066cc
+    style B fill:#d4edda,stroke:#28a745
+    style C fill:#fff3cd,stroke:#f0a500
+    style E fill:#f8d7da,stroke:#dc3545
+    style F fill:#f8d7da,stroke:#dc3545
+    </div>
   </div>
 
   <!-- When to Use -->
@@ -163,119 +170,197 @@
   <div class="section" id="when-to-use">
     <h2>When to Use This</h2>
     <div class="info-box">
-      <p><strong>Use load balancing when:</strong> the same model runs on 2 or more GPU servers and you want to distribute traffic across all of them simultaneously. Users see one model name; all backends serve requests in parallel.</p>
-      <ul>
-        <li>Register each backend with the same <code>model_name</code> — the router activates automatically</li>
-        <li>All backends must serve the same model weights for consistent responses</li>
-      </ul>
+      <p><strong>Register a new model</strong> after deploying a new InferenceService — add it to LiteLLM first, then sync to LiteMaaS so users can see and subscribe to it.</p>
     </div>
     <div class="info-box">
-      <p><strong>Use fallback when:</strong> you want server B as a backup if server A goes down — not for simultaneous load distribution. Fallback only activates after the primary group fails, so under normal conditions all traffic goes to server A.</p>
-      <ul>
-        <li>Useful for event safety: primary GPU server + warm standby</li>
-        <li>Fallback can point to a smaller or different model if no identical standby is available</li>
-      </ul>
+      <p><strong>Sync models after a DB mismatch</strong> when you see subscription foreign key errors — a model exists in LiteLLM but is missing from the LiteMaaS <code>models</code> table. Use the manual sync endpoint or run the sync playbook.</p>
+    </div>
+    <div class="info-box">
+      <p><strong>Enable AUTO_SYNC</strong> to avoid manual sync steps when models are frequently added or removed via the LiteLLM Admin UI — the backend will pull updates automatically on startup and at regular intervals.</p>
     </div>
   </div>
 
-  <!-- Load Balancing -->
+  <!-- Adding Models -->
 
-  <div class="section" id="load-balancing">
-    <h2>Load Balancing — Adding Multiple Backends</h2>
-    <p>
-      LiteLLM automatically load balances when two or more model registrations share the same <code>model_name</code>.
-      No explicit router configuration is needed — registering a second endpoint with the same name is all it takes.
-      Users see one model; LiteLLM round-robins requests across all registered backends.
-    </p>
+  <div class="section" id="adding-models">
+    <h2>Adding Models</h2>
 
-    <p>Click the diagram to expand.</p>
-    <div class="mermaid">
-graph LR
-    U[User Request] --> R[LiteLLM Router<br/>model: qwen3-14b]
-    R -->|round-robin| A[maas00<br/>qwen3-14b]
-    R -->|round-robin| B[smc00<br/>qwen3-14b]
+    <h3>Option 1: Admin UI (recommended)</h3>
+    <ol>
+      <li>Go to <a href="https://litellm-prod-frontend.apps.maas.redhatworkshops.io" target="_blank">LiteMaaS Frontend</a> &rarr; <strong>Admin &rarr; Models &rarr; Add Model</strong></li>
+      <li>Fill in:
+        <ul>
+          <li><strong>Provider:</strong> OpenAI-Compatible</li>
+          <li><strong>Model Name:</strong> e.g. <code>my-new-model</code></li>
+          <li><strong>API Base:</strong> KServe internal URL — e.g. <code>http://my-model-predictor.llm-hosting.svc.cluster.local/v1</code></li>
+          <li><strong>API Key:</strong> Service account token, or leave blank if no auth required</li>
+        </ul>
+      </li>
+      <li>Click <strong>Test Connect</strong>, then <strong>Add Model</strong></li>
+    </ol>
 
-    style A fill:#d4edda,stroke:#28a745
-    style B fill:#d4edda,stroke:#28a745
-    style R fill:#e8f4fd,stroke:#0066cc
-    </div>
-
-    <p>Set your admin key once, then use it for all commands below:</p>
-    <pre>export ADMIN_KEY=sk-1234567890abcdef1234
-export LITELLM_URL=https://litellm-prod.apps.maas.redhatworkshops.io</pre>
-
-    <h3>Add a second backend (zero disruption)</h3>
-    <p>Same <code>model_name</code>, different <code>api_base</code> — load balancing activates automatically:</p>
-    <pre>curl -sk -X POST "$LITELLM_URL/model/new" -H "Authorization: Bearer $ADMIN_KEY" -H "Content-Type: application/json" -d '{"model_name":"qwen3-14b","litellm_params":{"model":"openai/qwen3-14b","api_base":"https://qwen3-14b-llm-hosting.apps.server2.example.com/v1","custom_llm_provider":"openai"}}'</pre>
-
-    <h3>Check live health of both backends</h3>
-    <p>Run this during events — shows which backends are active and which are in cooldown:</p>
-    <pre>curl -sk "$LITELLM_URL/health?model=qwen3-14b" -H "Authorization: Bearer $ADMIN_KEY" | python3 -c "import sys,json; d=json.load(sys.stdin); [print('OK  ',e['api_base']) for e in d.get('healthy_endpoints',[]) if isinstance(e,dict)]; [print('DOWN',e['api_base']) for e in d.get('unhealthy_endpoints',[]) if isinstance(e,dict)]"</pre>
-    <p>Expected output — one line per backend:</p>
-    <pre>OK   https://qwen3-14b-llm-hosting.apps.maas00.rs-dfw3.infra.demo.redhat.com/v1
-OK   https://qwen3-14b-llm-hosting.apps.smc00.rs-dfw3.infra.demo.redhat.com/v1</pre>
-
-    <h3>Confirm router is distributing requests</h3>
-    <p>Each response includes <code>x-litellm-model-id</code> — different IDs confirm different backends are being hit:</p>
-    <pre>for i in 1 2 3 4 5; do curl -sk -X POST "$LITELLM_URL/v1/chat/completions" -H "Authorization: Bearer $ADMIN_KEY" -H "Content-Type: application/json" -d '{"model":"qwen3-14b","messages":[{"role":"user","content":"hi"}],"max_tokens":1}' -D - -o /dev/null | grep -i "x-litellm-model-id"; done | sort | uniq -c</pre>
-
-    <h3>View router settings</h3>
-    <p>Current strategy and tunable parameters. Change via <strong>Admin UI &rarr; Router Settings</strong>.</p>
-    <pre>curl -sk "$LITELLM_URL/router/settings" -H "Authorization: Bearer $ADMIN_KEY" | python3 -c "import sys,json; cv=json.load(sys.stdin).get('current_values',{}); [print(f'{k}: {v}') for k,v in cv.items() if v is not None and v != {} and v != []]"</pre>
-  </div>
-
-  <!-- Fallback -->
-
-  <div class="section" id="fallback">
-    <h2>Fallback — Primary + Standby</h2>
-    <p>
-      A fallback routes requests to a backup model only when the primary group fails — it does not distribute traffic simultaneously.
-      Under normal conditions, all requests go to the primary group; the fallback activates only after the primary is exhausted or in cooldown.
-    </p>
-
-    <p>Click the diagram to expand.</p>
-    <div class="mermaid">
-graph LR
-    U[User Request] --> R[LiteLLM Router]
-    R -->|normal| A[Primary<br/>qwen3-14b on maas00]
-    A -->|fails / cooldown| FB[Fallback<br/>qwen3-7b on smc00]
-
-    style A fill:#d4edda,stroke:#28a745
-    style FB fill:#fff3cd,stroke:#f0a500
-    style R fill:#e8f4fd,stroke:#0066cc
-    </div>
-
-    <p>Configure fallbacks in the LiteLLM config or via the Admin UI. Example <code>config.yaml</code> snippet:</p>
-    <pre><span class="comment"># litellm config.yaml</span>
-router_settings:
-  fallbacks:
-    - qwen3-14b:
-        - qwen3-7b   <span class="comment"># used only when qwen3-14b group is fully down</span></pre>
-
-    <p>You can also set fallbacks per-request using the <code>fallbacks</code> field in the API payload:</p>
-    <pre>curl -sk -X POST "$LITELLM_URL/v1/chat/completions" \
+    <h3>Option 2: API</h3>
+    <pre>curl -sk -X POST "$LITELLM_URL/model/new" \
   -H "Authorization: Bearer $ADMIN_KEY" \
   -H "Content-Type: application/json" \
-  -d '{
-    "model": "qwen3-14b",
-    "fallbacks": ["qwen3-7b"],
-    "messages": [{"role": "user", "content": "hello"}],
-    "max_tokens": 50
-  }'</pre>
+  -d '{"model_name":"my-new-model","litellm_params":{"model":"openai/my-new-model","api_base":"http://my-model-predictor.llm-hosting.svc.cluster.local/v1","custom_llm_provider":"openai"}}'</pre>
 
-    <div class="info-box">
-      <p><strong>Fallback vs. load balancing:</strong> If you want both maas00 and smc00 to serve <code>qwen3-14b</code> simultaneously, register both under the same <code>model_name</code> (load balancing). If you want smc00 only as a safety net, use fallback configuration.</p>
+    <h3>Verify the model is visible to users</h3>
+    <pre>curl -sk "$LITELLM_URL/v1/models" -H "Authorization: Bearer $ADMIN_KEY" | python3 -c "import sys,json; [print(m['id']) for m in json.load(sys.stdin)['data']]"</pre>
+  </div>
+
+  <!-- AUTO_SYNC -->
+
+  <div class="section" id="auto-sync">
+    <h2>LITELLM_AUTO_SYNC</h2>
+    <p>
+      The <code>LITELLM_AUTO_SYNC</code> environment variable controls whether the LiteMaaS backend automatically
+      synchronizes its model database from LiteLLM on startup and at periodic intervals. When enabled, the backend
+      pulls the current model list from LiteLLM and updates its own <code>models</code> table accordingly.
+    </p>
+
+    <p>Click the diagram to expand.</p>
+    <div class="mermaid">
+sequenceDiagram
+    participant L as LiteLLM Proxy
+    participant B as LiteMaaS Backend
+    participant D as PostgreSQL
+
+    Note over L,D: LITELLM_AUTO_SYNC=true
+    L->>D: Query LiteLLM_ProxyModelTable
+    L->>B: POST /api/v1/models (sync)
+    B->>D: Upsert models table
+    Note over B,D: Models now visible in user portal
     </div>
+
+    <h3>Check Current Setting</h3>
+    <pre>oc exec -n litellm-rhpds deployment/litellm-backend -- \
+  sh -c 'echo LITELLM_AUTO_SYNC=$LITELLM_AUTO_SYNC'</pre>
+
+    <h3>Enable Auto-Sync</h3>
+    <pre><span class="comment"># Set env var on the backend deployment</span>
+oc set env deployment/litellm-backend \
+  LITELLM_AUTO_SYNC=true \
+  -n litellm-rhpds
+
+<span class="comment"># Restart to apply</span>
+oc rollout restart deployment/litellm-backend -n litellm-rhpds</pre>
+
+    <h3>When to Use Auto-Sync</h3>
+    <table>
+      <thead><tr><th>Scenario</th><th>Recommendation</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Models added only via Ansible playbook</td>
+          <td>Auto-sync unnecessary — playbook handles both LiteLLM and backend DB</td>
+        </tr>
+        <tr>
+          <td>Models frequently added/removed via LiteLLM admin UI</td>
+          <td>Enable auto-sync to avoid running the sync playbook after each change</td>
+        </tr>
+        <tr>
+          <td>Production with tight change control</td>
+          <td>Disable auto-sync, use explicit sync playbook so changes are deliberate</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="warn-box">
+      <p>
+        <strong>Auto-sync and model deletion:</strong> If a model is deleted from LiteLLM and auto-sync is enabled,
+        the backend will remove it from its database too — which will cascade-delete user subscriptions to that model.
+        Be cautious about deleting models from LiteLLM when users have active subscriptions.
+      </p>
+    </div>
+  </div>
+
+  <!-- DB Sync -->
+
+  <div class="section" id="db-sync">
+    <h2>DB Sync Between LiteMaaS and LiteLLM</h2>
+    <p>
+      LiteMaaS maintains its own database tables (users, subscriptions, api_keys, models) that must stay in sync
+      with LiteLLM's <code>LiteLLM_VerificationToken</code> and <code>LiteLLM_ModelTable</code> tables.
+      Divergence between the two databases is the root cause of most operational issues.
+    </p>
+
+    <h3>Understanding the Two Databases</h3>
+    <p>Both LiteMaaS backend and LiteLLM proxy connect to the <strong>same PostgreSQL instance</strong> (<code>litellm-postgres-0</code>), but use different schemas/tables:</p>
+    <table>
+      <thead><tr><th>Table</th><th>Owner</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td><code>users</code></td><td>LiteMaaS backend</td><td>User accounts, roles, OAuth IDs</td></tr>
+        <tr><td><code>models</code></td><td>LiteMaaS backend</td><td>Model catalog with capability metadata</td></tr>
+        <tr><td><code>subscriptions</code></td><td>LiteMaaS backend</td><td>User-to-model subscription records</td></tr>
+        <tr><td><code>api_keys</code></td><td>LiteMaaS backend</td><td>Virtual key tracking with LiteLLM alias references</td></tr>
+        <tr><td><code>LiteLLM_VerificationToken</code></td><td>LiteLLM proxy</td><td>The actual virtual key records with spend/limits</td></tr>
+        <tr><td><code>LiteLLM_ModelTable</code></td><td>LiteLLM proxy</td><td>LiteLLM's internal model registry</td></tr>
+        <tr><td><code>LiteLLM_SpendLogs</code></td><td>LiteLLM proxy</td><td>Per-request spend audit trail</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Check for Orphaned Keys (LiteMaaS keys with no LiteLLM record)</h3>
+    <pre>oc exec -n litellm-rhpds litellm-postgres-0 -- \
+  psql -U litellm -d litellm -c "
+SELECT ak.id, ak.litellm_key_alias, ak.is_active, ak.created_at
+FROM api_keys ak
+WHERE ak.is_active = true
+  AND ak.litellm_key_alias IS NOT NULL
+  AND NOT EXISTS (
+    SELECT 1 FROM \"LiteLLM_VerificationToken\" lv
+    WHERE lv.key_alias = ak.litellm_key_alias
+  )
+LIMIT 20;"</pre>
+
+    <h3>Fix Orphaned Keys</h3>
+    <pre><span class="comment"># Mark orphaned LiteMaaS keys as inactive</span>
+oc exec -n litellm-rhpds litellm-postgres-0 -- \
+  psql -U litellm -d litellm -c "
+UPDATE api_keys
+SET is_active = false,
+    revoked_at = NOW(),
+    sync_status = 'error',
+    sync_error = 'Key not found in LiteLLM - manual cleanup',
+    updated_at = NOW()
+WHERE is_active = true
+  AND litellm_key_alias IS NOT NULL
+  AND NOT EXISTS (
+    SELECT 1 FROM \"LiteLLM_VerificationToken\" lv
+    WHERE lv.key_alias = api_keys.litellm_key_alias
+  );"</pre>
+
+    <h3>Check for Models in LiteLLM but Not in LiteMaaS</h3>
+    <pre><span class="comment"># List LiteLLM models missing from LiteMaaS models table</span>
+curl -X GET "${LITELLM_URL}/model/info" \
+  -H "Authorization: Bearer ${LITELLM_KEY}" | \
+  jq '.data[].model_name' | sort > /tmp/litellm-models.txt
+
+oc exec -n litellm-rhpds litellm-postgres-0 -- \
+  psql -U litellm -d litellm -t -c "SELECT id FROM models;" | \
+  sort > /tmp/litemaas-models.txt
+
+<span class="comment"># Show models in LiteLLM but not in LiteMaaS</span>
+diff /tmp/litellm-models.txt /tmp/litemaas-models.txt</pre>
+
+    <h3>Trigger Manual Sync</h3>
+    <pre><span class="comment"># Backend exposes a sync endpoint (admin auth required)</span>
+ADMIN_KEY=$(oc get secret backend-secret -n litellm-rhpds \
+  -o jsonpath='{.data.ADMIN_API_KEY}' | base64 -d)
+BACKEND_URL=$(oc get route litellm-prod-admin -n litellm-rhpds \
+  -o jsonpath='https://{.spec.host}')
+
+curl -X POST "${BACKEND_URL}/api/admin/sync-models" \
+  -H "Authorization: Bearer ${ADMIN_KEY}"</pre>
   </div>
 
   <div class="page-nav">
-    <a href="operations.html" class="pn-prev">
+    <a href="model-routing.html" class="pn-prev">
       <span class="pn-label">&larr; Previous</span>
-      <span class="pn-title">Day-2 Operations</span>
+      <span class="pn-title">Model Routing</span>
     </a>
-    <a href="model-management.html" class="pn-next">
+    <a href="analytics.html" class="pn-next">
       <span class="pn-label">Next &rarr;</span>
-      <span class="pn-title">Model Management</span>
+      <span class="pn-title">Analytics &amp; Backup</span>
     </a>
   </div>
 
