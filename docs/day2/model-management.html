@@ -353,6 +353,73 @@ curl -X POST "${BACKEND_URL}/api/admin/sync-models" \
   -H "Authorization: Bearer ${ADMIN_KEY}"</pre>
   </div>
 
+  <!-- External Provider Models -->
+  <div class="section" id="external-providers">
+    <h2>External Provider Models (Vertex AI)</h2>
+    <p>
+      In addition to on-cluster KServe models, RHDP MaaS supports models hosted on external providers
+      such as Google Vertex AI. These are accessed through the same OpenAI-compatible API endpoint and
+      virtual key — users see no difference in how they call them.
+    </p>
+    <p>
+      External models are pay-per-token (no GPU to manage), and are suited for use cases that require
+      larger models or specific capabilities not available on-cluster.
+    </p>
+
+    <h3>Currently Available — Google Vertex AI</h3>
+    <p>The following models are registered and available in RHDP MaaS via Google Vertex AI Model Garden:</p>
+
+    <table>
+      <thead>
+        <tr><th>Model</th><th>Type</th><th>Best for</th><th>Input /1M</th><th>Output /1M</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>minimax-m2</code></td>
+          <td>Chat, Agentic</td>
+          <td>Multi-step tool use, coding, office workflows</td>
+          <td>$0.30</td><td>$1.20</td>
+        </tr>
+        <tr>
+          <td><code>qwen3-235b</code></td>
+          <td>Chat, Reasoning</td>
+          <td>Multilingual, complex reasoning, large context tasks</td>
+          <td>$0.22</td><td>$0.88</td>
+        </tr>
+        <tr>
+          <td><code>gpt-oss-120b</code></td>
+          <td>Chat, Reasoning</td>
+          <td>Large-scale generation, function calling, agentic workflows</td>
+          <td>$0.09</td><td>$0.36</td>
+        </tr>
+        <tr>
+          <td><code>gpt-oss-20b</code></td>
+          <td>Chat</td>
+          <td>Cost-effective general tasks, lightweight agentic use</td>
+          <td>$0.07</td><td>$0.25</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>
+      All four models support <strong>function calling</strong> and are suitable for Agentic and MCP workflows.
+      Rate limits (TPM/RPM) and budget caps are enforced per key to keep usage sustainable.
+    </p>
+
+    <h3>Calling an external model</h3>
+    <p>No change in how you call the API — use the same endpoint and your virtual key:</p>
+    <pre><span class="comment"># Works exactly the same as on-cluster models</span>
+curl https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions \
+  -H "Authorization: Bearer $YOUR_VIRTUAL_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"model": "minimax-m2", "messages": [{"role": "user", "content": "your prompt"}]}'</pre>
+
+    <p>
+      <strong>Choose the right model for your use case</strong> — each has a different cost.
+      Use on-cluster models for casual testing; reserve external models for specific use cases that require them.
+    </p>
+  </div>
+
   <div class="page-nav">
     <a href="model-routing.html" class="pn-prev">
       <span class="pn-label">&larr; Previous</span>
