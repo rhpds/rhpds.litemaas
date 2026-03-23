@@ -577,24 +577,6 @@ curl https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions \
     </div>
   </div>
 
-    <!-- GPT OSS 120B -->
-    <div class="model-card">
-      <div class="model-card-header">
-          <h3>GPT OSS 120B <span class="badge badge-blue">Chat</span></h3>
-          <p style="color:#555; font-size:0.85rem; margin-top:0.3rem;">Large open-source 120B parameter model for complex generation and reasoning tasks.</p>
-      </div>
-      <div class="model-meta">
-        <div class="model-meta-item"><strong>Model ID</strong>gpt-oss-120b</div>
-        <div class="model-meta-item"><strong>Backend</strong>IBM WatsonX (us-south.ml.cloud.ibm.com)</div>
-        <div class="model-meta-item"><strong>Context</strong>—</div>
-      </div>
-      <pre><span class="comment"># Chat completion</span>
-curl https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions \
-  -H "Authorization: Bearer YOUR_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"model": "gpt-oss-120b", "messages": [{"role": "user", "content": "Summarise this document."}]}'</pre>
-    </div>
-
     <!-- Microsoft Phi-4 -->
     <div class="model-card">
       <div class="model-card-header">
@@ -611,6 +593,133 @@ curl https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"model": "microsoft-phi-4", "messages": [{"role": "user", "content": "Write a Python function to sort a list."}]}'</pre>
+    </div>
+  </div>
+
+  <!-- Vertex AI External Models -->
+  <div class="section" id="vertex-ai-models">
+    <h2>External Models (Google Vertex AI)</h2>
+    <p>
+      The following models are hosted on <strong>Google Vertex AI Model Garden</strong> and accessed through the same
+      RHDP MaaS endpoint and virtual key as all other models. They are fully managed MaaS APIs — no GPU allocation
+      is required on the RHDP side. Billing is pay-per-token; costs are tracked and capped per virtual key.
+    </p>
+    <div class="warn-box">
+      <p>
+        <strong>These are external models with real cost.</strong> Each request consumes tokens billed against the RHDP GCP project.
+        Choose the lightest model that meets your use case — prefer on-cluster models for casual testing and prototyping.
+      </p>
+    </div>
+
+    <!-- MiniMax M2 -->
+    <div class="model-card">
+      <div class="model-card-header">
+        <div>
+          <h3>MiniMax M2 <span class="badge badge-blue">Chat</span> <span class="badge badge-orange">Agentic</span> <span class="badge badge-gray" style="background:#f0f0f0;color:#444;border:1px solid #ccc;">Vertex AI</span></h3>
+          <p style="color:#555; font-size:0.85rem; margin-top:0.3rem;">Strong at multi-step tool use, coding, and office workflows. Large 197K context window makes it well-suited for document-heavy agentic pipelines.</p>
+        </div>
+      </div>
+      <div class="model-meta">
+        <div class="model-meta-item"><strong>Model ID</strong>minimax-m2</div>
+        <div class="model-meta-item"><strong>Context</strong>197K tokens</div>
+        <div class="model-meta-item"><strong>Input /1M</strong>$0.30</div>
+        <div class="model-meta-item"><strong>Output /1M</strong>$1.20</div>
+        <div class="model-meta-item"><strong>Function Calling</strong>Supported</div>
+        <div class="model-meta-item"><strong>Hosted on</strong>Google Vertex AI</div>
+      </div>
+      <pre><span class="comment"># Agentic / tool-use example</span>
+curl https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "minimax-m2",
+    "messages": [{"role": "user", "content": "Draft a project status report from the following notes: ..."}],
+    "max_tokens": 1024
+  }'</pre>
+    </div>
+
+    <!-- Qwen3 235B -->
+    <div class="model-card">
+      <div class="model-card-header">
+        <div>
+          <h3>Qwen3 235B <span class="badge badge-blue">Chat</span> <span class="badge badge-purple">Reasoning</span> <span class="badge badge-gray" style="background:#f0f0f0;color:#444;border:1px solid #ccc;">Vertex AI</span></h3>
+          <p style="color:#555; font-size:0.85rem; margin-top:0.3rem;">Large multilingual mixture-of-experts model from Alibaba. Excels at complex reasoning, multilingual tasks, and large-context workflows. 131K context window.</p>
+        </div>
+      </div>
+      <div class="model-meta">
+        <div class="model-meta-item"><strong>Model ID</strong>qwen3-235b</div>
+        <div class="model-meta-item"><strong>Parameters</strong>235B (MoE)</div>
+        <div class="model-meta-item"><strong>Context</strong>131K tokens</div>
+        <div class="model-meta-item"><strong>Input /1M</strong>$0.22</div>
+        <div class="model-meta-item"><strong>Output /1M</strong>$0.88</div>
+        <div class="model-meta-item"><strong>Function Calling</strong>Supported</div>
+        <div class="model-meta-item"><strong>Hosted on</strong>Google Vertex AI</div>
+      </div>
+      <pre><span class="comment"># Multilingual reasoning</span>
+curl https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "qwen3-235b",
+    "messages": [{"role": "user", "content": "Explain the trade-offs between RAG and fine-tuning for domain adaptation."}],
+    "max_tokens": 1024
+  }'</pre>
+    </div>
+
+    <!-- GPT OSS 120B -->
+    <div class="model-card">
+      <div class="model-card-header">
+        <div>
+          <h3>GPT OSS 120B <span class="badge badge-blue">Chat</span> <span class="badge badge-purple">Reasoning</span> <span class="badge badge-gray" style="background:#f0f0f0;color:#444;border:1px solid #ccc;">Vertex AI</span></h3>
+          <p style="color:#555; font-size:0.85rem; margin-top:0.3rem;">Large open-source 120B model with strong function calling support. Suited for complex generation, agentic workflows, and tasks that benefit from a large parameter count. 131K context window.</p>
+        </div>
+      </div>
+      <div class="model-meta">
+        <div class="model-meta-item"><strong>Model ID</strong>gpt-oss-120b</div>
+        <div class="model-meta-item"><strong>Parameters</strong>120B</div>
+        <div class="model-meta-item"><strong>Context</strong>131K tokens</div>
+        <div class="model-meta-item"><strong>Input /1M</strong>$0.09</div>
+        <div class="model-meta-item"><strong>Output /1M</strong>$0.36</div>
+        <div class="model-meta-item"><strong>Function Calling</strong>Supported</div>
+        <div class="model-meta-item"><strong>Hosted on</strong>Google Vertex AI</div>
+      </div>
+      <pre><span class="comment"># Function calling / complex generation</span>
+curl https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gpt-oss-120b",
+    "messages": [{"role": "user", "content": "Summarise this document and extract action items."}],
+    "max_tokens": 1024
+  }'</pre>
+    </div>
+
+    <!-- GPT OSS 20B -->
+    <div class="model-card">
+      <div class="model-card-header">
+        <div>
+          <h3>GPT OSS 20B <span class="badge badge-blue">Chat</span> <span class="badge badge-gray" style="background:#f0f0f0;color:#444;border:1px solid #ccc;">Vertex AI</span></h3>
+          <p style="color:#555; font-size:0.85rem; margin-top:0.3rem;">Cost-effective option for general-purpose chat tasks. The lightest external model — best starting point when you need a Vertex AI model but want to minimize spend. 131K context window.</p>
+        </div>
+      </div>
+      <div class="model-meta">
+        <div class="model-meta-item"><strong>Model ID</strong>gpt-oss-20b</div>
+        <div class="model-meta-item"><strong>Parameters</strong>20B</div>
+        <div class="model-meta-item"><strong>Context</strong>131K tokens</div>
+        <div class="model-meta-item"><strong>Input /1M</strong>$0.07</div>
+        <div class="model-meta-item"><strong>Output /1M</strong>$0.25</div>
+        <div class="model-meta-item"><strong>Function Calling</strong>Supported</div>
+        <div class="model-meta-item"><strong>Hosted on</strong>Google Vertex AI</div>
+      </div>
+      <pre><span class="comment"># General chat — cost-effective default</span>
+curl https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gpt-oss-20b",
+    "messages": [{"role": "user", "content": "What is the difference between a Pod and a Deployment in Kubernetes?"}],
+    "max_tokens": 512
+  }'</pre>
     </div>
   </div>
 

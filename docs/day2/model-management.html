@@ -366,6 +366,40 @@ curl -X POST "${BACKEND_URL}/api/admin/sync-models" \
       larger models or specific capabilities not available on-cluster.
     </p>
 
+    <h3>How Vertex AI Models Were Added</h3>
+    <p>
+      The following steps were taken to onboard Google Vertex AI models into RHDP MaaS.
+      All models use the <code>global</code> region and the RHDP GCP project.
+    </p>
+    <ol>
+      <li>
+        <strong>Identified models in Google Vertex AI Model Garden</strong> — browsed the RHDP org GCP project for
+        models available as fully managed MaaS APIs (pay-per-token, no GPU allocation required).
+        Selected models that complement the on-cluster fleet: MiniMax M2, Qwen3 235B, GPT OSS 120B, and GPT OSS 20B.
+      </li>
+      <li>
+        <strong>Created a Service Account</strong> (<code>litemaas-vertex-sa</code>) in the RHDP GCP project
+        and granted it the <code>roles/aiplatform.user</code> role — the minimum permission needed
+        to call Vertex AI prediction endpoints.
+      </li>
+      <li>
+        <strong>Stored the SA key as an OCP secret</strong> — the JSON key was stored as a Kubernetes
+        secret (<code>vertex-ai-sa-key</code>) in the <code>litellm-rhpds</code> namespace.
+        No credentials are stored in code or config files.
+      </li>
+      <li>
+        <strong>Mounted the secret in the LiteLLM deployment</strong> — the secret is volume-mounted
+        at <code>/etc/vertex-credentials/</code> inside the LiteLLM proxy pod so the proxy can
+        authenticate to Vertex AI at request time.
+      </li>
+      <li>
+        <strong>Registered each model via the LiteLLM API</strong> — each model was added using the
+        <code>POST /model/new</code> endpoint with <code>provider: vertex_ai</code>,
+        <code>vertex_credentials</code> pointing to the mounted key path, plus pricing
+        (input/output cost per token) and per-key rate limits (TPM/RPM).
+      </li>
+    </ol>
+
     <h3>Currently Available — Google Vertex AI</h3>
     <p>The following models are registered and available in RHDP MaaS via Google Vertex AI Model Garden:</p>
 
