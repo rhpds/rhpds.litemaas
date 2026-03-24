@@ -721,6 +721,132 @@ curl https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions \
     "max_tokens": 512
   }'</pre>
     </div>
+
+    <!-- Claude Sonnet 4.6 -->
+    <div class="model-card">
+      <div class="model-card-header">
+        <div>
+          <h3>Claude Sonnet 4.6 <span class="badge badge-blue">Chat</span> <span class="badge badge-gray" style="background:#f0f0f0;color:#444;border:1px solid #ccc;">Vertex AI</span></h3>
+          <p style="color:#555; font-size:0.85rem; margin-top:0.3rem;">Anthropic Claude Sonnet 4.6 via Google Vertex AI. Strong general-purpose reasoning, coding, and analysis. Balanced capability-to-cost ratio.</p>
+        </div>
+      </div>
+      <div class="model-meta">
+        <div class="model-meta-item"><strong>Model ID</strong>claude-sonnet-4-6</div>
+        <div class="model-meta-item"><strong>Input /1M</strong>$3.00</div>
+        <div class="model-meta-item"><strong>Output /1M</strong>$15.00</div>
+        <div class="model-meta-item"><strong>Hosted on</strong>Google Vertex AI</div>
+      </div>
+      <pre><span class="comment"># General reasoning and coding</span>
+curl https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "claude-sonnet-4-6",
+    "messages": [{"role": "user", "content": "Explain how Kubernetes resource quotas work."}],
+    "max_tokens": 1024
+  }'</pre>
+    </div>
+
+    <!-- Claude Opus 4.6 -->
+    <div class="model-card">
+      <div class="model-card-header">
+        <div>
+          <h3>Claude Opus 4.6 <span class="badge badge-blue">Chat</span> <span class="badge badge-gray" style="background:#f0f0f0;color:#444;border:1px solid #ccc;">Vertex AI</span></h3>
+          <p style="color:#555; font-size:0.85rem; margin-top:0.3rem;">Anthropic's most capable Claude model. Best for complex multi-step reasoning, long-document analysis, and high-stakes generation tasks.</p>
+        </div>
+      </div>
+      <div class="model-meta">
+        <div class="model-meta-item"><strong>Model ID</strong>claude-opus-4-6</div>
+        <div class="model-meta-item"><strong>Input /1M</strong>$5.00</div>
+        <div class="model-meta-item"><strong>Output /1M</strong>$25.00</div>
+        <div class="model-meta-item"><strong>Hosted on</strong>Google Vertex AI</div>
+      </div>
+      <pre><span class="comment"># Complex analysis and long-form generation</span>
+curl https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "claude-opus-4-6",
+    "messages": [{"role": "user", "content": "Analyze this architecture design and identify scalability bottlenecks."}],
+    "max_tokens": 2048
+  }'</pre>
+    </div>
+
+    <!-- Claude Sonnet 4.5 -->
+    <div class="model-card">
+      <div class="model-card-header">
+        <div>
+          <h3>Claude Sonnet 4.5 <span class="badge badge-blue">Chat</span> <span class="badge badge-gray" style="background:#f0f0f0;color:#444;border:1px solid #ccc;">Vertex AI</span></h3>
+          <p style="color:#555; font-size:0.85rem; margin-top:0.3rem;">Previous-generation Claude Sonnet. Strong coding and reasoning at the same price point as Sonnet 4.6.</p>
+        </div>
+      </div>
+      <div class="model-meta">
+        <div class="model-meta-item"><strong>Model ID</strong>claude-sonnet-4-5</div>
+        <div class="model-meta-item"><strong>Input /1M</strong>$3.00</div>
+        <div class="model-meta-item"><strong>Output /1M</strong>$15.00</div>
+        <div class="model-meta-item"><strong>Hosted on</strong>Google Vertex AI</div>
+      </div>
+      <pre><span class="comment"># Coding and structured output</span>
+curl https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "claude-sonnet-4-5",
+    "messages": [{"role": "user", "content": "Write a Python function to parse Kubernetes manifests."}],
+    "max_tokens": 1024
+  }'</pre>
+    </div>
+
+    <!-- Claude 3.5 Haiku -->
+    <div class="model-card">
+      <div class="model-card-header">
+        <div>
+          <h3>Claude 3.5 Haiku <span class="badge badge-blue">Chat</span> <span class="badge badge-gray" style="background:#f0f0f0;color:#444;border:1px solid #ccc;">Vertex AI</span></h3>
+          <p style="color:#555; font-size:0.85rem; margin-top:0.3rem;">Anthropic's fastest and most cost-efficient Claude model. Ideal for high-throughput tasks, classification, summarization, and light Q&amp;A where cost sensitivity matters.</p>
+        </div>
+      </div>
+      <div class="model-meta">
+        <div class="model-meta-item"><strong>Model ID</strong>claude-3-5-haiku</div>
+        <div class="model-meta-item"><strong>Input /1M</strong>$1.00</div>
+        <div class="model-meta-item"><strong>Output /1M</strong>$5.00</div>
+        <div class="model-meta-item"><strong>Hosted on</strong>Google Vertex AI</div>
+      </div>
+      <pre><span class="comment"># Fast, cost-efficient tasks</span>
+curl https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "claude-3-5-haiku",
+    "messages": [{"role": "user", "content": "Classify this log line as error, warning, or info."}],
+    "max_tokens": 64
+  }'</pre>
+    </div>
+
+    <!-- Gemini 2.5 Pro -->
+    <div class="model-card">
+      <div class="model-card-header">
+        <div>
+          <h3>Gemini 2.5 Pro <span class="badge badge-blue">Chat</span> <span class="badge badge-gray" style="background:#f0f0f0;color:#444;border:1px solid #ccc;">Vertex AI</span></h3>
+          <p style="color:#555; font-size:0.85rem; margin-top:0.3rem;">Google Gemini 2.5 Pro with a 1M token context window. Native Google model on Vertex AI — ideal for long-document analysis, multimodal workflows, and tasks requiring very large context.</p>
+        </div>
+      </div>
+      <div class="model-meta">
+        <div class="model-meta-item"><strong>Model ID</strong>gemini-2.5-pro</div>
+        <div class="model-meta-item"><strong>Context</strong>1M tokens</div>
+        <div class="model-meta-item"><strong>Input /1M</strong>$1.25</div>
+        <div class="model-meta-item"><strong>Output /1M</strong>$10.00</div>
+        <div class="model-meta-item"><strong>Hosted on</strong>Google Vertex AI</div>
+      </div>
+      <pre><span class="comment"># Long-document analysis</span>
+curl https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gemini-2.5-pro",
+    "messages": [{"role": "user", "content": "Summarize this entire repository and identify the main architecture patterns."}],
+    "max_tokens": 2048
+  }'</pre>
+    </div>
   </div>
 
   <!-- Available Models API -->
@@ -749,7 +875,7 @@ curl https://litellm-prod.apps.maas.redhatworkshops.io/model/info \
 
 <footer>
   <p>RHDP LiteMaaS Documentation &mdash; Red Hat Demo Platform &mdash; maas.redhatworkshops.io</p>
-  <span class="footer-updated">Last updated: 2026-03-19</span>
+  <span class="footer-updated">Last updated: 2026-03-25</span>
 </footer>
 
 <button id="back-to-top" title="Back to top" aria-label="Back to top">&#8679;</button>

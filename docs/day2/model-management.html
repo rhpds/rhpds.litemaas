@@ -134,6 +134,7 @@
       <li><a href="#adding-models">Adding Models</a></li>
       <li><a href="#auto-sync">LITELLM_AUTO_SYNC</a></li>
       <li><a href="#db-sync">DB Sync Between LiteMaaS and LiteLLM</a></li>
+      <li><a href="#external-providers">External Provider Models (Vertex AI)</a></li>
     </ul>
   </div>
 
@@ -400,6 +401,39 @@ curl -X POST "${BACKEND_URL}/api/admin/sync-models" \
       </li>
     </ol>
 
+    <h3>Adding a Service Account key to LiteLLM</h3>
+    <p>Vertex AI models authenticate via a GCP Service Account JSON key. The key is stored as an OCP secret and volume-mounted into the LiteLLM pod — LiteMaaS backend has no knowledge of it.</p>
+
+    <h4>Step 1 — Store the key as an OCP secret</h4>
+    <pre>oc create secret generic vertex-ai-sa-key \
+  --from-file=key.json=/path/to/service-account.json \
+  -n litellm-rhpds</pre>
+
+    <h4>Step 2 — Mount the secret into the LiteLLM pod</h4>
+    <pre>oc set volume deployment/litellm -n litellm-rhpds \
+  --add --name=vertex-sa-key \
+  --type=secret \
+  --secret-name=vertex-ai-sa-key \
+  --mount-path=/etc/vertex-credentials \
+  --read-only</pre>
+
+    <h4>Step 3 — Reference the path when registering the model</h4>
+    <p>Pass <code>vertex_credentials</code> pointing to the mounted file when calling <code>/model/new</code>:</p>
+    <pre>curl -sk -X POST "$LITELLM_URL/model/new" \
+  -H "Authorization: Bearer $ADMIN_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"model_name":"my-vertex-model",
+       "litellm_params":{
+         "model":"vertex_ai/publisher/model-maas",
+         "vertex_project":"my-gcp-project",
+         "vertex_location":"global",
+         "vertex_credentials":"/etc/vertex-credentials/key.json"
+       }}'</pre>
+
+    <p>LiteLLM reads the key file at request time, generates a short-lived OAuth token, and calls Vertex AI. The credentials path is encrypted in <code>LiteLLM_ProxyModelTable</code>.</p>
+
+    <p><strong>Note:</strong> If you have multiple SA keys (e.g. one for Model Garden and one for Claude/Gemini), mount each as a separate secret under a different path and reference accordingly.</p>
+
     <h3>Currently Available — Google Vertex AI</h3>
     <p>The following models are registered and available in RHDP MaaS via Google Vertex AI Model Garden:</p>
 
@@ -432,11 +466,42 @@ curl -X POST "${BACKEND_URL}/api/admin/sync-models" \
           <td>Cost-effective general tasks, lightweight agentic use</td>
           <td>$0.07</td><td>$0.25</td>
         </tr>
+        <tr>
+          <td><code>claude-sonnet-4-6</code></td>
+          <td>Chat</td>
+          <td>General-purpose reasoning, coding, analysis</td>
+          <td>$3.00</td><td>$15.00</td>
+        </tr>
+        <tr>
+          <td><code>claude-opus-4-6</code></td>
+          <td>Chat</td>
+          <td>Complex multi-step reasoning, long-document analysis</td>
+          <td>$5.00</td><td>$25.00</td>
+        </tr>
+        <tr>
+          <td><code>claude-sonnet-4-5</code></td>
+          <td>Chat</td>
+          <td>Coding and structured output, previous-generation Sonnet</td>
+          <td>$3.00</td><td>$15.00</td>
+        </tr>
+        <tr>
+          <td><code>claude-3-5-haiku</code></td>
+          <td>Chat</td>
+          <td>High-throughput, classification, light Q&amp;A — lowest Anthropic price</td>
+          <td>$1.00</td><td>$5.00</td>
+        </tr>
+        <tr>
+          <td><code>gemini-2.5-pro</code></td>
+          <td>Chat</td>
+          <td>Long-document analysis, 1M context, native Google model</td>
+          <td>$1.25</td><td>$10.00</td>
+        </tr>
       </tbody>
     </table>
 
     <p>
-      All four models support <strong>function calling</strong> and are suitable for Agentic and MCP workflows.
+      All models support standard chat completions. The MiniMax, Qwen3, and GPT OSS models also support
+      <strong>function calling</strong> and are suitable for Agentic and MCP workflows.
       Rate limits (TPM/RPM) and budget caps are enforced per key to keep usage sustainable.
     </p>
 
@@ -469,7 +534,7 @@ curl https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions \
 
 <footer>
   <p>RHDP LiteMaaS Documentation &mdash; Red Hat Demo Platform &mdash; maas.redhatworkshops.io</p>
-  <span class="footer-updated">Last updated: 2026-03-20</span>
+  <span class="footer-updated">Last updated: 2026-03-25</span>
 </footer>
 
 <button class="back-to-top" id="backToTop" title="Back to top">&#8679;</button>

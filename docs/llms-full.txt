@@ -2,7 +2,7 @@ RHDP LiteMaaS — Full Documentation (Plain Text for AI Ingestion)
 ================================================================
 Source: https://rhpds.github.io/rhpds.litemaas/docs/
 GitHub: https://github.com/rhpds/rhpds.litemaas
-Last updated: 2026-03-13
+Last updated: 2026-03-25
 
 ================================================================
 WHAT IS RHDP LiteMaaS?
@@ -104,8 +104,10 @@ Important: Users must log in via OAuth at least once before being promoted to ad
 Direct database inserts break OAuth login because the OpenShift OAuth ID (UUID) is not set.
 
 ================================================================
-AVAILABLE MODELS (as of v0.4.0)
+AVAILABLE MODELS (as of 2026-03)
 ================================================================
+
+--- On-Cluster GPU-Hosted (Self-Hosted) ---
 
 granite-3-2-8b-instruct
   Capability: Chat
@@ -115,20 +117,49 @@ granite-3-2-8b-instruct
   KServe predictor: granite-3-2-8b-instruct-predictor
   Replicas: 1
 
-llama-scout-17b
-  Capability: Chat
-  Runtime: vLLM on KServe
-  Context: 400K tokens (MoE architecture)
-  Description: Meta Llama Scout 17B. Ideal for long-document analysis and large-context RAG.
-  KServe predictor: llama-scout-17b-predictor
-  Replicas: 2 (HA)
-
 granite-4-0-h-tiny
   Capability: Chat
   Runtime: vLLM on KServe
-  Description: IBM Granite 4.0 Tiny. Low-latency. Best for simple Q&A and classification.
+  Description: IBM Granite 4.0 H Tiny. Low-latency. Best for simple Q&A and classification. Tool calling support.
   KServe predictor: granite-4-0-h-tiny-predictor
   Replicas: 1
+
+llama-scout-17b
+  Capability: Chat
+  Runtime: vLLM on KServe
+  Context: 400K tokens
+  Description: Meta Llama 4 Scout 17B. Ideal for long-document analysis and large-context RAG.
+  KServe predictor: llama-scout-17b-predictor
+  Replicas: 2 (HA)
+
+deepseek-r1-distill-qwen-14b
+  Capability: Chat, Reasoning
+  Runtime: vLLM on KServe
+  Description: DeepSeek R1 Distill Qwen 14B. Chain-of-thought reasoning model.
+  KServe predictor: deepseek-r1-distill-qwen-14b-predictor
+  Replicas: 1
+
+gpt-oss-120b
+  Capability: Chat
+  Runtime: vLLM on KServe
+  Description: GPT OSS 120B. Large open-source model for complex generation and agentic workflows.
+    NOTE: Also available as a Vertex AI pay-per-token model — same model ID, different backend.
+  KServe predictor: gpt-oss-120b-predictor
+  Replicas: 1
+
+microsoft-phi-4
+  Capability: Chat
+  Runtime: vLLM on KServe
+  Description: Microsoft Phi-4. Compact model with strong reasoning relative to size.
+  KServe predictor: microsoft-phi-4-predictor
+  Replicas: 1
+
+qwen3-14b
+  Capability: Chat
+  Runtime: vLLM on KServe
+  Description: Alibaba Qwen 3 14B. Multilingual model with strong instruction following.
+  KServe predictor: qwen3-14b-predictor
+  Replicas: 2 (LOAD BALANCED: one on maas00, one on smc00)
 
 codellama-7b-instruct
   Capability: Chat
@@ -138,7 +169,7 @@ codellama-7b-instruct
   KServe predictor: codellama-7b-instruct-predictor
   Replicas: 1
 
-llama-guard-3-1b
+Llama-Guard-3-1B
   Capability: Safety / Guardrails
   Runtime: vLLM on KServe
   Description: Meta Llama Guard 3 1B. Classifies content against 13 hazard categories.
@@ -158,11 +189,75 @@ nomic-embed-text-v1-5
 
 granite-docling-258m
   Capability: Document Conversion
-  Runtime: KServe (CPU)
+  Runtime: KServe (CPU), Docling Serve v1.14.3
   Description: IBM Granite Docling 258M. Converts PDFs and Word documents to clean Markdown.
     Handles layout analysis, table extraction, figure detection, OCR.
+  Endpoint: /docling/v1/convert/source
   KServe predictor: granite-docling-258m-predictor
   Replicas: 1
+
+--- Google Vertex AI (Pay-Per-Token, Programmatic Only) ---
+
+minimax-m2
+  Capability: Chat, Agentic
+  Hosted on: Google Vertex AI Model Garden
+  Context: 197K tokens
+  Pricing: $0.30 input / $1.20 output per 1M tokens
+  Description: MiniMax M2. Strong at multi-step tool use, coding, and office workflows.
+
+qwen3-235b
+  Capability: Chat, Reasoning
+  Hosted on: Google Vertex AI Model Garden
+  Context: 131K tokens
+  Pricing: $0.22 input / $0.88 output per 1M tokens
+  Description: Qwen3 235B (MoE). Multilingual, complex reasoning, large context tasks.
+
+gpt-oss-120b
+  Capability: Chat
+  Hosted on: Google Vertex AI Model Garden
+  Context: 131K tokens
+  Pricing: $0.09 input / $0.36 output per 1M tokens
+  Description: GPT OSS 120B via Vertex AI. NOTE: Same model ID as on-cluster self-hosted version.
+
+gpt-oss-20b
+  Capability: Chat
+  Hosted on: Google Vertex AI Model Garden
+  Context: 131K tokens
+  Pricing: $0.07 input / $0.25 output per 1M tokens
+  Description: GPT OSS 20B. Cost-effective general tasks, lightweight agentic use.
+
+claude-sonnet-4-6
+  Capability: Chat
+  Hosted on: Google Vertex AI (Anthropic via Vertex)
+  Pricing: $3.00 input / $15.00 output per 1M tokens
+  Description: Anthropic Claude Sonnet 4.6. Strong general-purpose reasoning, coding, and analysis.
+
+claude-opus-4-6
+  Capability: Chat
+  Hosted on: Google Vertex AI (Anthropic via Vertex)
+  Pricing: $5.00 input / $25.00 output per 1M tokens
+  Description: Anthropic Claude Opus 4.6. Most capable Claude model for complex multi-step tasks.
+
+claude-sonnet-4-5
+  Capability: Chat
+  Hosted on: Google Vertex AI (Anthropic via Vertex)
+  Pricing: $3.00 input / $15.00 output per 1M tokens
+  Description: Anthropic Claude Sonnet 4.5. Previous-generation Sonnet with strong coding and reasoning.
+
+claude-3-5-haiku
+  Capability: Chat
+  Hosted on: Google Vertex AI (Anthropic via Vertex)
+  Pricing: $1.00 input / $5.00 output per 1M tokens
+  Description: Anthropic Claude 3.5 Haiku. Fastest and most cost-efficient Claude model.
+    Ideal for classification, summarization, and high-throughput light Q&A.
+
+gemini-2.5-pro
+  Capability: Chat
+  Hosted on: Google Vertex AI (native Google model)
+  Context: 1M tokens
+  Pricing: $1.25 input / $10.00 output per 1M tokens
+  Description: Google Gemini 2.5 Pro. Native Google model with 1M context window.
+    Ideal for long-document analysis, multimodal workflows, and large-context tasks.
 
 ================================================================
 API ENDPOINTS

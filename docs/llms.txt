@@ -42,17 +42,31 @@ Users never interact with model servers directly. RHDP MaaS sits in between — 
 
 ## Available Models (as of 2026-03)
 
+### On-Cluster GPU-Hosted (Self-Hosted)
+
 - granite-3-2-8b-instruct — IBM Granite 3.2 8B, Chat, 128K context
 - granite-4-0-h-tiny — IBM Granite 4.0 H Tiny, Chat, tool calling
-- llama-scout-17b — Meta Llama 4 Scout 17B, Chat, 400K context, MoE
+- llama-scout-17b — Meta Llama 4 Scout 17B, Chat, 400K context
 - deepseek-r1-distill-qwen-14b — DeepSeek R1 Distill Qwen 14B, Chat, reasoning
-- gpt-oss-120b — GPT OSS 120B, Chat, large model
+- gpt-oss-120b — GPT OSS 120B, Chat, large (also on Vertex AI but self-hosted version here)
 - microsoft-phi-4 — Microsoft Phi-4, Chat, compact
 - qwen3-14b — Alibaba Qwen 3 14B, Chat, multilingual (LOAD BALANCED: 2 replicas on maas00 and smc00)
 - codellama-7b-instruct — Meta CodeLlama 7B, Code chat
 - Llama-Guard-3-1B — Meta Llama Guard 3 1B, Safety classification
 - nomic-embed-text-v1-5 — Nomic Embed Text, Embeddings
 - granite-docling-258m — IBM Granite Docling 258M, Document Conversion, Docling Serve v1.14.3, endpoint: /docling/v1/convert/source
+
+### Google Vertex AI (Pay-Per-Token, Programmatic Only)
+
+- minimax-m2 — MiniMax M2, Chat+Agentic, $0.30/$1.20 per 1M tokens
+- qwen3-235b — Qwen3 235B, Chat+Reasoning, $0.22/$0.88 per 1M tokens
+- gpt-oss-120b — GPT OSS 120B, Chat, $0.09/$0.36 per 1M tokens (also self-hosted on-cluster)
+- gpt-oss-20b — GPT OSS 20B, Chat, $0.07/$0.25 per 1M tokens
+- claude-sonnet-4-6 — Claude Sonnet 4.6, Chat, $3/$15 per 1M tokens
+- claude-opus-4-6 — Claude Opus 4.6, Chat, $5/$25 per 1M tokens
+- claude-sonnet-4-5 — Claude Sonnet 4.5, Chat, $3/$15 per 1M tokens
+- claude-3-5-haiku — Claude 3.5 Haiku, Chat, $1/$5 per 1M tokens
+- gemini-2.5-pro — Gemini 2.5 Pro, Chat, 1M context, $1.25/$10 per 1M tokens
 
 ## Architecture Summary
 
