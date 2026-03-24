@@ -188,6 +188,31 @@
     </div>
   </div>
 
+  <!-- LiteLLM vs LiteMaaS Explained -->
+  <div class="section">
+    <h2>LiteLLM, LiteLLM Proxy, and LiteMaaS — what's what</h2>
+    <p>These three terms are often confused. Here is the precise distinction:</p>
+
+    <div class="arch-layer layer-1" style="margin-bottom:1rem;">
+      <h4>LiteLLM (the library)</h4>
+      <p>An open-source Python library that provides a single interface to 100+ LLM providers. It knows how to translate requests to the format each provider expects — OpenAI, Anthropic, Vertex AI, Bedrock, etc. — and converts responses back to a standard shape. This is the <strong>translator/engine</strong>.</p>
+    </div>
+
+    <div class="arch-layer layer-2" style="margin-bottom:1rem;">
+      <h4>LiteLLM Proxy (the gateway)</h4>
+      <p>A FastAPI HTTP server built on top of the LiteLLM library. It exposes an OpenAI-compatible endpoint so any OpenAI client can connect to it without modification. It adds virtual keys, rate limiting (TPM/RPM), spend tracking, load balancing, and model routing. This is the <strong>gateway</strong> — raw infrastructure, no user-facing UI.</p>
+    </div>
+
+    <div class="arch-layer layer-3" style="margin-bottom:1rem;">
+      <h4>LiteMaaS (the platform)</h4>
+      <p>Built by Red Hat AI Services BU on top of the LiteLLM Proxy. It adds the <strong>self-service portal layer</strong>: users log in with Red Hat SSO, browse a model catalog, subscribe to models, create and manage API keys, and view their usage — without talking to an admin. LiteMaaS is what turns the raw proxy into a product.</p>
+    </div>
+
+    <p><strong>Simple analogy:</strong> LiteLLM library = engine &nbsp;|&nbsp; LiteLLM Proxy = car &nbsp;|&nbsp; LiteMaaS = dealership with showroom, customer accounts, and self-service.</p>
+
+    <p>When something breaks at the routing or key level → <strong>LiteLLM Proxy</strong>. When something breaks at the user, subscription, or catalog level → <strong>LiteMaaS</strong>. When a new AI provider needs support → <strong>LiteLLM library</strong>.</p>
+  </div>
+
   <!-- Architecture Layers -->
   <div class="section">
     <h2>Three-Layer Architecture</h2>
