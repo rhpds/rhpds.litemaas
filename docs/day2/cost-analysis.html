@@ -455,6 +455,52 @@
     </div>
   </div>
 
+  <!-- Section 6: Methodology -->
+  <div class="section" id="methodology">
+    <h2>How This Was Calculated</h2>
+    <p>The cost data came from an AWS Cost Explorer CSV export covering 6 months (September 2025 – February 2026). Here is the exact methodology used to arrive at the per-model $/1M token figures.</p>
+
+    <h3>Step 1 — Extract GPU instance costs from the CSV</h3>
+    <p>The CSV had one row per AWS instance type per month. We summed each GPU instance type over the full 6-month period:</p>
+    <pre>g6e.12xlarge (L40S×4)  → $7,899 total
+g6e.2xlarge  (L40S×1)  → $7,365 total
+g6.2xlarge   (L4×1)    → $3,804 total
+g4dn.2xlarge (T4×1)    → $2,597 total
+Total GPU cost          → $21,665</pre>
+
+    <h3>Step 2 — Calculate the overhead multiplier</h3>
+    <p>The total cluster cost over 6 months was <strong>$116,984</strong>. GPU nodes represent only 18.5% of that. The remaining 81.5% covers workers, control plane, database, networking, storage, and other overhead.</p>
+    <pre>Overhead multiplier = Total cluster cost / GPU cost
+                    = $116,984 / $21,665
+                    = 5.40x</pre>
+    <p>This means for every $1 spent on GPU hardware, $4.40 goes to supporting infrastructure.</p>
+
+    <h3>Step 3 — Map models to instance types</h3>
+    <p>We queried the OpenShift cluster to find which InferenceService runs on which instance type:</p>
+    <pre>KUBECONFIG=/tmp/maas-kube.yaml oc get inferenceservice -n llm-hosting -o json | \
+  python3 -c "import sys,json; ..."</pre>
+    <p>Each model was assigned its instance's share of the monthly GPU cost. Models sharing an instance (e.g. granite-4-0-h-tiny and granite-docling-258m on the same g6.2xlarge) split the cost equally.</p>
+
+    <h3>Step 4 — Get token usage from the database</h3>
+    <p>We queried the LiteLLM spend logs for the last 3 months:</p>
+    <pre>SELECT model, SUM(total_tokens)
+FROM "LiteLLM_SpendLogs"
+WHERE "startTime" >= NOW() - INTERVAL '3 months'
+GROUP BY model ORDER BY 2 DESC;</pre>
+    <p>Model names were normalised (e.g. <code>openai/qwen3-14b</code> and <code>qwen3-14b</code> were combined) to get total tokens per logical model.</p>
+
+    <h3>Step 5 — Calculate GPU-only $/1M tokens</h3>
+    <pre>Monthly GPU cost for model / (tokens used in 3 months / 3 / 1,000,000)</pre>
+
+    <h3>Step 6 — Apply overhead multiplier</h3>
+    <pre>Full cost per 1M tokens = GPU-only cost × 5.40</pre>
+    <p>The input/output split uses a 70/30 ratio based on typical chat workload patterns. Embedding models use input cost only (output tokens = 0).</p>
+
+    <div class="info-box">
+      <p><strong>Important caveat:</strong> These are internal infrastructure cost estimates, not billing rates. They reflect the amortised cost of running the cluster assuming current utilisation levels. Models with low usage will show a higher per-token cost because the fixed GPU cost is divided across fewer tokens.</p>
+    </div>
+  </div>
+
   <div class="page-nav">
     <a href="analytics.html" class="pn-prev">
       <span class="pn-label">&larr; Previous</span>
