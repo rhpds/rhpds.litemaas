@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LiteMaaS — Model Cost Analysis</title>
+  <meta name="description" content="RHDP LiteMaaS cost analysis — cluster costs, GPU node breakdown, per-model $/1M tokens, and self-hosted vs external provider comparison.">
+  <link rel="canonical" href="https://rhpds.github.io/rhpds.litemaas/docs/day2/cost-analysis.html">
+  <link rel="stylesheet" href="../assets/style.css">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Red Hat Text', 'Segoe UI', sans-serif; background: #f5f5f5; color: #151515; line-height: 1.6; }
+    header { background: #cc0000; color: white; padding: 1.5rem 3rem; display: flex; align-items: center; gap: 1.5rem; }
+    header h1 { font-size: 1.5rem; font-weight: 700; }
+    header p { opacity: 0.85; font-size: 0.9rem; margin-top: 0.2rem; }
+    nav { background: #151515; padding: 0 3rem; display: flex; gap: 0; flex-wrap: wrap; }
+    nav a { color: #e0e0e0; text-decoration: none; padding: 0.85rem 1.2rem; font-size: 0.9rem; display: block; transition: background 0.15s; }
+    nav a:hover, nav a.active { background: #cc0000; color: white; }
+    .container { max-width: 1100px; margin: 2rem auto; padding: 0 2rem; }
+    .breadcrumb { font-size: 0.82rem; color: #666; margin-bottom: 1.5rem; }
+    .breadcrumb a { color: #cc0000; text-decoration: none; }
+    .breadcrumb a:hover { text-decoration: underline; }
+    h1.page-title { font-size: 1.8rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .page-subtitle { color: #555; margin-bottom: 2rem; font-size: 1rem; }
+    .section { background: white; border-radius: 8px; padding: 2rem; margin-bottom: 1.5rem; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+    .section h2 { font-size: 1.2rem; font-weight: 700; margin-bottom: 1rem; color: #151515; border-bottom: 2px solid #cc0000; padding-bottom: 0.5rem; }
+    .section h3 { font-size: 1rem; font-weight: 700; margin: 1.4rem 0 0.5rem; color: #333; }
+    .section h4 { font-size: 0.92rem; font-weight: 700; margin: 1rem 0 0.4rem; color: #444; }
+    .section p { margin-bottom: 0.8rem; color: #333; font-size: 0.92rem; }
+    .section ul, .section ol { padding-left: 1.5rem; margin-bottom: 0.8rem; }
+    .section li { margin-bottom: 0.4rem; color: #333; font-size: 0.92rem; }
+    pre { background: #1e1e1e; color: #d4d4d4; padding: 1.2rem 1.5rem; border-radius: 6px; overflow-x: auto; font-size: 0.82rem; line-height: 1.5; margin: 0.8rem 0; }
+    pre .comment { color: #6a9955; }
+    pre .string { color: #ce9178; }
+    pre .keyword { color: #569cd6; }
+    pre .var { color: #9cdcfe; }
+    code { font-family: 'Courier New', monospace; font-size: 0.85em; background: #f0f0f0; padding: 0.1em 0.3em; border-radius: 3px; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.86rem; }
+    th { background: #151515; color: white; padding: 0.6rem 0.8rem; text-align: left; font-weight: 600; }
+    td { padding: 0.6rem 0.8rem; border-bottom: 1px solid #e8e8e8; vertical-align: top; }
+    tr:nth-child(even) { background: #f9f9f9; }
+    td code { background: #f0f0f0; padding: 0.1em 0.3em; border-radius: 3px; font-size: 0.82rem; }
+    .info-box { background: #e8f4fd; border-left: 4px solid #0066cc; padding: 1rem 1.5rem; border-radius: 0 6px 6px 0; margin: 1rem 0; }
+    .info-box p { margin: 0; font-size: 0.88rem; color: #004080; }
+    .warn-box { background: #fff8e1; border-left: 4px solid #f0a500; padding: 1rem 1.5rem; border-radius: 0 6px 6px 0; margin: 1rem 0; }
+    .warn-box p { margin: 0; font-size: 0.88rem; color: #5d3900; }
+    .danger-box { background: #fce8e8; border-left: 4px solid #cc0000; padding: 1rem 1.5rem; border-radius: 0 6px 6px 0; margin: 1rem 0; }
+    .danger-box p { margin: 0; font-size: 0.88rem; color: #7a0000; }
+    .toc { background: #f9f9f9; border: 1px solid #e0e0e0; border-radius: 8px; padding: 1.2rem 1.5rem; margin-bottom: 2rem; }
+    .toc h3 { font-size: 0.9rem; font-weight: 700; margin-bottom: 0.8rem; }
+    .toc ul { padding-left: 1.2rem; margin: 0; }
+    .toc li { margin-bottom: 0.3rem; }
+    .toc a { color: #cc0000; text-decoration: none; font-size: 0.88rem; }
+    .toc a:hover { text-decoration: underline; }
+    .toc .toc-sub { margin-top: 0.6rem; padding-left: 1rem; border-top: 1px solid #e0e0e0; padding-top: 0.6rem; }
+    .toc .toc-sub li { margin-bottom: 0.25rem; }
+    .toc .toc-sub a { font-size: 0.83rem; color: #555; }
+    footer { background: #151515; color: #aaa; text-align: center; padding: 1.5rem; font-size: 0.85rem; margin-top: 3rem; }
+    .footer-updated { display: block; margin-top: 0.3rem; font-size: 0.8rem; color: #777; }
+    .page-nav { display: flex; justify-content: space-between; margin: 2rem 0; gap: 1rem; }
+    .page-nav a { display: flex; flex-direction: column; padding: 1rem 1.5rem; background: white; border-radius: 8px; text-decoration: none; color: #151515; box-shadow: 0 1px 4px rgba(0,0,0,0.1); flex: 1; max-width: 48%; transition: box-shadow 0.15s; }
+    .page-nav a:hover { box-shadow: 0 3px 10px rgba(0,0,0,0.15); }
+    .pn-label { font-size: 0.78rem; color: #888; margin-bottom: 0.2rem; }
+    .pn-title { font-size: 0.95rem; font-weight: 600; color: #cc0000; }
+    .pn-prev { align-items: flex-start; }
+    .pn-next { align-items: flex-end; }
+    .nav-hamburger { display: none; background: none; border: none; color: #e0e0e0; font-size: 1.5rem; cursor: pointer; padding: 0.85rem 1.2rem; }
+    @media (max-width: 768px) {
+      header { padding: 1rem 1.5rem; }
+      nav { padding: 0; flex-direction: column; }
+      .nav-hamburger { display: block; }
+      .nav-links { display: none; flex-direction: column; width: 100%; }
+      .nav-links.open { display: flex; }
+      .nav-links a { padding: 0.7rem 1.5rem; border-top: 1px solid #2a2a2a; }
+      .container { padding: 0 1rem; }
+      .page-nav { flex-direction: column; }
+      .page-nav a { max-width: 100%; }
+    }
+    .anchor-link { opacity: 0; margin-left: 0.4rem; color: #cc0000; font-size: 0.8rem; text-decoration: none; }
+    .section h2:hover .anchor-link, .section h3:hover .anchor-link { opacity: 1; }
+    .copy-btn { position: absolute; right: 0.5rem; top: 0.5rem; background: #333; color: #ccc; border: none; border-radius: 4px; padding: 0.2rem 0.6rem; font-size: 0.75rem; cursor: pointer; opacity: 0; transition: opacity 0.15s; }
+    pre { position: relative; }
+    pre:hover .copy-btn { opacity: 1; }
+    .copy-btn.copied { background: #28a745; color: white; }
+    .back-to-top { position: fixed; bottom: 2rem; right: 2rem; background: #cc0000; color: white; border: none; border-radius: 50%; width: 2.5rem; height: 2.5rem; font-size: 1.2rem; cursor: pointer; opacity: 0; transition: opacity 0.3s; z-index: 100; }
+    .back-to-top.visible { opacity: 1; }
+    /* Cost page specific */
+    .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin: 1.2rem 0; }
+    .stat-card { background: #f9f9f9; border: 1px solid #e0e0e0; border-radius: 8px; padding: 1.2rem 1.5rem; }
+    .stat-card .stat-label { font-size: 0.78rem; color: #666; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.3rem; }
+    .stat-card .stat-value { font-size: 1.6rem; font-weight: 700; color: #cc0000; line-height: 1.2; }
+    .stat-card .stat-sub { font-size: 0.8rem; color: #555; margin-top: 0.3rem; }
+    td.num { text-align: right; font-variant-numeric: tabular-nums; }
+    td.highlight { background: #fff8e1; font-weight: 600; }
+    td.good { background: #e8f5e9; color: #1b5e20; font-weight: 600; }
+    td.bad { background: #fce8e8; color: #7a0000; }
+    td.muted { color: #888; font-style: italic; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>RHDP LiteMaaS</h1>
+    <p>Model as a Service for Red Hat Demo Platform</p>
+  </div>
+</header>
+
+<nav>
+  <button class="nav-hamburger" id="navToggle" aria-label="Toggle navigation">&#9776;</button>
+  <div class="nav-links" id="navLinks">
+    <a href="../index.html">Home</a>
+    <a href="../architecture.html">Architecture</a>
+    <a href="../product/overview.html">Overview</a>
+    <a href="../product/models.html">Models</a>
+    <a href="../install/deployment.html">Install</a>
+    <a href="operations.html">Day-2</a>
+    <a href="model-routing.html">Model Routing</a>
+    <a href="model-management.html">Model Management</a>
+    <a href="analytics.html">Analytics &amp; Backup</a>
+    <a href="cost-analysis.html" class="active">Cost Analysis</a>
+    <a href="../monitoring.html">Monitoring</a>
+    <a href="../infrastructure.html">Infrastructure</a>
+    <a href="../troubleshooting/common.html">Troubleshooting</a>
+  </div>
+</nav>
+
+<div class="container">
+
+  <div class="breadcrumb">
+    <a href="../index.html">Home</a> / <a href="operations.html">Day-2</a> / Cost Analysis
+  </div>
+
+  <h1 class="page-title">Model Cost Analysis</h1>
+  <p class="page-subtitle">Six-month cost breakdown for the RHDP MaaS cluster — GPU spend, per-model token costs, and self-hosted vs external provider economics.</p>
+
+  <div class="toc">
+    <h3>On This Page</h3>
+    <ul>
+      <li><a href="#cluster-overview">Cluster Cost Overview (Sep 2025 &ndash; Feb 2026)</a></li>
+      <li><a href="#gpu-breakdown">GPU Node Cost Breakdown</a></li>
+      <li><a href="#cost-per-token">Cost Per 1M Tokens</a></li>
+      <li><a href="#self-hosted-vs-external">Self-Hosted vs External Provider</a></li>
+      <li><a href="#vertex-ai">Vertex AI Models (Pay-per-Token)</a></li>
+    </ul>
+  </div>
+
+  <!-- Section 1: Cluster Cost Overview -->
+  <div class="section" id="cluster-overview">
+    <h2>Cluster Cost Overview (Sep 2025 &ndash; Feb 2026)</h2>
+    <p>Six months of production cluster costs across all node types, broken down between GPU compute and supporting infrastructure.</p>
+
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-label">Total Cluster Cost</div>
+        <div class="stat-value">$116,984</div>
+        <div class="stat-sub">6 months (Sep 2025 &ndash; Feb 2026)</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">GPU Node Costs</div>
+        <div class="stat-value">$21,665</div>
+        <div class="stat-sub">18.5% of total spend</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Overhead</div>
+        <div class="stat-value">$95,319</div>
+        <div class="stat-sub">81.5% — workers, control plane, DB, networking</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Overhead Multiplier</div>
+        <div class="stat-value">5.40&times;</div>
+        <div class="stat-sub">For every $1 of GPU cost, $4.40 goes to overhead</div>
+      </div>
+    </div>
+
+    <h3>Monthly Breakdown</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Month</th>
+          <th class="num">Total Cost</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Sep 2025</td><td class="num">$18,900</td></tr>
+        <tr><td>Oct 2025</td><td class="num">$20,267</td></tr>
+        <tr><td>Nov 2025</td><td class="num">$23,455</td></tr>
+        <tr><td>Dec 2025</td><td class="num">$18,717</td></tr>
+        <tr><td>Jan 2026</td><td class="num">$17,089</td></tr>
+        <tr><td>Feb 2026</td><td class="num">$18,555</td></tr>
+        <tr><td><strong>Total</strong></td><td class="num"><strong>$116,984</strong></td></tr>
+      </tbody>
+    </table>
+
+    <div class="info-box">
+      <p>
+        <strong>The overhead multiplier is the critical number for cost planning.</strong> The cluster infrastructure
+        (worker nodes, control plane, PostgreSQL, networking, storage) costs 5.40&times; the raw GPU spend. Any
+        model running on dedicated GPU hardware must be used heavily enough to justify both the GPU cost
+        <em>and</em> that 4.40&times; overhead on top.
+      </p>
+    </div>
+  </div>
+
+  <!-- Section 2: GPU Node Cost Breakdown -->
+  <div class="section" id="gpu-breakdown">
+    <h2>GPU Node Cost Breakdown</h2>
+    <p>Each GPU node type is dedicated to specific models. Costs are amortized over the 6-month window.</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Instance Type</th>
+          <th>GPU</th>
+          <th class="num">6-Month Cost</th>
+          <th class="num">Cost/Month</th>
+          <th>Models Hosted</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>g6e.12xlarge</code></td>
+          <td>L40S &times; 4</td>
+          <td class="num">$7,899</td>
+          <td class="num">$1,317</td>
+          <td>llama-scout-17b (2 replicas)</td>
+        </tr>
+        <tr>
+          <td><code>g6e.2xlarge</code></td>
+          <td>L40S &times; 1</td>
+          <td class="num">$7,365</td>
+          <td class="num">$1,227</td>
+          <td>codellama-7b-instruct</td>
+        </tr>
+        <tr>
+          <td><code>g6.2xlarge</code></td>
+          <td>L4 &times; 1</td>
+          <td class="num">$3,804</td>
+          <td class="num">$634</td>
+          <td>granite-4-0-h-tiny, granite-docling-258m</td>
+        </tr>
+        <tr>
+          <td><code>g4dn.2xlarge</code></td>
+          <td>T4 &times; 1</td>
+          <td class="num">$2,597</td>
+          <td class="num">$433</td>
+          <td>llama-guard-3-1b, nomic-embed-text-v1-5</td>
+        </tr>
+        <tr>
+          <td><strong>Total</strong></td>
+          <td></td>
+          <td class="num"><strong>$21,665</strong></td>
+          <td class="num"><strong>$3,611</strong></td>
+          <td></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="warn-box">
+      <p>
+        <strong>llama-scout-17b accounts for 36% of GPU spend</strong> ($7,899 over 6 months) due to the
+        4-GPU instance type required for 2 replicas. Models requiring multi-GPU instances have a much steeper
+        cost cliff when token utilization is low.
+      </p>
+    </div>
+  </div>
+
+  <!-- Section 3: Cost Per 1M Tokens -->
+  <div class="section" id="cost-per-token">
+    <h2>Cost Per 1M Tokens (GPU-Only vs Full Infrastructure)</h2>
+    <p>
+      The GPU-only cost divides the monthly GPU node cost by observed token throughput. The full cost applies the
+      5.40&times; overhead multiplier to reflect the true all-in infrastructure cost per token.
+    </p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Model</th>
+          <th class="num">GPU-Only $/1M</th>
+          <th class="num">Full Cost $/1M</th>
+          <th class="num">3-Month Token Usage</th>
+          <th class="num">Monthly GPU Cost</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>qwen3-14b</td>
+          <td class="num good">$4.89</td>
+          <td class="num good">$26.40</td>
+          <td class="num">376M</td>
+          <td class="num">$613</td>
+        </tr>
+        <tr>
+          <td>granite-3-2-8b-instruct</td>
+          <td class="num good">$13.62</td>
+          <td class="num good">$73.54</td>
+          <td class="num">135M</td>
+          <td class="num">$613</td>
+        </tr>
+        <tr>
+          <td>deepseek-r1-distill-qwen-14b</td>
+          <td class="num">$21.25</td>
+          <td class="num">$114.74</td>
+          <td class="num">87M</td>
+          <td class="num">$613</td>
+        </tr>
+        <tr>
+          <td>llama-scout-17b</td>
+          <td class="num">$79.06</td>
+          <td class="num">$426.89</td>
+          <td class="num">100M</td>
+          <td class="num">$2,633</td>
+        </tr>
+        <tr>
+          <td>microsoft-phi-4</td>
+          <td class="num bad">$233.38</td>
+          <td class="num bad">$1,260.16</td>
+          <td class="num">7.9M</td>
+          <td class="num">$613</td>
+        </tr>
+        <tr>
+          <td>granite-4-0-h-tiny</td>
+          <td class="num bad">$189.71</td>
+          <td class="num bad">$1,024.36</td>
+          <td class="num">5.0M</td>
+          <td class="num">$317</td>
+        </tr>
+        <tr>
+          <td>Llama-Guard-3-1B</td>
+          <td class="num bad">$145.16</td>
+          <td class="num bad">$783.81</td>
+          <td class="num">4.5M</td>
+          <td class="num">$217</td>
+        </tr>
+        <tr>
+          <td>codellama-7b-instruct</td>
+          <td class="num bad">$278.07</td>
+          <td class="num bad">$1,501.47</td>
+          <td class="num">13.2M</td>
+          <td class="num">$1,227</td>
+        </tr>
+        <tr>
+          <td>nomic-embed-text-v1-5</td>
+          <td class="num bad">$440.04</td>
+          <td class="num bad">$2,376.04</td>
+          <td class="num">1.5M</td>
+          <td class="num">$217</td>
+        </tr>
+        <tr>
+          <td>gpt-oss-120b</td>
+          <td class="num muted">&mdash;</td>
+          <td class="num muted">&mdash; (Vertex AI: $0.09/$0.36)</td>
+          <td class="num">0.6M</td>
+          <td class="muted">moved to Vertex AI</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="info-box">
+      <p>
+        <strong>Full cost = GPU cost &times; 5.40 (overhead multiplier).</strong> Self-hosted cost is high for
+        low-usage models &mdash; consider moving them to external providers. Models highlighted in green
+        (qwen3-14b, granite-3-2-8b-instruct) have sufficient token volume to amortize the fixed GPU cost
+        efficiently.
+      </p>
+    </div>
+  </div>
+
+  <!-- Section 4: Self-Hosted vs External -->
+  <div class="section" id="self-hosted-vs-external">
+    <h2>Self-Hosted vs External Provider Comparison</h2>
+    <p>
+      Fixed GPU costs only make sense when token volume is high enough to spread that cost thin.
+      These examples show where self-hosting competes well &mdash; and where it does not.
+    </p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Model</th>
+          <th class="num">Self-Hosted $/1M (full)</th>
+          <th class="num">External $/1M</th>
+          <th>Verdict</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>nomic-embed-text-v1-5</td>
+          <td class="num bad">$2,376</td>
+          <td class="num good">$0.30 (external)</td>
+          <td>Move to external &mdash; ~7,920&times; cheaper per token</td>
+        </tr>
+        <tr>
+          <td>codellama-7b-instruct</td>
+          <td class="num bad">$1,501</td>
+          <td class="num muted">No direct equivalent</td>
+          <td>Evaluate alternatives; GPU utilization is too low to justify cost</td>
+        </tr>
+        <tr>
+          <td>qwen3-14b</td>
+          <td class="num good">$26</td>
+          <td class="num good">$0.22 (qwen3-235b on Vertex AI &mdash; larger model, cheaper!)</td>
+          <td>Self-hosting competitive at this volume; Vertex AI still wins on price but loses on data control</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="warn-box">
+      <p>
+        <strong>Self-hosting makes sense for high-usage models</strong> (qwen3-14b, granite-3-2-8b) where the
+        fixed GPU cost is amortized across many tokens and data sovereignty matters. Low-usage models cost
+        significantly more per token self-hosted than via external APIs &mdash; the fixed node cost is the same
+        whether the GPU serves 1M or 1B tokens per month.
+      </p>
+    </div>
+  </div>
+
+  <!-- Section 5: Vertex AI Models -->
+  <div class="section" id="vertex-ai">
+    <h2>Vertex AI Models (Pay-per-Token)</h2>
+    <p>
+      External models routed through Vertex AI are billed purely on consumption with no fixed infrastructure cost.
+      Input and output tokens are priced separately.
+    </p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Model</th>
+          <th class="num">Input $/1M tokens</th>
+          <th class="num">Output $/1M tokens</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>minimax-m2</td><td class="num">$0.30</td><td class="num">$1.20</td></tr>
+        <tr><td>qwen3-235b</td><td class="num">$0.22</td><td class="num">$0.88</td></tr>
+        <tr><td>gpt-oss-120b</td><td class="num">$0.09</td><td class="num">$0.36</td></tr>
+        <tr><td>gpt-oss-20b</td><td class="num">$0.07</td><td class="num">$0.25</td></tr>
+        <tr><td>claude-sonnet-4-6</td><td class="num">$3.00</td><td class="num">$15.00</td></tr>
+        <tr><td>claude-opus-4-6</td><td class="num">$5.00</td><td class="num">$25.00</td></tr>
+        <tr><td>claude-sonnet-4-5</td><td class="num">$3.00</td><td class="num">$15.00</td></tr>
+        <tr><td>claude-3-5-haiku</td><td class="num">$1.00</td><td class="num">$5.00</td></tr>
+        <tr><td>gemini-2.5-pro</td><td class="num">$1.25</td><td class="num">$10.00</td></tr>
+      </tbody>
+    </table>
+
+    <div class="info-box">
+      <p>
+        <strong>External model costs are official published Vertex AI rates.</strong> Actual rates may differ
+        under Red Hat partnership agreements. For models with very low usage on the cluster (under 5M tokens
+        per month), the Vertex AI pay-per-token model is almost always cheaper than maintaining a dedicated
+        GPU node.
+      </p>
+    </div>
+  </div>
+
+  <div class="page-nav">
+    <a href="analytics.html" class="pn-prev">
+      <span class="pn-label">&larr; Previous</span>
+      <span class="pn-title">Analytics &amp; Backup</span>
+    </a>
+    <a href="../monitoring.html" class="pn-next">
+      <span class="pn-label">Next &rarr;</span>
+      <span class="pn-title">Monitoring</span>
+    </a>
+  </div>
+
+</div>
+
+<footer>
+  <p>RHDP LiteMaaS Documentation &mdash; Red Hat Demo Platform &mdash; maas.redhatworkshops.io</p>
+  <span class="footer-updated">Last updated: 2026-03-25</span>
+</footer>
+
+<button class="back-to-top" id="backToTop" title="Back to top">&#8679;</button>
+
+<script>
+  document.getElementById('navToggle').addEventListener('click', function() {
+    document.getElementById('navLinks').classList.toggle('open');
+  });
+  var btt = document.getElementById('backToTop');
+  window.addEventListener('scroll', function() {
+    btt.classList.toggle('visible', window.scrollY > 400);
+  });
+  btt.addEventListener('click', function() { window.scrollTo({ top: 0, behavior: 'smooth' }); });
+  document.querySelectorAll('.section h2, .section h3').forEach(function(h) {
+    if (!h.id) h.id = h.textContent.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    var a = document.createElement('a');
+    a.className = 'anchor-link'; a.href = '#' + h.id; a.textContent = '#'; a.setAttribute('aria-label', 'Link to section');
+    h.appendChild(a);
+  });
+</script>
+
+</body>
+</html>
