@@ -140,8 +140,10 @@
       <li><a href="#cluster-overview">Cluster Cost Overview (Sep 2025 &ndash; Feb 2026)</a></li>
       <li><a href="#gpu-breakdown">GPU Node Cost Breakdown</a></li>
       <li><a href="#cost-per-token">Cost Per 1M Tokens</a></li>
+      <li><a href="#nomic-embed-analysis">Why nomic-embed-text-v1-5 Shows $2,351/1M</a></li>
       <li><a href="#self-hosted-vs-external">Self-Hosted vs External Provider</a></li>
       <li><a href="#vertex-ai">Vertex AI Models (Pay-per-Token)</a></li>
+      <li><a href="#methodology">How This Was Calculated</a></li>
     </ul>
   </div>
 
@@ -230,7 +232,7 @@
           <td>L40S &times; 1</td>
           <td class="num">$7,365</td>
           <td class="num">$1,227</td>
-          <td>codellama-7b-instruct</td>
+          <td>granite-3-2-8b-instruct, codellama-7b-instruct</td>
         </tr>
         <tr>
           <td><code>g6.2xlarge</code></td>
@@ -270,99 +272,114 @@
     <h2>Cost Per 1M Tokens (GPU-Only vs Full Infrastructure)</h2>
     <p>
       The GPU-only cost divides the monthly GPU node cost by observed token throughput. The full cost applies the
-      5.40&times; overhead multiplier to reflect the true all-in infrastructure cost per token.
+      5.40&times; overhead multiplier to reflect the true all-in infrastructure cost per token. Only the 7
+      InferenceServices confirmed running on this cluster are included below.
     </p>
 
     <table>
       <thead>
         <tr>
           <th>Model</th>
-          <th class="num">GPU-Only $/1M</th>
-          <th class="num">Full Cost $/1M</th>
+          <th>Node / Instance</th>
+          <th class="num">GPU $/month</th>
+          <th class="num">Full $/month (&times;5.40)</th>
           <th class="num">3-Month Token Usage</th>
-          <th class="num">Monthly GPU Cost</th>
+          <th class="num">Full $/1M tokens</th>
         </tr>
       </thead>
       <tbody>
         <tr>
-          <td>qwen3-14b</td>
-          <td class="num good">$4.89</td>
-          <td class="num good">$26.40</td>
-          <td class="num">376M</td>
-          <td class="num">$613</td>
-        </tr>
-        <tr>
           <td>granite-3-2-8b-instruct</td>
-          <td class="num good">$13.62</td>
-          <td class="num good">$73.54</td>
-          <td class="num">135M</td>
-          <td class="num">$613</td>
-        </tr>
-        <tr>
-          <td>deepseek-r1-distill-qwen-14b</td>
-          <td class="num">$21.25</td>
-          <td class="num">$114.74</td>
-          <td class="num">87M</td>
-          <td class="num">$613</td>
+          <td><code>g6e.2xlarge</code> (L40S)</td>
+          <td class="num">$614</td>
+          <td class="num">$3,314</td>
+          <td class="num good">135M</td>
+          <td class="num good">$73.64</td>
         </tr>
         <tr>
           <td>llama-scout-17b</td>
-          <td class="num">$79.06</td>
-          <td class="num">$426.89</td>
-          <td class="num">100M</td>
+          <td><code>g6e.12xlarge</code> &times;2 (L40S&times;4)</td>
           <td class="num">$2,633</td>
-        </tr>
-        <tr>
-          <td>microsoft-phi-4</td>
-          <td class="num bad">$233.38</td>
-          <td class="num bad">$1,260.16</td>
-          <td class="num">7.9M</td>
-          <td class="num">$613</td>
-        </tr>
-        <tr>
-          <td>granite-4-0-h-tiny</td>
-          <td class="num bad">$189.71</td>
-          <td class="num bad">$1,024.36</td>
-          <td class="num">5.0M</td>
-          <td class="num">$317</td>
-        </tr>
-        <tr>
-          <td>Llama-Guard-3-1B</td>
-          <td class="num bad">$145.16</td>
-          <td class="num bad">$783.81</td>
-          <td class="num">4.5M</td>
-          <td class="num">$217</td>
+          <td class="num">$14,218</td>
+          <td class="num">99.9M</td>
+          <td class="num">$426.82</td>
         </tr>
         <tr>
           <td>codellama-7b-instruct</td>
-          <td class="num bad">$278.07</td>
-          <td class="num bad">$1,501.47</td>
-          <td class="num">13.2M</td>
-          <td class="num">$1,227</td>
+          <td><code>g6e.2xlarge</code> (L40S)</td>
+          <td class="num">$614</td>
+          <td class="num">$3,314</td>
+          <td class="num bad">13.2M</td>
+          <td class="num bad">$750.90</td>
+        </tr>
+        <tr>
+          <td>granite-4-0-h-tiny</td>
+          <td><code>g6.2xlarge</code> (L4)</td>
+          <td class="num">$317</td>
+          <td class="num">$1,712</td>
+          <td class="num bad">5.0M</td>
+          <td class="num bad">$1,024.43</td>
+        </tr>
+        <tr>
+          <td>granite-docling-258m</td>
+          <td><code>g6.2xlarge</code> (L4)</td>
+          <td class="num">$317</td>
+          <td class="num">$1,712</td>
+          <td class="num muted">~0</td>
+          <td class="num muted">N/A</td>
+        </tr>
+        <tr>
+          <td>llama-guard-3-1b</td>
+          <td><code>g4dn.2xlarge</code> (T4)</td>
+          <td class="num">$216</td>
+          <td class="num">$1,168</td>
+          <td class="num bad">4.6M</td>
+          <td class="num bad">$766.55</td>
         </tr>
         <tr>
           <td>nomic-embed-text-v1-5</td>
-          <td class="num bad">$440.04</td>
-          <td class="num bad">$2,376.04</td>
-          <td class="num">1.5M</td>
-          <td class="num">$217</td>
-        </tr>
-        <tr>
-          <td>gpt-oss-120b</td>
-          <td class="num muted">&mdash;</td>
-          <td class="num muted">&mdash; (Vertex AI: $0.09/$0.36)</td>
-          <td class="num">0.6M</td>
-          <td class="muted">moved to Vertex AI</td>
+          <td><code>g4dn.2xlarge</code> (T4)</td>
+          <td class="num">$216</td>
+          <td class="num">$1,168</td>
+          <td class="num bad">1.5M</td>
+          <td class="num bad">$2,351.43</td>
         </tr>
       </tbody>
     </table>
 
     <div class="info-box">
       <p>
+        <strong>Models on maas00/smc00 servers (qwen3-14b, deepseek-r1-distill-qwen-14b, microsoft-phi-4) are excluded</strong>
+        — their infrastructure costs are not captured in this AWS billing data. Only the 7 InferenceServices
+        running on this cluster (in the <code>llm-hosting</code> namespace) are included above.
+      </p>
+    </div>
+
+    <div class="info-box">
+      <p>
         <strong>Full cost = GPU cost &times; 5.40 (overhead multiplier).</strong> Self-hosted cost is high for
-        low-usage models &mdash; consider moving them to external providers. Models highlighted in green
-        (qwen3-14b, granite-3-2-8b-instruct) have sufficient token volume to amortize the fixed GPU cost
-        efficiently.
+        low-usage models &mdash; consider moving them to external providers. granite-3-2-8b-instruct has
+        sufficient token volume to amortize the fixed GPU cost efficiently.
+      </p>
+    </div>
+  </div>
+
+  <!-- Section 3a: nomic-embed analysis -->
+  <div class="section" id="nomic-embed-analysis">
+    <h2>Why nomic-embed-text-v1-5 Shows $2,351/1M</h2>
+    <p>This is a <strong>utilization problem</strong>, not a model problem. Two factors combine:</p>
+    <ul>
+      <li><strong>Very low usage</strong> — only 1.49M tokens over 3 months (~497K tokens/month). The g4dn.2xlarge runs 24/7 regardless.</li>
+      <li><strong>Embeddings are token-light</strong> — each API call generates input tokens only (zero output). A typical embedding call is 50&ndash;200 tokens vs 500&ndash;2,000 for a chat turn.</li>
+    </ul>
+    <p>At 10&times; usage (15M tokens/3 months), cost would drop to ~$235/1M. At 100&times; (150M tokens), it would reach ~$24/1M — competitive with any external provider.</p>
+
+    <div class="warn-box">
+      <p>
+        <strong>At current usage (1.5M tokens over 3 months), self-hosting nomic-embed costs $858</strong>
+        compared to ~$0.15 for the same volume via an external embedding API (e.g. OpenAI
+        text-embedding-3-small at $0.02/1M or Vertex AI embeddings at $0.025/1M). Consider moving to an
+        external provider unless usage is expected to grow significantly.
       </p>
     </div>
   </div>
@@ -387,28 +404,28 @@
       <tbody>
         <tr>
           <td>nomic-embed-text-v1-5</td>
-          <td class="num bad">$2,376</td>
-          <td class="num good">$0.30 (external)</td>
-          <td>Move to external &mdash; ~7,920&times; cheaper per token</td>
+          <td class="num bad">$2,351</td>
+          <td class="num good">$0.02&ndash;$0.03 (external)</td>
+          <td>Move to external &mdash; ~80,000&times; cheaper per token at current volume</td>
         </tr>
         <tr>
           <td>codellama-7b-instruct</td>
-          <td class="num bad">$1,501</td>
+          <td class="num bad">$751</td>
           <td class="num muted">No direct equivalent</td>
           <td>Evaluate alternatives; GPU utilization is too low to justify cost</td>
         </tr>
         <tr>
-          <td>qwen3-14b</td>
-          <td class="num good">$26</td>
-          <td class="num good">$0.22 (qwen3-235b on Vertex AI &mdash; larger model, cheaper!)</td>
-          <td>Self-hosting competitive at this volume; Vertex AI still wins on price but loses on data control</td>
+          <td>granite-3-2-8b-instruct</td>
+          <td class="num good">$74</td>
+          <td class="num muted">No direct equivalent (proprietary Red Hat model)</td>
+          <td>Self-hosting justified — competitive cost and data sovereignty</td>
         </tr>
       </tbody>
     </table>
 
     <div class="warn-box">
       <p>
-        <strong>Self-hosting makes sense for high-usage models</strong> (qwen3-14b, granite-3-2-8b) where the
+        <strong>Self-hosting makes sense for high-usage models</strong> (granite-3-2-8b-instruct, llama-scout-17b) where the
         fixed GPU cost is amortized across many tokens and data sovereignty matters. Low-usage models cost
         significantly more per token self-hosted than via external APIs &mdash; the fixed node cost is the same
         whether the GPU serves 1M or 1B tokens per month.
@@ -460,6 +477,13 @@
     <h2>How This Was Calculated</h2>
     <p>The cost data came from an AWS Cost Explorer CSV export covering 6 months (September 2025 – February 2026). Here is the exact methodology used to arrive at the per-model $/1M token figures.</p>
 
+    <p>
+      The cost attribution covers only the <strong>7 InferenceServices running on this cluster</strong> (in the
+      <code>llm-hosting</code> namespace). Models running on separate inference servers (maas00/smc00) such as
+      qwen3-14b, deepseek-r1-distill-qwen-14b, and microsoft-phi-4 are excluded because their infrastructure
+      costs are tracked separately and are not reflected in this AWS billing data.
+    </p>
+
     <h3>Step 1 — Extract GPU instance costs from the CSV</h3>
     <p>The CSV had one row per AWS instance type per month. We summed each GPU instance type over the full 6-month period:</p>
     <pre>g6e.12xlarge (L40S×4)  → $7,899 total
@@ -476,10 +500,16 @@ Total GPU cost          → $21,665</pre>
     <p>This means for every $1 spent on GPU hardware, $4.40 goes to supporting infrastructure.</p>
 
     <h3>Step 3 — Map models to instance types</h3>
-    <p>We queried the OpenShift cluster to find which InferenceService runs on which instance type:</p>
-    <pre>KUBECONFIG=/tmp/maas-kube.yaml oc get inferenceservice -n llm-hosting -o json | \
-  python3 -c "import sys,json; ..."</pre>
-    <p>Each model was assigned its instance's share of the monthly GPU cost. Models sharing an instance (e.g. granite-4-0-h-tiny and granite-docling-258m on the same g6.2xlarge) split the cost equally.</p>
+    <p>We queried the OpenShift cluster to confirm exactly which InferenceServices are running and which instance type each uses:</p>
+    <pre>oc get inferenceservice -n llm-hosting</pre>
+    <p>
+      This confirmed exactly <strong>7 models</strong> deployed as InferenceServices in the
+      <code>llm-hosting</code> namespace: granite-3-2-8b-instruct, llama-scout-17b, codellama-7b-instruct,
+      granite-4-0-h-tiny, granite-docling-258m, llama-guard-3-1b, and nomic-embed-text-v1-5.
+      Each model was assigned its instance's share of the monthly GPU cost. Models sharing an instance
+      (e.g. granite-4-0-h-tiny and granite-docling-258m on the same g6.2xlarge, or llama-guard-3-1b and
+      nomic-embed-text-v1-5 on the same g4dn.2xlarge) split the cost equally.
+    </p>
 
     <h3>Step 4 — Get token usage from the database</h3>
     <p>We queried the LiteLLM spend logs for the last 3 months:</p>
@@ -487,14 +517,14 @@ Total GPU cost          → $21,665</pre>
 FROM "LiteLLM_SpendLogs"
 WHERE "startTime" >= NOW() - INTERVAL '3 months'
 GROUP BY model ORDER BY 2 DESC;</pre>
-    <p>Model names were normalised (e.g. <code>openai/qwen3-14b</code> and <code>qwen3-14b</code> were combined) to get total tokens per logical model.</p>
+    <p>Model names were normalised (e.g. <code>openai/granite-3-2-8b-instruct</code> and <code>granite-3-2-8b-instruct</code> were combined) to get total tokens per logical model.</p>
 
     <h3>Step 5 — Calculate GPU-only $/1M tokens</h3>
     <pre>Monthly GPU cost for model / (tokens used in 3 months / 3 / 1,000,000)</pre>
 
     <h3>Step 6 — Apply overhead multiplier</h3>
     <pre>Full cost per 1M tokens = GPU-only cost × 5.40</pre>
-    <p>The input/output split uses a 70/30 ratio based on typical chat workload patterns. Embedding models use input cost only (output tokens = 0).</p>
+    <p>Embedding models use input cost only (output tokens = 0). Chat models use a combined token count.</p>
 
     <div class="info-box">
       <p><strong>Important caveat:</strong> These are internal infrastructure cost estimates, not billing rates. They reflect the amortised cost of running the cluster assuming current utilisation levels. Models with low usage will show a higher per-token cost because the fixed GPU cost is divided across fewer tokens.</p>
