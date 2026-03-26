@@ -415,9 +415,30 @@ oc rollout status deployment/litellm -n litellm-rhpds</pre>
       <li>Test subscription flow: as a non-admin user, subscribe to a model and retrieve an API key</li>
       <li>Test API key: make a curl request with the issued virtual key, verify response</li>
       <li>Retrieve and save admin credentials: <code>oc get secret litellm-secret -n &lt;ns&gt; -o yaml</code></li>
+      <li>Promote at least one user to admin: <code>oc adm groups add-users litemaas-admins user@redhat.com</code>, then have them log in via the frontend</li>
       <li>Set up key cleanup cron (production): <code>./setup-key-cleanup-cronjob.sh &lt;namespace&gt;</code></li>
       <li>Configure backup cron (production): <code>./setup-litemaas-backup-cronjob.sh &lt;namespace&gt; &lt;s3-bucket&gt;</code></li>
     </ul>
+  </div>
+
+  <!-- Adding Admin Users -->
+  <div class="section" id="admin-users">
+    <h2>Adding Admin Users</h2>
+    <p>LiteMaaS determines admin access by checking OpenShift group membership at OAuth login time. Users in the <code>litemaas-admins</code> OCP Group are granted the <code>admin</code> role automatically when they log in.</p>
+
+    <h3>Step 1 — Add the user to the litemaas-admins group</h3>
+    <pre><span class="comment"># Add a user to the litemaas-admins OCP group</span>
+oc adm groups add-users litemaas-admins user@redhat.com
+
+<span class="comment"># Verify group membership</span>
+oc get group litemaas-admins -o yaml</pre>
+
+    <div class="info-box"><p>If the <code>litemaas-admins</code> group does not exist yet, create it first: <code>oc adm groups new litemaas-admins</code></p></div>
+
+    <h3>Step 2 — User logs in via the frontend</h3>
+    <p>Have the user visit the LiteMaaS frontend and log in with their OpenShift credentials. The backend reads their group membership from OCP during the OAuth callback and assigns the <code>admin</code> role automatically. No further action is needed.</p>
+
+    <div class="info-box"><p>Role hierarchy: <strong>admin</strong> — full platform control &nbsp;|&nbsp; <strong>adminReadonly</strong> — read-only access to all admin views &nbsp;|&nbsp; <strong>user</strong> — default role on first login.</p></div>
   </div>
 
   <!-- Resource Summary -->
