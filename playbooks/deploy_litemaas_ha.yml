@@ -1,24 +1,38 @@
 ---
 # LiteMaaS HA Deployment Playbook
 #
+# Deploys LiteMaaS v0.4.0 on OpenShift with PostgreSQL, Redis, and 3-replica LiteLLM.
+# OAuth is enabled by default. All user budget and rate limit defaults are pre-configured.
+#
+# Prerequisites:
+#   - oc CLI authenticated to the target cluster (cluster-admin)
+#   - ansible-galaxy collection install kubernetes.core community.general
+#   - ansible-galaxy collection install . --force  (from repo root)
+#
 # Usage:
-#   # Standard HA deployment (OAuth enabled by default)
-#   ansible-playbook playbooks/deploy_litemaas_ha.yml
+#   # Fresh install (defaults: OAuth on, $2000/day budget, 400K TPM, 500 RPM)
+#   ansible-playbook playbooks/deploy_litemaas_ha.yml \
+#     -e ocp4_workload_litemaas_namespace=litemaas
 #
 #   # With RHDP branding
 #   ansible-playbook playbooks/deploy_litemaas_ha.yml \
+#     -e ocp4_workload_litemaas_namespace=litemaas \
 #     -e ocp4_workload_litemaas_branding_enabled=true
 #
-#   # Custom replicas
+#   # Custom user budget (e.g. monthly $5000 limit)
 #   ansible-playbook playbooks/deploy_litemaas_ha.yml \
-#     -e ocp4_workload_litemaas_ha_litellm_replicas=5
+#     -e ocp4_workload_litemaas_namespace=litemaas \
+#     -e ocp4_workload_litemaas_default_user_max_budget=5000 \
+#     -e ocp4_workload_litemaas_default_user_budget_duration=monthly
 #
 #   # Disable OAuth for testing
 #   ansible-playbook playbooks/deploy_litemaas_ha.yml \
+#     -e ocp4_workload_litemaas_namespace=litemaas \
 #     -e ocp4_workload_litemaas_oauth_enabled=false
 #
 #   # Remove deployment
 #   ansible-playbook playbooks/deploy_litemaas_ha.yml \
+#     -e ocp4_workload_litemaas_namespace=litemaas \
 #     -e ocp4_workload_litemaas_remove=true
 
 - name: Deploy LiteMaaS (High Availability)
