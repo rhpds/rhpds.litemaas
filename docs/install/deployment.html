@@ -180,9 +180,6 @@ helm install litemaas ~/work/code/rh-litemaas/deployment/helm/litemaas/ \
 <span class="comment"># Scale LiteLLM replicas (default 3)</span>
 <span class="var">ocp4_workload_litemaas_ha_litellm_replicas</span>: 3
 
-<span class="comment"># Enable RHDP branding</span>
-<span class="var">ocp4_workload_litemaas_branding_enabled</span>: true
-
 <span class="comment"># Route prefix customization (optional)</span>
 <span class="var">ocp4_workload_litemaas_api_route_prefix</span>: <span class="string">"litellm-prod"</span>
 <span class="var">ocp4_workload_litemaas_frontend_route_prefix</span>: <span class="string">"litellm-prod-frontend"</span>
@@ -205,8 +202,7 @@ ansible-playbook playbooks/deploy_litemaas_ha.yml \
 <span class="comment"># Or pass variables inline</span>
 ansible-playbook playbooks/deploy_litemaas_ha.yml \
   -e ocp4_workload_litemaas_namespace=litemaas \
-  -e ocp4_workload_litemaas_oauth_enabled=true \
-  -e ocp4_workload_litemaas_branding_enabled=true</pre>
+  -e ocp4_workload_litemaas_oauth_enabled=true</pre>
 
     <h3>Step 3: Deployment Order</h3>
     <p>The HA task deploys components in this sequence. Each component waits for its predecessor to be ready before continuing:</p>
