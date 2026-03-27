@@ -221,23 +221,6 @@
       retries: 30
       delay: 10
 
-- name: Deploy RHDP Branding ConfigMaps
-  when:
-    - ocp4_workload_litemaas_branding_enabled | default(false) | bool
-    - ocp4_workload_litemaas_deploy_frontend | bool
-  block:
-    - name: Deploy branding assets ConfigMap
-      kubernetes.core.k8s:
-        state: present
-        namespace: "{{ _litemaas_ha_namespace }}"
-        definition: "{{ lookup('template', 'litemaas-branding-configmap.yml.j2') | from_yaml }}"
-
-    - name: Deploy nginx branding config ConfigMap
-      kubernetes.core.k8s:
-        state: present
-        namespace: "{{ _litemaas_ha_namespace }}"
-        definition: "{{ lookup('template', 'litemaas-branding-nginx-config.yml.j2') | from_yaml }}"
-
 - name: Deploy Frontend (if enabled)
   when: ocp4_workload_litemaas_deploy_frontend | bool
   block:

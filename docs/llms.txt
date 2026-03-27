@@ -80,7 +80,7 @@ Three-layer architecture:
 The rhpds.litemaas Ansible collection deploys all components in order:
 Namespace -> PostgreSQL 16 -> Redis 7 -> LiteLLM Proxy (3 replicas) -> LiteMaaS Backend (3 replicas) -> Branding ConfigMaps -> LiteMaaS Frontend (3 replicas) -> Routes + OAuthClient
 
-Key variables: ocp4_workload_litemaas_namespace, ocp4_workload_litemaas_oauth_enabled, ocp4_workload_litemaas_ha_litellm_replicas, ocp4_workload_litemaas_branding_enabled
+Key variables: ocp4_workload_litemaas_namespace, ocp4_workload_litemaas_oauth_enabled, ocp4_workload_litemaas_ha_litellm_replicas, ocp4_workload_litemaas_default_user_max_budget, ocp4_workload_litemaas_default_user_budget_duration
 
 ## User Role Hierarchy
 
