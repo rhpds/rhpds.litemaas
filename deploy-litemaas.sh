@@ -2,14 +2,15 @@
 # =============================================================================
 # LiteMaaS Deployment Script
 # =============================================================================
-# Deploys LiteMaaS in High Availability mode with automatic Python venv setup
+# Deploys or updates LiteMaaS in High Availability mode.
+# Safe to re-run for updates — the Ansible role is idempotent.
 #
 # Usage:
-#   # Standard HA deployment
+#   # Fresh install or update
 #   ./deploy-litemaas.sh <namespace>
 #
-#   # HA with RHDP branding
-#   ./deploy-litemaas.sh <namespace> --rhdp
+#   # With OAuth (recommended for production)
+#   ./deploy-litemaas.sh <namespace> --oauth
 #
 #   # Custom replicas
 #   ./deploy-litemaas.sh <namespace> --replicas 5
@@ -41,7 +42,6 @@ EXTRA_VARS=""
 
 # Feature flags
 ENABLE_OAUTH=false
-ENABLE_RHDP=false
 ROUTE_PREFIX=""
 
 # Parse arguments
@@ -54,7 +54,6 @@ if [ $# -eq 0 ]; then
     echo "  --replicas <count>    Number of LiteLLM replicas (default: 3)"
     echo "  --remove              Remove existing deployment"
     echo "  --oauth               Enable OAuth authentication with OpenShift"
-    echo "  --rhdp                Enable RHDP branding (logos + footer)"
     echo "  --route-prefix <name> Set custom route prefix (e.g., litellm-prod)"
     echo "  -e <key=value>        Pass extra variables to Ansible"
     echo ""
@@ -62,11 +61,7 @@ if [ $# -eq 0 ]; then
     echo "  # Standard HA deployment"
     echo "  $0 litellm-rhpds"
     echo ""
-    echo "  # HA with RHDP branding"
-    echo "  $0 litellm-rhpds --rhdp"
     echo ""
-    echo "  # Full RHDP production (OAuth + branding + custom routes)"
-    echo "  $0 litellm-rhpds --oauth --rhdp --route-prefix litellm-prod"
     echo ""
     echo "  # Remove deployment"
     echo "  $0 litellm-rhpds --remove"
@@ -90,10 +85,7 @@ while [[ $# -gt 0 ]]; do
             ENABLE_OAUTH=true
             shift
             ;;
-        --rhdp)
-            ENABLE_RHDP=true
             shift
-            ;;
         --route-prefix)
             ROUTE_PREFIX="$2"
             shift 2
@@ -202,7 +194,6 @@ echo "Remove Mode:      $REMOVE_MODE"
 echo ""
 echo "Features:"
 echo "  OAuth:          $ENABLE_OAUTH"
-echo "  RHDP Branding:  $ENABLE_RHDP"
 if [ -n "$ROUTE_PREFIX" ]; then
     echo "  Route Prefix:   $ROUTE_PREFIX"
 fi
@@ -217,9 +208,6 @@ fi
 ANSIBLE_VARS="$ANSIBLE_VARS -e ocp4_workload_litemaas_deploy_backend=true"
 ANSIBLE_VARS="$ANSIBLE_VARS -e ocp4_workload_litemaas_deploy_frontend=true"
 
-if [ "$ENABLE_RHDP" = true ]; then
-    ANSIBLE_VARS="$ANSIBLE_VARS -e ocp4_workload_litemaas_branding_enabled=true"
-fi
 
 if [ -n "$ROUTE_PREFIX" ]; then
     ANSIBLE_VARS="$ANSIBLE_VARS -e ocp4_workload_litemaas_api_route_prefix=$ROUTE_PREFIX"
@@ -287,8 +275,10 @@ if ansible-playbook "$PLAYBOOK" $ANSIBLE_VARS; then
         echo ""
 
         echo "Next steps:"
-        echo "  1. Get the master API key using command above"
-        echo "  2. Add models via LiteLLM admin UI or playbook"
+        echo "  1. Get the master API key using the command above"
+        echo "  2. Add an admin user: oc adm groups add-users litemaas-admins <email>"
+        echo "     Then have them log in via the frontend to activate admin role"
+        echo "  3. Add models via LiteLLM admin UI or: ansible-playbook playbooks/manage_models.yml"
     fi
 else
     echo ""
