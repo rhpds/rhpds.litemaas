@@ -3,7 +3,7 @@
 ocp4_workload_litemaas_collection_version: "0.3.0"
 
 # Container image versions (backend/frontend images)
-ocp4_workload_litemaas_version: "0.2.2"
+ocp4_workload_litemaas_version: "0.4.0"
 
 # Namespace configuration
 ocp4_workload_litemaas_namespace: "litemaas"
@@ -19,13 +19,13 @@ ocp4_workload_litemaas_admin_route_name: "litellm-admin" # Admin route name
 ocp4_workload_litemaas_frontend_route_name: "litellm-frontend"  # Frontend route name
 
 # Image configuration
-ocp4_workload_litemaas_image_registry: "quay.io/rhpds"
-ocp4_workload_litemaas_backend_image: "quay.io/rhpds/litemaas"
-ocp4_workload_litemaas_backend_tag: "backend-0.2.2"
-ocp4_workload_litemaas_frontend_image: "quay.io/rhpds/litemaas"
-ocp4_workload_litemaas_frontend_tag: "frontend-0.2.2"
-ocp4_workload_litemaas_litellm_image: "ghcr.io/berriai/litellm-non_root"
-ocp4_workload_litemaas_litellm_tag: "main-v1.81.0-stable"
+ocp4_workload_litemaas_image_registry: "quay.io/rh-aiservices-bu"
+ocp4_workload_litemaas_backend_image: "quay.io/rh-aiservices-bu/litemaas-backend"
+ocp4_workload_litemaas_backend_tag: "0.4.0"
+ocp4_workload_litemaas_frontend_image: "quay.io/rh-aiservices-bu/litemaas-frontend"
+ocp4_workload_litemaas_frontend_tag: "0.4.0"
+ocp4_workload_litemaas_litellm_image: "quay.io/rh-aiservices-bu/litellm-non-root"
+ocp4_workload_litemaas_litellm_tag: "main-v1.81.0-stable-custom"
 
 # Cloud provider (auto-detected if not set)
 ocp4_workload_litemaas_cloud_provider: ""
@@ -68,6 +68,13 @@ ocp4_workload_litemaas_oauth_enabled: false
 ocp4_workload_litemaas_oauth_provider: "openshift"
 ocp4_workload_litemaas_oauth_client_id: "{{ ocp4_workload_litemaas_namespace }}"
 ocp4_workload_litemaas_oauth_client_secret: "{{ lookup('password', '/dev/null length=32 chars=ascii_letters,digits') }}"
+
+# Default user budget and rate limits
+# These control what every new user gets on first OAuth login
+ocp4_workload_litemaas_default_user_max_budget: 2000
+ocp4_workload_litemaas_default_user_budget_duration: "daily"
+ocp4_workload_litemaas_default_user_tpm_limit: 400000
+ocp4_workload_litemaas_default_user_rpm_limit: 500
 
 # Admin access
 ocp4_workload_litemaas_admin_emails:
