@@ -144,11 +144,13 @@ spec:
             - name: RATE_LIMIT_TIME_WINDOW
               value: "5m"
             - name: DEFAULT_USER_MAX_BUDGET
-              value: "100"
+              value: "{{ ocp4_workload_litemaas_default_user_max_budget }}"
+            - name: DEFAULT_USER_BUDGET_DURATION
+              value: "{{ ocp4_workload_litemaas_default_user_budget_duration }}"
             - name: DEFAULT_USER_TPM_LIMIT
-              value: "100000"
+              value: "{{ ocp4_workload_litemaas_default_user_tpm_limit }}"
             - name: DEFAULT_USER_RPM_LIMIT
-              value: "120"
+              value: "{{ ocp4_workload_litemaas_default_user_rpm_limit }}"
           resources:
             requests:
               memory: "256Mi"

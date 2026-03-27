@@ -133,7 +133,8 @@ ansible-galaxy collection install kubernetes.core community.general</pre>
   <!-- Collection Install -->
   <div class="section">
     <h2>Collection Installation</h2>
-    <p>LiteMaaS is distributed as an Ansible collection. Install it from the repository or via Ansible Galaxy.</p>
+    <div class="info-box"><p><strong>Collection Installation vs. Deployment:</strong> These are two separate steps. <em>Collection Installation</em> puts the Ansible roles on your workstation (done once). <em>Deployment</em> (next section) runs the playbook to actually install LiteMaaS on your OpenShift cluster. You need to do both.</p></div>
+    <p>LiteMaaS is distributed as an Ansible collection. Install it on your workstation using one of the options below.</p>
 
     <h3>Option A: From GitHub (Recommended for RHDP)</h3>
     <pre><span class="comment"># Clone the collection repository</span>
@@ -331,6 +332,18 @@ LiteMaaS User Interface: https://litellm-prod-frontend.apps.cluster.example.com<
         <tr><td><code>ocp4_workload_litemaas_oauth_client_id</code></td><td><em>namespace name</em></td><td>OAuthClient resource name</td></tr>
         <tr><td><code>ocp4_workload_litemaas_oauth_client_secret</code></td><td><em>random 32-char</em></td><td>OAuthClient secret</td></tr>
         <tr><td><code>ocp4_workload_litemaas_admin_emails</code></td><td><code>[admin]</code></td><td>Initial admin user list</td></tr>
+      </tbody>
+    </table>
+
+    <h3>User Budget &amp; Rate Limits</h3>
+    <p>These control the defaults applied to every new user on first OAuth login. Existing users are not affected by changes — update them via the admin UI or API.</p>
+    <table>
+      <thead><tr><th>Variable</th><th>Default</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>ocp4_workload_litemaas_default_user_max_budget</code></td><td><code>2000</code></td><td>Default spend limit per user (in USD)</td></tr>
+        <tr><td><code>ocp4_workload_litemaas_default_user_budget_duration</code></td><td><code>daily</code></td><td>Budget reset period: <code>daily</code>, <code>weekly</code>, <code>monthly</code>, or leave empty for lifetime</td></tr>
+        <tr><td><code>ocp4_workload_litemaas_default_user_tpm_limit</code></td><td><code>400000</code></td><td>Default tokens-per-minute limit per user</td></tr>
+        <tr><td><code>ocp4_workload_litemaas_default_user_rpm_limit</code></td><td><code>500</code></td><td>Default requests-per-minute limit per user</td></tr>
       </tbody>
     </table>
 
