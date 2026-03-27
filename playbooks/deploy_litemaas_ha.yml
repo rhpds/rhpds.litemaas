@@ -14,11 +14,6 @@
 #   ansible-playbook playbooks/deploy_litemaas_ha.yml \
 #     -e ocp4_workload_litemaas_namespace=litemaas
 #
-#   # With RHDP branding
-#   ansible-playbook playbooks/deploy_litemaas_ha.yml \
-#     -e ocp4_workload_litemaas_namespace=litemaas \
-#     -e ocp4_workload_litemaas_branding_enabled=true
-#
 #   # Custom user budget (e.g. monthly $5000 limit)
 #   ansible-playbook playbooks/deploy_litemaas_ha.yml \
 #     -e ocp4_workload_litemaas_namespace=litemaas \

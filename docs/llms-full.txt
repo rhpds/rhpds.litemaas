@@ -366,19 +366,18 @@ Deployment command:
   ansible-playbook playbooks/deploy_litemaas_ha.yml \
     -e ocp4_workload_litemaas_namespace=litemaas \
     -e ocp4_workload_litemaas_oauth_enabled=true \
-    -e ocp4_workload_litemaas_branding_enabled=true \
     -e ocp4_workload_litemaas_ha_litellm_replicas=3
 
 Deployment order:
   Namespace -> PostgreSQL 16 (StatefulSet + PVC) -> Redis 7 -> LiteLLM Proxy (3 replicas)
-  -> LiteMaaS Backend (3 replicas) -> Branding ConfigMaps -> LiteMaaS Frontend (3 replicas)
-  -> Routes + OAuthClient
+  -> LiteMaaS Backend (3 replicas) -> LiteMaaS Frontend (3 replicas) -> Routes + OAuthClient
 
 Key Variables:
   ocp4_workload_litemaas_namespace — target OpenShift namespace (default: litemaas)
   ocp4_workload_litemaas_oauth_enabled — enable OpenShift OAuth login (default: false)
   ocp4_workload_litemaas_ha_litellm_replicas — LiteLLM replica count (default: 3)
-  ocp4_workload_litemaas_branding_enabled — enable RHDP branding (default: true)
+  ocp4_workload_litemaas_default_user_max_budget — default user budget in USD (default: 2000)
+  ocp4_workload_litemaas_default_user_budget_duration — budget reset period: daily/weekly/monthly (default: daily)
   ocp4_workload_litemaas_postgres_storage_size — PVC size (default: 10Gi)
   ocp4_workload_litemaas_ha_redis_image — Redis image (default: registry.redhat.io/rhel9/redis-7:latest)
   ocp4_workload_litemaas_litellm_image — LiteLLM proxy image
