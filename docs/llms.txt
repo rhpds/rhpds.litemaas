@@ -91,12 +91,12 @@ The LiteMaaS MCP server (docs/day2/mcp.html) runs on OpenShift and lets Claude C
 **Setup (one command):**
 ```
 claude mcp add --transport http --scope user litemaas \
-  https://litemaas-mcp.apps.maas.redhatworkshops.io/mcp
+  https://litemaas-mcp.apps.<your-cluster>/mcp
 ```
 
 **Available tools:** list_models, get_model_health, list_users, get_spend_summary, get_daily_stats, get_pod_status, update_user_budget, list_virtual_keys
 
-**MCP server endpoint:** https://litemaas-mcp.apps.maas.redhatworkshops.io/mcp
+**MCP server endpoint:** https://litemaas-mcp.apps.<your-cluster>/mcp
 **Transport:** MCP 2025-03-26 Streamable HTTP
 **Deployment:** opt-in via ocp4_workload_litemaas_deploy_mcp=true
 
