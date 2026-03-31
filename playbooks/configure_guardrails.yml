@@ -53,18 +53,8 @@
               - pattern_type: "prebuilt"
                 pattern_name: "us_ssn"
                 action: "BLOCK"
-              - pattern_type: "prebuilt"
-                pattern_name: "credit_card"
-                action: "BLOCK"
-              - pattern_type: "prebuilt"
-                pattern_name: "visa"
-                action: "BLOCK"
-              - pattern_type: "prebuilt"
-                pattern_name: "mastercard"
-                action: "BLOCK"
-              - pattern_type: "prebuilt"
-                pattern_name: "amex"
-                action: "BLOCK"
+              # credit_card/visa/mastercard/amex removed — false positives in tool outputs
+              # (16-digit sequences in order IDs, tool results, YAML content hit the regex)
               # Credentials
               - pattern_type: "prebuilt"
                 pattern_name: "aws_access_key"
@@ -87,26 +77,15 @@
                 action: "BLOCK"
               # violence_threats regex removed — too broad for infosec/security lab contexts.
               # Words like eliminate, neutralize, execute, kill (process) are standard security terms.
-              # harmful_violence category below provides contextual keyword matching instead.
+              # harmful_violence/self_harm/illegal_weapons categories removed for the same reason —
+              # "kill", "harm", "weapon" are routine in sysadmin, CVE, and security lab prompts.
+              # Semantic classification via Llama Guard adapter will replace these (see guardrails/server.py).
               - pattern_type: "prebuilt"
                 pattern_name: "harassment_hate"
                 action: "BLOCK"
               - pattern_type: "prebuilt"
                 pattern_name: "self_harm_suicide"
                 action: "BLOCK"
-            categories:
-              - category: "harmful_violence"
-                enabled: true
-                action: "BLOCK"
-                severity_threshold: "medium"
-              - category: "harmful_self_harm"
-                enabled: true
-                action: "BLOCK"
-                severity_threshold: "medium"
-              - category: "harmful_illegal_weapons"
-                enabled: true
-                action: "BLOCK"
-                severity_threshold: "medium"
 
         - guardrail_name: "output-pii-mask"
           litellm_params:
@@ -117,9 +96,7 @@
               - pattern_type: "prebuilt"
                 pattern_name: "us_ssn"
                 action: "MASK"
-              - pattern_type: "prebuilt"
-                pattern_name: "credit_card"
-                action: "MASK"
+              # credit_card MASK removed — false positives on 16-digit sequences in tool outputs
               - pattern_type: "prebuilt"
                 pattern_name: "aws_access_key"
                 action: "MASK"
