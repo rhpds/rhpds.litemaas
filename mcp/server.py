@@ -2,14 +2,13 @@
 """
 LiteMaaS MCP Server — Streamable HTTP transport (MCP 2025-03-26)
 
-Claude Code connects via HTTP MCP transport. Runs on OpenShift in-cluster
-with direct PostgreSQL and LiteLLM access.
+Uses StreamableHTTPSessionManager for proper session state management.
+Claude Code connects via HTTP MCP transport.
 
 Environment variables:
   LITELLM_API_URL   Internal LiteLLM URL (default: http://litellm:4000)
   LITELLM_API_KEY   LiteLLM admin key
   DATABASE_URL      PostgreSQL connection string
-  MCP_API_KEY       Bearer token (empty = no auth)
   NAMESPACE         OCP namespace (default: litellm-rhpds)
 """
 
@@ -19,14 +18,12 @@ import os
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
-import anyio
 import asyncpg
 import httpx
 from mcp.server import Server
-from mcp.server.streamable_http import StreamableHTTPServerTransport
+from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
 from mcp.types import TextContent, Tool
 from starlette.requests import Request
-from starlette.responses import JSONResponse, Response
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 logging.basicConfig(
@@ -40,19 +37,17 @@ log = logging.getLogger("litemaas-mcp")
 LITELLM_URL  = os.environ.get("LITELLM_API_URL", "http://litellm:4000")
 LITELLM_KEY  = os.environ.get("LITELLM_API_KEY", "")
 DATABASE_URL = os.environ.get("DATABASE_URL", "")
-MCP_API_KEY  = os.environ.get("MCP_API_KEY", "")
 NAMESPACE    = os.environ.get("NAMESPACE", "litellm-rhpds")
 
-# ── Database helpers ──────────────────────────────────────────────────────────
+# ── Database ──────────────────────────────────────────────────────────────────
 
 _pool: asyncpg.Pool | None = None
 
 async def _db(query: str, *args) -> list[dict]:
     async with _pool.acquire() as conn:
-        rows = await conn.fetch(query, *args)
-        return [dict(r) for r in rows]
+        return [dict(r) for r in await conn.fetch(query, *args)]
 
-# ── LiteLLM API helper ────────────────────────────────────────────────────────
+# ── LiteLLM API ───────────────────────────────────────────────────────────────
 
 async def _llm(method: str, path: str, **kwargs):
     async with httpx.AsyncClient(timeout=30, verify=False) as c:
@@ -64,7 +59,7 @@ async def _llm(method: str, path: str, **kwargs):
         resp.raise_for_status()
         return resp.json()
 
-# ── Kubernetes helper ─────────────────────────────────────────────────────────
+# ── Kubernetes ────────────────────────────────────────────────────────────────
 
 _k8s = None
 
@@ -100,8 +95,8 @@ async def tool_get_model_health(args):
     model = args.get("model", "")
     data = await _llm("get", "/health", params={"model": model} if model else {})
     return json.dumps({
-        "healthy":   len(data.get("healthy_endpoints", [])),
-        "unhealthy": len(data.get("unhealthy_endpoints", [])),
+        "healthy":             len(data.get("healthy_endpoints", [])),
+        "unhealthy":           len(data.get("unhealthy_endpoints", [])),
         "healthy_endpoints":   data.get("healthy_endpoints", []),
         "unhealthy_endpoints": data.get("unhealthy_endpoints", []),
     }, indent=2)
@@ -121,7 +116,8 @@ async def tool_list_users(_args):
         }
         for u in (data.get("users", data) if isinstance(data, dict) else data)
     ]
-    return json.dumps(sorted(users, key=lambda x: x["spend"] or 0, reverse=True), indent=2, default=str)
+    return json.dumps(sorted(users, key=lambda x: x["spend"] or 0, reverse=True),
+                      indent=2, default=str)
 
 
 async def tool_get_spend_summary(args):
@@ -210,7 +206,7 @@ TOOLS = [
          description="List all models in LiteMaaS — name, provider, availability, pricing ($/1M tokens), rate limits.",
          inputSchema={"type": "object", "properties": {}}),
     Tool(name="get_model_health",
-         description="Check live health of a model. Leave model empty to check all.",
+         description="Check live health of a model via LiteLLM. Leave model empty to check all.",
          inputSchema={"type": "object", "properties": {
              "model": {"type": "string", "description": "Model name (empty = all)"}}}),
     Tool(name="list_users",
@@ -242,7 +238,7 @@ TOOLS = [
 ]
 
 
-def _make_server() -> Server:
+def _build_mcp_server() -> Server:
     server = Server("litemaas-mcp")
 
     @server.list_tools()
@@ -265,30 +261,22 @@ def _make_server() -> Server:
     return server
 
 
-# ── ASGI application ──────────────────────────────────────────────────────────
+# ── App ───────────────────────────────────────────────────────────────────────
 
-class LiteMaaSMCPApp:
-    """
-    Bare ASGI app — no Starlette routing overhead.
-    Routes:
-      GET  /health  — liveness check
-      *    /mcp     — MCP Streamable HTTP transport
-      *    /sse     — alias for /mcp (legacy path)
-    """
+mcp_server = _build_mcp_server()
+session_manager = StreamableHTTPSessionManager(app=mcp_server, json_response=False)
 
-    def _auth_ok(self, headers: dict) -> bool:
-        if not MCP_API_KEY:
-            return True
-        return headers.get(b"authorization", b"").decode() == f"Bearer {MCP_API_KEY}"
 
-    async def _send_json(self, send: Send, status: int, body: dict, extra_headers: list | None = None):
-        data = json.dumps(body).encode()
-        headers = [(b"content-type", b"application/json"),
-                   (b"content-length", str(len(data)).encode())]
-        if extra_headers:
-            headers.extend(extra_headers)
-        await send({"type": "http.response.start", "status": status, "headers": headers})
-        await send({"type": "http.response.body", "body": data})
+async def _send_json(send: Send, status: int, body: dict):
+    data = json.dumps(body).encode()
+    await send({"type": "http.response.start", "status": status,
+                "headers": [(b"content-type", b"application/json"),
+                            (b"content-length", str(len(data)).encode())]})
+    await send({"type": "http.response.body", "body": data})
+
+
+class LiteMaaSApp:
+    """Bare ASGI app — routes /health and /mcp without Starlette path munging."""
 
     async def _health(self, scope: Scope, receive: Receive, send: Send):
         db_ok = llm_ok = False
@@ -305,24 +293,8 @@ class LiteMaaSMCPApp:
         except Exception:
             pass
         status = "healthy" if (db_ok and llm_ok) else "degraded"
-        code = 200 if status == "healthy" else 503
-        await self._send_json(send, code, {"status": status, "database": db_ok, "litellm": llm_ok})
-
-    async def _mcp(self, scope: Scope, receive: Receive, send: Send):
-        headers = dict(scope.get("headers", []))
-        if not self._auth_ok(headers):
-            await self._send_json(send, 401,
-                {"error": "unauthorized", "message": "Valid Bearer token required"},
-                extra_headers=[(b"www-authenticate", b'Bearer realm="LiteMaaS MCP"')])
-            return
-
-        server = _make_server()
-        transport = StreamableHTTPServerTransport(mcp_session_id=None, is_json_response_enabled=False)
-        async with transport.connect() as (read, write):
-            async with anyio.create_task_group() as tg:
-                tg.start_soon(server.run, read, write, server.create_initialization_options())
-                await transport.handle_request(scope, receive, send)
-                tg.cancel_scope.cancel()
+        await _send_json(send, 200 if status == "healthy" else 503,
+                         {"status": status, "database": db_ok, "litellm": llm_ok})
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send):
         if scope["type"] == "lifespan":
@@ -330,29 +302,29 @@ class LiteMaaSMCPApp:
             return
         if scope["type"] != "http":
             return
-
         path = scope.get("path", "")
         if path == "/health":
             await self._health(scope, receive, send)
         elif path in ("/mcp", "/sse"):
-            await self._mcp(scope, receive, send)
+            await session_manager.handle_request(scope, receive, send)
         else:
-            await self._send_json(send, 404, {"error": "not found"})
+            await _send_json(send, 404, {"error": "not found"})
 
     async def _lifespan(self, scope: Scope, receive: Receive, send: Send):
         global _pool
-        await receive()  # startup
+        await receive()  # startup event
         log.info("Starting LiteMaaS MCP Server")
         _pool = await asyncpg.create_pool(DATABASE_URL, min_size=2, max_size=8)
         await _init_k8s()
-        log.info("Ready — Streamable HTTP on /mcp (alias /sse)")
-        await send({"type": "lifespan.startup.complete"})
-        await receive()  # shutdown
+        async with session_manager.run():
+            log.info("Ready — StreamableHTTP session manager on /mcp")
+            await send({"type": "lifespan.startup.complete"})
+            await receive()  # shutdown event
         await _pool.close()
         await send({"type": "lifespan.shutdown.complete"})
 
 
-app = LiteMaaSMCPApp()
+app = LiteMaaSApp()
 
 if __name__ == "__main__":
     import uvicorn
