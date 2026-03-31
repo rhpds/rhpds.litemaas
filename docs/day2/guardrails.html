@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LiteMaaS — Guardrails</title>
+  <meta name="description" content="RHDP LiteMaaS guardrails — blocking sensitive information, PII, credentials, and harmful content using LiteLLM content filtering.">
+  <link rel="canonical" href="https://rhpds.github.io/rhpds.litemaas/docs/day2/guardrails.html">
+  <link rel="stylesheet" href="../assets/style.css">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Red Hat Text', 'Segoe UI', sans-serif; background: #f5f5f5; color: #151515; line-height: 1.6; }
+    header { background: #cc0000; color: white; padding: 1.5rem 3rem; display: flex; align-items: center; gap: 1.5rem; }
+    header h1 { font-size: 1.5rem; font-weight: 700; }
+    header p { opacity: 0.85; font-size: 0.9rem; margin-top: 0.2rem; }
+    nav { background: #151515; padding: 0 3rem; display: flex; gap: 0; flex-wrap: wrap; }
+    nav a { color: #e0e0e0; text-decoration: none; padding: 0.85rem 1.2rem; font-size: 0.9rem; display: block; transition: background 0.15s; }
+    nav a:hover, nav a.active { background: #cc0000; color: white; }
+    .container { max-width: 1100px; margin: 2rem auto; padding: 0 2rem; }
+    .breadcrumb { font-size: 0.82rem; color: #666; margin-bottom: 1.5rem; }
+    .breadcrumb a { color: #cc0000; text-decoration: none; }
+    .breadcrumb a:hover { text-decoration: underline; }
+    h1.page-title { font-size: 1.8rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .page-subtitle { color: #555; margin-bottom: 2rem; font-size: 1rem; }
+    .section { background: white; border-radius: 8px; padding: 2rem; margin-bottom: 1.5rem; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+    .section h2 { font-size: 1.2rem; font-weight: 700; margin-bottom: 1rem; color: #151515; border-bottom: 2px solid #cc0000; padding-bottom: 0.5rem; }
+    .section h3 { font-size: 1rem; font-weight: 700; margin: 1.4rem 0 0.5rem; color: #333; }
+    .section h4 { font-size: 0.92rem; font-weight: 700; margin: 1rem 0 0.4rem; color: #444; }
+    .section p { margin-bottom: 0.8rem; color: #333; font-size: 0.92rem; }
+    .section ul, .section ol { padding-left: 1.5rem; margin-bottom: 0.8rem; }
+    .section li { margin-bottom: 0.4rem; color: #333; font-size: 0.92rem; }
+    pre { background: #1e1e1e; color: #d4d4d4; padding: 1.2rem 1.5rem; border-radius: 6px; overflow-x: auto; font-size: 0.82rem; line-height: 1.5; margin: 0.8rem 0; position: relative; }
+    pre .comment { color: #6a9955; }
+    pre .string { color: #ce9178; }
+    pre .keyword { color: #569cd6; }
+    pre .var { color: #9cdcfe; }
+    code { font-family: 'Courier New', monospace; font-size: 0.85em; background: #f0f0f0; padding: 0.1em 0.3em; border-radius: 3px; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.86rem; }
+    th { background: #151515; color: white; padding: 0.6rem 0.8rem; text-align: left; font-weight: 600; }
+    td { padding: 0.6rem 0.8rem; border-bottom: 1px solid #e8e8e8; vertical-align: top; }
+    tr:nth-child(even) { background: #f9f9f9; }
+    td code { background: #f0f0f0; padding: 0.1em 0.3em; border-radius: 3px; font-size: 0.82rem; }
+    .info-box { background: #e8f4fd; border-left: 4px solid #0066cc; padding: 1rem 1.5rem; border-radius: 0 6px 6px 0; margin: 1rem 0; }
+    .info-box p { margin: 0; font-size: 0.88rem; color: #004080; }
+    .warn-box { background: #fff8e1; border-left: 4px solid #f0a500; padding: 1rem 1.5rem; border-radius: 0 6px 6px 0; margin: 1rem 0; }
+    .warn-box p { margin: 0; font-size: 0.88rem; color: #5d3900; }
+    .danger-box { background: #fce8e8; border-left: 4px solid #cc0000; padding: 1rem 1.5rem; border-radius: 0 6px 6px 0; margin: 1rem 0; }
+    .danger-box p { margin: 0; font-size: 0.88rem; color: #7a0000; }
+    .success-box { background: #e8f5e9; border-left: 4px solid #2e7d32; padding: 1rem 1.5rem; border-radius: 0 6px 6px 0; margin: 1rem 0; }
+    .success-box p { margin: 0; font-size: 0.88rem; color: #1b5e20; }
+    .toc { background: #f9f9f9; border: 1px solid #e0e0e0; border-radius: 8px; padding: 1.2rem 1.5rem; margin-bottom: 2rem; }
+    .toc h3 { font-size: 0.9rem; font-weight: 700; margin-bottom: 0.8rem; }
+    .toc ul { padding-left: 1.2rem; margin: 0; }
+    .toc li { margin-bottom: 0.3rem; }
+    .toc a { color: #cc0000; text-decoration: none; font-size: 0.88rem; }
+    .toc a:hover { text-decoration: underline; }
+    .toc .toc-sub { margin-top: 0.6rem; padding-left: 1rem; border-top: 1px solid #e0e0e0; padding-top: 0.6rem; }
+    .toc .toc-sub li { margin-bottom: 0.25rem; }
+    .toc .toc-sub a { font-size: 0.83rem; color: #555; }
+    footer { background: #151515; color: #aaa; text-align: center; padding: 1.5rem; font-size: 0.85rem; margin-top: 3rem; }
+    .footer-updated { display: block; margin-top: 0.3rem; font-size: 0.8rem; color: #777; }
+    .page-nav { display: flex; justify-content: space-between; margin: 2rem 0; gap: 1rem; }
+    .page-nav a { display: flex; flex-direction: column; padding: 1rem 1.5rem; background: white; border-radius: 8px; text-decoration: none; color: #151515; box-shadow: 0 1px 4px rgba(0,0,0,0.1); flex: 1; max-width: 48%; transition: box-shadow 0.15s; }
+    .page-nav a:hover { box-shadow: 0 3px 10px rgba(0,0,0,0.15); }
+    .pn-label { font-size: 0.78rem; color: #888; margin-bottom: 0.2rem; }
+    .pn-title { font-size: 0.95rem; font-weight: 600; color: #cc0000; }
+    .pn-prev { align-items: flex-start; }
+    .pn-next { align-items: flex-end; }
+    .nav-hamburger { display: none; background: none; border: none; color: #e0e0e0; font-size: 1.5rem; cursor: pointer; padding: 0.85rem 1.2rem; }
+    @media (max-width: 768px) {
+      header { padding: 1rem 1.5rem; }
+      nav { padding: 0; flex-direction: column; }
+      .nav-hamburger { display: block; }
+      .nav-links { display: none; flex-direction: column; width: 100%; }
+      .nav-links.open { display: flex; }
+      .nav-links a { padding: 0.7rem 1.5rem; border-top: 1px solid #2a2a2a; }
+      .container { padding: 0 1rem; }
+      .page-nav { flex-direction: column; }
+      .page-nav a { max-width: 100%; }
+    }
+    .copy-btn { position: absolute; right: 0.5rem; top: 0.5rem; background: #333; color: #ccc; border: none; border-radius: 4px; padding: 0.2rem 0.6rem; font-size: 0.75rem; cursor: pointer; opacity: 0; transition: opacity 0.15s; }
+    pre:hover .copy-btn { opacity: 1; }
+    .copy-btn.copied { background: #28a745; color: white; }
+    .back-to-top { position: fixed; bottom: 2rem; right: 2rem; background: #cc0000; color: white; border: none; border-radius: 50%; width: 2.5rem; height: 2.5rem; font-size: 1.2rem; cursor: pointer; opacity: 0; transition: opacity 0.3s; z-index: 100; }
+    .back-to-top.visible { opacity: 1; }
+    .badge { display: inline-block; font-size: 0.72rem; font-weight: 700; padding: 0.15em 0.5em; border-radius: 3px; vertical-align: middle; margin-left: 0.4rem; }
+    .badge-block { background: #fce8e8; color: #7a0000; }
+    .badge-mask { background: #fff8e1; color: #5d3900; }
+    .badge-new { background: #e8f5e9; color: #1b5e20; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>RHDP LiteMaaS</h1>
+    <p>Model as a Service for Red Hat Demo Platform</p>
+  </div>
+</header>
+
+<nav>
+  <button class="nav-hamburger" id="navToggle" aria-label="Toggle navigation">&#9776;</button>
+  <div class="nav-links" id="navLinks">
+    <a href="../index.html">Home</a>
+    <a href="../architecture.html">Architecture</a>
+    <a href="../product/overview.html">Overview</a>
+    <a href="../product/models.html">Models</a>
+    <a href="../install/deployment.html">Install</a>
+    <a href="operations.html">Day-2</a>
+    <a href="model-routing.html">Model Routing</a>
+    <a href="model-management.html">Model Management</a>
+    <a href="guardrails.html" class="active">Guardrails</a>
+    <a href="analytics.html">Analytics &amp; Backup</a>
+    <a href="cost-analysis.html">Cost Analysis</a>
+    <a href="../monitoring.html">Monitoring</a>
+    <a href="../infrastructure.html">Infrastructure</a>
+    <a href="../troubleshooting/common.html">Troubleshooting</a>
+  </div>
+</nav>
+
+<div class="container">
+
+  <div class="breadcrumb">
+    <a href="../index.html">Home</a> / <a href="operations.html">Day-2</a> / Guardrails
+  </div>
+
+  <h1 class="page-title">Guardrails</h1>
+  <p class="page-subtitle">Block sensitive information, PII, credentials, and harmful content from flowing through LiteMaaS — with zero added latency.</p>
+
+  <div class="toc">
+    <h3>On This Page</h3>
+    <ul>
+      <li><a href="#overview">Overview</a></li>
+      <li><a href="#how-it-works">How It Works</a></li>
+      <li><a href="#deploy">Deploying with the Playbook</a></li>
+      <li><a href="#patterns">Prebuilt Patterns Reference</a></li>
+      <li><a href="#categories">Harmful Content Categories</a></li>
+      <li><a href="#testing">Testing Guardrails</a></li>
+      <li><a href="#customizing">Customizing Patterns</a></li>
+      <li><a href="#removing">Removing Guardrails</a></li>
+    </ul>
+    <div class="toc-sub">
+      <ul>
+        <li><a href="operations.html">Day-2 Operations &rarr;</a></li>
+        <li><a href="model-management.html">Model Management &rarr;</a></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Overview -->
+  <div class="section" id="overview">
+    <h2>Overview <a class="anchor-link" href="#overview">#</a></h2>
+    <p>
+      LiteMaaS guardrails use LiteLLM's built-in <code>litellm_content_filter</code> to intercept requests and
+      responses at the proxy layer. No external service or additional infrastructure is required — all pattern
+      matching runs in-process using precompiled regex.
+    </p>
+    <p>Two guardrail layers are active by default:</p>
+    <table>
+      <tr>
+        <th>Guardrail</th>
+        <th>Mode</th>
+        <th>What it does</th>
+      </tr>
+      <tr>
+        <td><code>pii-and-credentials</code></td>
+        <td><code>pre_call</code></td>
+        <td>Blocks requests containing SSNs, credit cards, AWS/GitHub/generic API keys, and harmful content (explosives, terrorism, violence, hate speech, self-harm) before they reach the model.</td>
+      </tr>
+      <tr>
+        <td><code>output-pii-mask</code></td>
+        <td><code>post_call</code></td>
+        <td>Scans model responses and masks any PII or credentials that appear in the output (replaces with <code>[REDACTED]</code>).</td>
+      </tr>
+    </table>
+    <div class="success-box">
+      <p><strong>Production status:</strong> Both guardrails are active on <code>maas.redhatworkshops.io</code> (namespace: <code>litellm-rhpds</code>) as of 2026-04-01.</p>
+    </div>
+  </div>
+
+  <!-- How It Works -->
+  <div class="section" id="how-it-works">
+    <h2>How It Works <a class="anchor-link" href="#how-it-works">#</a></h2>
+    <p>
+      Guardrail configuration lives in a Kubernetes <strong>ConfigMap</strong> (<code>litellm-guardrails-config</code>)
+      mounted into the LiteLLM deployment at <code>/etc/litellm/config.yaml</code>. LiteLLM is started with
+      <code>--config /etc/litellm/config.yaml</code>, which loads the guardrails on startup.
+    </p>
+    <p>
+      Because models are stored in the database (<code>STORE_MODEL_IN_DB=true</code>), the config file only needs
+      to define guardrails — no <code>model_list</code> is required. The two systems coexist cleanly.
+    </p>
+    <h3>Request flow</h3>
+    <pre>
+User request
+    │
+    ▼
+[pii-and-credentials guardrail]  ← pre_call: regex scan
+    │ match → 403 Blocked
+    │ no match ↓
+    ▼
+LiteLLM routes to model
+    │
+    ▼
+Model response
+    │
+    ▼
+[output-pii-mask guardrail]  ← post_call: regex scan
+    │ match → MASK redaction
+    │ no match ↓
+    ▼
+Response returned to user</pre>
+    <div class="info-box">
+      <p><strong>Zero latency:</strong> All pattern matching is pure regex running in the LiteLLM process. There are no external API calls, no additional network hops, and no inference requests. The impact on request latency is negligible.</p>
+    </div>
+  </div>
+
+  <!-- Deploy -->
+  <div class="section" id="deploy">
+    <h2>Deploying with the Playbook <a class="anchor-link" href="#deploy">#</a></h2>
+    <p>The <code>configure_guardrails.yml</code> playbook handles everything: creating the ConfigMap, patching the deployment, waiting for rollout, and verifying the guardrails are active.</p>
+
+    <h3>Prerequisites</h3>
+    <ul>
+      <li>Logged into the target OpenShift cluster (<code>oc login ...</code>)</li>
+      <li><code>kubernetes.core</code> Ansible collection installed</li>
+      <li>Access to the target namespace</li>
+    </ul>
+
+    <h3>Apply to production</h3>
+    <pre><button class="copy-btn">copy</button>ansible-playbook playbooks/configure_guardrails.yml \
+  -e litemaas_namespace=litellm-rhpds</pre>
+
+    <h3>Apply to dev or staging</h3>
+    <pre><button class="copy-btn">copy</button>ansible-playbook playbooks/configure_guardrails.yml \
+  -e litemaas_namespace=litellm-dev
+
+ansible-playbook playbooks/configure_guardrails.yml \
+  -e litemaas_namespace=litellm-staging</pre>
+
+    <h3>Check current guardrails without applying</h3>
+    <pre><button class="copy-btn">copy</button>ansible-playbook playbooks/configure_guardrails.yml \
+  -e litemaas_namespace=litellm-rhpds \
+  -e litemaas_guardrails_check_only=true</pre>
+
+    <h3>What the playbook does</h3>
+    <ol>
+      <li>Resolves the LiteLLM route and master key from OpenShift secrets</li>
+      <li>Creates or updates the <code>litellm-guardrails-config</code> ConfigMap</li>
+      <li>Patches the <code>litellm</code> deployment to mount the ConfigMap and set <code>--config</code> startup args</li>
+      <li>Waits for rolling restart to complete (180s timeout)</li>
+      <li>Verifies the <code>/guardrails/list</code> API endpoint returns both guardrails</li>
+      <li>Runs a live SSN blocking test and reports pass/fail</li>
+    </ol>
+
+    <div class="info-box">
+      <p><strong>Idempotent:</strong> Safe to run multiple times. Kubernetes strategic merge patch uses <code>name</code> as the merge key for volumes and containers — re-running the playbook will not duplicate volumes or mounts.</p>
+    </div>
+  </div>
+
+  <!-- Patterns -->
+  <div class="section" id="patterns">
+    <h2>Prebuilt Patterns Reference <a class="anchor-link" href="#patterns">#</a></h2>
+    <p>These regex patterns ship with LiteLLM 1.81.0 and are available without any additional setup.</p>
+
+    <h3>PII Patterns <span class="badge badge-block">BLOCK</span></h3>
+    <table>
+      <tr><th>Pattern Name</th><th>Description</th></tr>
+      <tr><td><code>us_ssn</code></td><td>US Social Security Numbers (XXX-XX-XXXX)</td></tr>
+      <tr><td><code>us_ssn_no_dash</code></td><td>US SSN without dashes (XXXXXXXXX)</td></tr>
+      <tr><td><code>email</code></td><td>Email addresses</td></tr>
+      <tr><td><code>us_phone</code></td><td>US phone numbers in various formats</td></tr>
+      <tr><td><code>passport_us</code></td><td>US passport numbers</td></tr>
+    </table>
+
+    <h3>Payment Card Patterns <span class="badge badge-block">BLOCK</span></h3>
+    <table>
+      <tr><th>Pattern Name</th><th>Description</th></tr>
+      <tr><td><code>credit_card</code></td><td>Any major credit card number</td></tr>
+      <tr><td><code>visa</code></td><td>Visa card numbers</td></tr>
+      <tr><td><code>mastercard</code></td><td>Mastercard numbers</td></tr>
+      <tr><td><code>amex</code></td><td>American Express numbers</td></tr>
+      <tr><td><code>discover</code></td><td>Discover card numbers</td></tr>
+    </table>
+
+    <h3>Credential Patterns <span class="badge badge-block">BLOCK</span></h3>
+    <table>
+      <tr><th>Pattern Name</th><th>Description</th></tr>
+      <tr><td><code>aws_access_key</code></td><td>AWS access keys (AKIA...)</td></tr>
+      <tr><td><code>aws_secret_key</code></td><td>AWS secret keys (40-char)</td></tr>
+      <tr><td><code>github_token</code></td><td>GitHub personal access tokens</td></tr>
+      <tr><td><code>slack_token</code></td><td>Slack API tokens</td></tr>
+      <tr><td><code>generic_api_key</code></td><td>Generic API key patterns (sk-xxx, key-xxx, token-xxx)</td></tr>
+    </table>
+
+    <h3>Dangerous Content Patterns <span class="badge badge-block">BLOCK</span></h3>
+    <table>
+      <tr><th>Pattern Name</th><th>Description</th></tr>
+      <tr><td><code>explosives</code></td><td>Explosives and bomb-making terminology</td></tr>
+      <tr><td><code>terrorism</code></td><td>Terrorism and extremism terminology</td></tr>
+      <tr><td><code>violence_threats</code></td><td>Violent threats and terminology</td></tr>
+      <tr><td><code>harassment_hate</code></td><td>Slurs, hate speech, and harassment</td></tr>
+      <tr><td><code>self_harm_suicide</code></td><td>Self-harm and suicide terminology</td></tr>
+      <tr><td><code>weapons_firearms</code></td><td>Firearms and ammunition terminology</td></tr>
+      <tr><td><code>illegal_activities</code></td><td>Illegal activity terminology</td></tr>
+    </table>
+
+    <div class="warn-box">
+      <p><strong>Note on <code>generic_api_key</code>:</strong> This pattern is broad — it matches strings like <code>sk-xxx</code>, <code>key-xxx</code>, and <code>token-xxx</code>. Monitor for false positives in prompts that discuss API concepts in general terms. Tune or remove if needed.</p>
+    </div>
+  </div>
+
+  <!-- Categories -->
+  <div class="section" id="categories">
+    <h2>Harmful Content Categories <a class="anchor-link" href="#categories">#</a></h2>
+    <p>
+      Categories use dictionary-based keyword matching (not LLM inference) loaded from YAML files
+      shipped with LiteLLM. Three categories are enabled by default:
+    </p>
+    <table>
+      <tr><th>Category</th><th>Severity Threshold</th><th>Action</th><th>Description</th></tr>
+      <tr>
+        <td><code>harmful_violence</code></td>
+        <td>medium</td>
+        <td><span class="badge badge-block">BLOCK</span></td>
+        <td>Violence, criminal planning, physical harm</td>
+      </tr>
+      <tr>
+        <td><code>harmful_self_harm</code></td>
+        <td>medium</td>
+        <td><span class="badge badge-block">BLOCK</span></td>
+        <td>Self-harm, suicide, eating disorders</td>
+      </tr>
+      <tr>
+        <td><code>harmful_illegal_weapons</code></td>
+        <td>medium</td>
+        <td><span class="badge badge-block">BLOCK</span></td>
+        <td>Illegal weapons, explosives (keyword level)</td>
+      </tr>
+    </table>
+    <p>Additional available categories (not enabled by default):</p>
+    <table>
+      <tr><th>Category</th><th>Description</th></tr>
+      <tr><td><code>bias_gender</code></td><td>Gender-based discriminatory language</td></tr>
+      <tr><td><code>bias_racial</code></td><td>Racial and ethnic discrimination</td></tr>
+      <tr><td><code>bias_religious</code></td><td>Religious discrimination and stereotypes</td></tr>
+      <tr><td><code>bias_sexual_orientation</code></td><td>Discriminatory language targeting LGBTQ+ individuals</td></tr>
+      <tr><td><code>denied_medical_advice</code></td><td>Medical advice, diagnosis, or treatment requests</td></tr>
+      <tr><td><code>denied_legal_advice</code></td><td>Legal advice or representation requests</td></tr>
+      <tr><td><code>denied_financial_advice</code></td><td>Personalized financial investment advice</td></tr>
+    </table>
+  </div>
+
+  <!-- Testing -->
+  <div class="section" id="testing">
+    <h2>Testing Guardrails <a class="anchor-link" href="#testing">#</a></h2>
+    <p>Run these against the production LiteLLM endpoint to verify guardrails are active. Use the team test key.</p>
+
+    <h3>Quick smoke test</h3>
+    <pre><button class="copy-btn">copy</button>LITELLM_URL="https://litellm-prod.apps.maas.redhatworkshops.io"
+TEST_KEY="sk-REDACTED"
+
+# SSN — expect 403
+curl -s -o /dev/null -w "%{http_code}" -X POST "$LITELLM_URL/v1/chat/completions" \
+  -H "Authorization: Bearer $TEST_KEY" -H "Content-Type: application/json" \
+  -d '{"model":"granite-3-2-8b-instruct","messages":[{"role":"user","content":"My SSN is 123-45-6789"}]}'
+
+# AWS key — expect 403
+curl -s -o /dev/null -w "%{http_code}" -X POST "$LITELLM_URL/v1/chat/completions" \
+  -H "Authorization: Bearer $TEST_KEY" -H "Content-Type: application/json" \
+  -d '{"model":"granite-3-2-8b-instruct","messages":[{"role":"user","content":"key AKIAIOSFODNN7EXAMPLE"}]}'
+
+# Violence — expect 403
+curl -s -o /dev/null -w "%{http_code}" -X POST "$LITELLM_URL/v1/chat/completions" \
+  -H "Authorization: Bearer $TEST_KEY" -H "Content-Type: application/json" \
+  -d '{"model":"granite-3-2-8b-instruct","messages":[{"role":"user","content":"I will kill you"}]}'
+
+# Normal message — expect 200
+curl -s -o /dev/null -w "%{http_code}" -X POST "$LITELLM_URL/v1/chat/completions" \
+  -H "Authorization: Bearer $TEST_KEY" -H "Content-Type: application/json" \
+  -d '{"model":"granite-3-2-8b-instruct","messages":[{"role":"user","content":"What is the capital of France?"}],"max_tokens":10}'</pre>
+
+    <h3>View active guardrails (admin)</h3>
+    <pre><button class="copy-btn">copy</button>MASTER_KEY=$(oc get secret litellm-secret -n litellm-rhpds \
+  -o jsonpath='{.data.LITELLM_MASTER_KEY}' | base64 -d)
+
+curl -s "$LITELLM_URL/guardrails/list" \
+  -H "Authorization: Bearer $MASTER_KEY" | python3 -m json.tool</pre>
+
+    <h3>Expected blocked response</h3>
+    <pre><button class="copy-btn">copy</button>{
+  "error": {
+    "message": "{'error': 'Content blocked: us_ssn pattern detected', 'pattern': 'us_ssn'}",
+    "type": "None",
+    "param": "None",
+    "code": "403"
+  }
+}</pre>
+  </div>
+
+  <!-- Customizing -->
+  <div class="section" id="customizing">
+    <h2>Customizing Patterns <a class="anchor-link" href="#customizing">#</a></h2>
+    <p>
+      To change which patterns are active, edit the <code>litemaas_guardrails_config</code> variable in
+      <code>playbooks/configure_guardrails.yml</code> and re-run the playbook. Changes take effect after the
+      rolling restart completes.
+    </p>
+
+    <h3>Add a custom regex pattern</h3>
+    <pre><button class="copy-btn">copy</button><span class="comment"># In configure_guardrails.yml, under patterns:</span>
+- pattern_type: <span class="string">"regex"</span>
+  name: <span class="string">"redhat-internal-id"</span>
+  pattern: <span class="string">"RH-[0-9]{6}"</span>
+  action: <span class="string">"BLOCK"</span></pre>
+
+    <h3>Change action from BLOCK to MASK</h3>
+    <p>Use <code>MASK</code> to redact the matched content instead of blocking the entire request. Useful for output filtering where you want the response but with sensitive data removed.</p>
+    <pre><button class="copy-btn">copy</button>- pattern_type: <span class="string">"prebuilt"</span>
+  pattern_name: <span class="string">"email"</span>
+  action: <span class="string">"MASK"</span>   <span class="comment"># replaces with [email_REDACTED]</span></pre>
+
+    <h3>Enable additional categories</h3>
+    <pre><button class="copy-btn">copy</button><span class="comment"># Add under categories in the pii-and-credentials guardrail:</span>
+- category: <span class="string">"denied_medical_advice"</span>
+  enabled: true
+  action: <span class="string">"BLOCK"</span>
+  severity_threshold: <span class="string">"high"</span>   <span class="comment"># high | medium | low</span></pre>
+
+    <h3>Update ConfigMap without full playbook run</h3>
+    <pre><button class="copy-btn">copy</button><span class="comment"># Edit the ConfigMap directly, then restart to pick up changes</span>
+oc edit configmap litellm-guardrails-config -n litellm-rhpds
+oc rollout restart deployment/litellm -n litellm-rhpds</pre>
+  </div>
+
+  <!-- Removing -->
+  <div class="section" id="removing">
+    <h2>Removing Guardrails <a class="anchor-link" href="#removing">#</a></h2>
+    <p>To disable guardrails entirely:</p>
+    <pre><button class="copy-btn">copy</button>ansible-playbook playbooks/configure_guardrails.yml \
+  -e litemaas_namespace=litellm-rhpds \
+  -e litemaas_guardrails_state=absent</pre>
+    <p>This removes the ConfigMap and restores the LiteLLM deployment to its original startup command (no <code>--config</code> flag).</p>
+    <div class="danger-box">
+      <p><strong>Warning:</strong> Removing guardrails in production disables all content filtering immediately. All three LiteLLM replicas will restart via rolling update.</p>
+    </div>
+  </div>
+
+  <!-- Page nav -->
+  <div class="page-nav">
+    <a href="model-management.html" class="pn-prev">
+      <span class="pn-label">&#8592; Previous</span>
+      <span class="pn-title">Model Management</span>
+    </a>
+    <a href="analytics.html" class="pn-next">
+      <span class="pn-label">Next &#8594;</span>
+      <span class="pn-title">Analytics &amp; Backup</span>
+    </a>
+  </div>
+
+</div>
+
+<button class="back-to-top" id="backToTop" title="Back to top">&#8679;</button>
+
+<footer>
+  RHDP LiteMaaS Documentation
+  <span class="footer-updated">Last updated: April 2026</span>
+</footer>
+
+<script>
+  // Nav hamburger
+  document.getElementById('navToggle').addEventListener('click', function() {
+    document.getElementById('navLinks').classList.toggle('open');
+  });
+
+  // Copy buttons
+  document.querySelectorAll('.copy-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var pre = btn.parentElement;
+      var text = pre.innerText.replace('copy\n', '').replace('copy', '').trim();
+      navigator.clipboard.writeText(text).then(function() {
+        btn.textContent = 'copied!';
+        btn.classList.add('copied');
+        setTimeout(function() { btn.textContent = 'copy'; btn.classList.remove('copied'); }, 2000);
+      });
+    });
+  });
+
+  // Back to top
+  var backToTop = document.getElementById('backToTop');
+  window.addEventListener('scroll', function() {
+    backToTop.classList.toggle('visible', window.scrollY > 300);
+  });
+  backToTop.addEventListener('click', function() {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+</script>
+
+</body>
+</html>
