@@ -15,6 +15,7 @@ Users never interact with model servers directly. RHDP MaaS sits in between — 
 - [Models Reference](https://rhpds.github.io/rhpds.litemaas/docs/product/models.html): Model capability types (Chat, Embeddings, Document Conversion), API endpoints, curl and SDK examples.
 - [Deployment Guide](https://rhpds.github.io/rhpds.litemaas/docs/install/deployment.html): Prerequisites, Ansible collection variables, step-by-step deployment, post-install checklist.
 - [Day-2 Operations](https://rhpds.github.io/rhpds.litemaas/docs/day2/operations.html): Upgrading, scaling, key cleanup, admin management. Split across 3 sub-pages: operations.html (core ops), model-routing.html (adding models, load balancing, AUTO_SYNC, DB sync), analytics.html (backup, restore, usage analytics).
+- [Claude Code MCP](https://rhpds.github.io/rhpds.litemaas/docs/day2/mcp.html): Connect Claude Code to LiteMaaS via MCP — setup, available tools, example queries, admin deployment guide.
 - [Grafana & Metrics](https://rhpds.github.io/rhpds.litemaas/docs/day2/grafana.html): Grafana dashboards for RHOAI, vLLM metrics, ServiceMonitors, GPU monitoring.
 - [Monitoring](https://rhpds.github.io/rhpds.litemaas/docs/monitoring.html): Grafana dashboards (vLLM, GPU, OpenVino), ServiceMonitors, benchmark tool, key cleanup cronjob.
 - [Troubleshooting](https://rhpds.github.io/rhpds.litemaas/docs/troubleshooting/common.html): 10 common issues with exact fix commands.
@@ -78,13 +79,29 @@ Three-layer architecture:
 ## Deployment Summary
 
 The rhpds.litemaas Ansible collection deploys all components in order:
-Namespace -> PostgreSQL 16 -> Redis 7 -> LiteLLM Proxy (3 replicas) -> LiteMaaS Backend (3 replicas) -> Branding ConfigMaps -> LiteMaaS Frontend (3 replicas) -> Routes + OAuthClient
+Namespace -> PostgreSQL 16 -> Redis 7 -> LiteLLM Proxy (3 replicas) -> LiteMaaS Backend (3 replicas) -> LiteMaaS Frontend (3 replicas) -> Routes + OAuthClient -> MCP Server (optional)
 
 Key variables: ocp4_workload_litemaas_namespace, ocp4_workload_litemaas_oauth_enabled, ocp4_workload_litemaas_ha_litellm_replicas, ocp4_workload_litemaas_default_user_max_budget, ocp4_workload_litemaas_default_user_budget_duration
 
+## Claude Code MCP Integration
+
+The LiteMaaS MCP server (docs/day2/mcp.html) runs on OpenShift and lets Claude Code query and manage LiteMaaS in plain English.
+
+**Setup (one command):**
+```
+claude mcp add --transport http --scope user litemaas \
+  https://litemaas-mcp.apps.maas.redhatworkshops.io/mcp
+```
+
+**Available tools:** list_models, get_model_health, list_users, get_spend_summary, get_daily_stats, get_pod_status, update_user_budget, list_virtual_keys
+
+**MCP server endpoint:** https://litemaas-mcp.apps.maas.redhatworkshops.io/mcp
+**Transport:** MCP 2025-03-26 Streamable HTTP
+**Deployment:** opt-in via ocp4_workload_litemaas_deploy_mcp=true
+
 ## User Role Hierarchy
 
-- admin — Full platform control (assigned via promote-admin.sh or psql)
+- admin — Full platform control (add to litemaas-admins OCP group, then user logs in via frontend)
 - adminReadonly — Read-only access to all admin views
 - user — Browse models, subscribe, manage own API keys (auto-assigned on first OAuth login)
 
