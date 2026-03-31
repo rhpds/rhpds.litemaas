@@ -37,6 +37,7 @@ log = logging.getLogger("litemaas-mcp")
 LITELLM_URL  = os.environ.get("LITELLM_API_URL", "http://litellm:4000")
 LITELLM_KEY  = os.environ.get("LITELLM_API_KEY", "")
 DATABASE_URL = os.environ.get("DATABASE_URL", "")
+MCP_API_KEY  = os.environ.get("MCP_API_KEY", "")
 NAMESPACE    = os.environ.get("NAMESPACE", "litellm-rhpds")
 
 # ── Database ──────────────────────────────────────────────────────────────────
@@ -46,6 +47,20 @@ _pool: asyncpg.Pool | None = None
 async def _db(query: str, *args) -> list[dict]:
     async with _pool.acquire() as conn:
         return [dict(r) for r in await conn.fetch(query, *args)]
+
+
+def _check_auth(scope) -> bool:
+    """Auth via query param ?token=MCP_API_KEY (works with all MCP HTTP clients)."""
+    if not MCP_API_KEY:
+        return True
+    qs = scope.get("query_string", b"").decode()
+    for part in qs.split("&"):
+        if part.startswith("token="):
+            return part[6:] == MCP_API_KEY
+    # Also accept Authorization: Bearer header as fallback
+    headers = dict(scope.get("headers", []))
+    auth = headers.get(b"authorization", b"").decode()
+    return auth == f"Bearer {MCP_API_KEY}"
 
 # ── LiteLLM API ───────────────────────────────────────────────────────────────
 
@@ -76,19 +91,34 @@ async def _init_k8s():
 
 async def tool_list_models(_args):
     rows = await _db("""
-        SELECT name, provider, availability, restricted_access,
-               context_length, supports_function_calling,
-               input_cost_per_token, output_cost_per_token, tpm, rpm
-        FROM models ORDER BY provider, name
+        SELECT model_name,
+               model_info->>'mode'              AS mode,
+               litellm_params->>'model'         AS backend,
+               litellm_params->>'custom_llm_provider' AS provider,
+               CAST(model_info->>'input_cost_per_token'  AS double precision) AS input_cost,
+               CAST(model_info->>'output_cost_per_token' AS double precision) AS output_cost,
+               CAST(model_info->>'max_tokens' AS integer) AS max_tokens,
+               model_info->>'supports_function_calling' AS function_calling
+        FROM "LiteLLM_ProxyModelTable"
+        ORDER BY model_name
     """)
+    result = []
     for r in rows:
-        if r.get("input_cost_per_token"):
-            r["input_$/1M"]  = round(float(r.pop("input_cost_per_token"))  * 1_000_000, 4)
-            r["output_$/1M"] = round(float(r.pop("output_cost_per_token")) * 1_000_000, 4)
-        else:
-            r.pop("input_cost_per_token", None)
-            r.pop("output_cost_per_token", None)
-    return json.dumps(rows, indent=2, default=str)
+        m = {
+            "model":    r["model_name"],
+            "mode":     r["mode"],
+            "backend":  r["backend"],
+            "provider": r["provider"],
+        }
+        if r.get("input_cost") is not None:
+            m["input_$/1M"]  = round(float(r["input_cost"])  * 1_000_000, 4)
+            m["output_$/1M"] = round(float(r["output_cost"]) * 1_000_000, 4)
+        if r.get("max_tokens"):
+            m["max_tokens"] = r["max_tokens"]
+        if r.get("function_calling"):
+            m["function_calling"] = r["function_calling"] == "true"
+        result.append(m)
+    return json.dumps(result, indent=2, default=str)
 
 
 async def tool_get_model_health(args):
@@ -103,21 +133,27 @@ async def tool_get_model_health(args):
 
 
 async def tool_list_users(_args):
-    data = await _llm("get", "/user/list")
+    rows = await _db("""
+        SELECT user_id, user_email, spend, max_budget,
+               budget_duration, tpm_limit, rpm_limit, created_at
+        FROM "LiteLLM_UserTable"
+        WHERE user_id != 'default_user'
+        ORDER BY spend DESC NULLS LAST
+        LIMIT 200
+    """)
     users = [
         {
-            "user_id":         u.get("user_id"),
-            "email":           u.get("user_email"),
-            "spend":           round(u.get("spend", 0), 4),
-            "max_budget":      u.get("max_budget"),
-            "budget_duration": u.get("budget_duration"),
-            "tpm_limit":       u.get("tpm_limit"),
-            "rpm_limit":       u.get("rpm_limit"),
+            "user_id":         r["user_id"],
+            "email":           r["user_email"],
+            "spend":           round(float(r["spend"] or 0), 4),
+            "max_budget":      float(r["max_budget"]) if r["max_budget"] else None,
+            "budget_duration": r["budget_duration"],
+            "tpm_limit":       r["tpm_limit"],
+            "rpm_limit":       r["rpm_limit"],
         }
-        for u in (data.get("users", data) if isinstance(data, dict) else data)
+        for r in rows
     ]
-    return json.dumps(sorted(users, key=lambda x: x["spend"] or 0, reverse=True),
-                      indent=2, default=str)
+    return json.dumps(users, indent=2, default=str)
 
 
 async def tool_get_spend_summary(args):
@@ -306,7 +342,11 @@ class LiteMaaSApp:
         if path == "/health":
             await self._health(scope, receive, send)
         elif path in ("/mcp", "/sse"):
-            await session_manager.handle_request(scope, receive, send)
+            if not _check_auth(scope):
+                await _send_json(send, 401,
+                    {"error": "unauthorized", "message": "Valid ?token= required"})
+            else:
+                await session_manager.handle_request(scope, receive, send)
         else:
             await _send_json(send, 404, {"error": "not found"})
 
