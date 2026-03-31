@@ -1,0 +1,330 @@
+---
+# =============================================================================
+# LiteMaaS Guardrails Configuration Playbook
+# =============================================================================
+# Configures LiteLLM content filtering guardrails on a LiteMaaS deployment.
+# Blocks sensitive information (PII, credentials) and harmful content using
+# the built-in litellm_content_filter guardrail (no external service required).
+#
+# Usage:
+#
+# 1. Apply default guardrails to a namespace:
+#    ansible-playbook playbooks/configure_guardrails.yml \
+#      -e litemaas_namespace=litellm-rhpds
+#
+# 2. Apply to dev namespace:
+#    ansible-playbook playbooks/configure_guardrails.yml \
+#      -e litemaas_namespace=litellm-dev
+#
+# 3. Remove guardrails:
+#    ansible-playbook playbooks/configure_guardrails.yml \
+#      -e litemaas_namespace=litellm-rhpds \
+#      -e litemaas_guardrails_state=absent
+#
+# 4. Check current guardrails without applying:
+#    ansible-playbook playbooks/configure_guardrails.yml \
+#      -e litemaas_namespace=litellm-rhpds \
+#      -e litemaas_guardrails_check_only=true
+# =============================================================================
+
+- name: Configure LiteMaaS Guardrails
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    litemaas_namespace: "litellm-rhpds"
+    litemaas_guardrails_state: "present"   # present or absent
+    litemaas_guardrails_check_only: false
+    litemaas_configmap_name: "litellm-guardrails-config"
+    litemaas_config_mountpath: "/etc/litellm"
+
+    # Guardrail config written to ConfigMap
+    # Customize patterns and categories as needed
+    litemaas_guardrails_config: |
+      guardrails:
+        - guardrail_name: "pii-and-credentials"
+          litellm_params:
+            guardrail: "litellm_content_filter"
+            mode: "pre_call"
+            default_on: true
+            patterns:
+              # PII
+              - pattern_type: "prebuilt"
+                pattern_name: "us_ssn"
+                action: "BLOCK"
+              - pattern_type: "prebuilt"
+                pattern_name: "credit_card"
+                action: "BLOCK"
+              - pattern_type: "prebuilt"
+                pattern_name: "visa"
+                action: "BLOCK"
+              - pattern_type: "prebuilt"
+                pattern_name: "mastercard"
+                action: "BLOCK"
+              - pattern_type: "prebuilt"
+                pattern_name: "amex"
+                action: "BLOCK"
+              # Credentials
+              - pattern_type: "prebuilt"
+                pattern_name: "aws_access_key"
+                action: "BLOCK"
+              - pattern_type: "prebuilt"
+                pattern_name: "github_token"
+                action: "BLOCK"
+              - pattern_type: "prebuilt"
+                pattern_name: "slack_token"
+                action: "BLOCK"
+              - pattern_type: "prebuilt"
+                pattern_name: "generic_api_key"
+                action: "BLOCK"
+              # Dangerous content
+              - pattern_type: "prebuilt"
+                pattern_name: "explosives"
+                action: "BLOCK"
+              - pattern_type: "prebuilt"
+                pattern_name: "terrorism"
+                action: "BLOCK"
+              - pattern_type: "prebuilt"
+                pattern_name: "violence_threats"
+                action: "BLOCK"
+              - pattern_type: "prebuilt"
+                pattern_name: "harassment_hate"
+                action: "BLOCK"
+              - pattern_type: "prebuilt"
+                pattern_name: "self_harm_suicide"
+                action: "BLOCK"
+            categories:
+              - category: "harmful_violence"
+                enabled: true
+                action: "BLOCK"
+                severity_threshold: "medium"
+              - category: "harmful_self_harm"
+                enabled: true
+                action: "BLOCK"
+                severity_threshold: "medium"
+              - category: "harmful_illegal_weapons"
+                enabled: true
+                action: "BLOCK"
+                severity_threshold: "medium"
+
+        - guardrail_name: "output-pii-mask"
+          litellm_params:
+            guardrail: "litellm_content_filter"
+            mode: "post_call"
+            default_on: true
+            patterns:
+              - pattern_type: "prebuilt"
+                pattern_name: "us_ssn"
+                action: "MASK"
+              - pattern_type: "prebuilt"
+                pattern_name: "credit_card"
+                action: "MASK"
+              - pattern_type: "prebuilt"
+                pattern_name: "aws_access_key"
+                action: "MASK"
+              - pattern_type: "prebuilt"
+                pattern_name: "github_token"
+                action: "MASK"
+              - pattern_type: "prebuilt"
+                pattern_name: "generic_api_key"
+                action: "MASK"
+
+  tasks:
+
+    # -------------------------------------------------------------------------
+    # Preflight: resolve LiteLLM URL and master key
+    # -------------------------------------------------------------------------
+
+    - name: Get LiteLLM route
+      kubernetes.core.k8s_info:
+        api_version: route.openshift.io/v1
+        kind: Route
+        namespace: "{{ litemaas_namespace }}"
+        label_selectors:
+          - "app=litellm"
+      register: r_litellm_route
+
+    - name: Set LiteLLM URL
+      ansible.builtin.set_fact:
+        litellm_url: "https://{{ r_litellm_route.resources[0].spec.host }}"
+
+    - name: Get LiteLLM master key
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Secret
+        namespace: "{{ litemaas_namespace }}"
+        name: litellm-secret
+      register: r_litellm_secret
+
+    - name: Set master key
+      ansible.builtin.set_fact:
+        litellm_master_key: "{{ r_litellm_secret.resources[0].data.LITELLM_MASTER_KEY | b64decode }}"
+
+    # -------------------------------------------------------------------------
+    # Check-only mode: list current guardrails and exit
+    # -------------------------------------------------------------------------
+
+    - name: List current guardrails
+      when: litemaas_guardrails_check_only | bool
+      ansible.builtin.uri:
+        url: "{{ litellm_url }}/guardrails/list"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ litellm_master_key }}"
+        validate_certs: false
+      register: r_guardrails_list
+
+    - name: Display current guardrails
+      when: litemaas_guardrails_check_only | bool
+      ansible.builtin.debug:
+        var: r_guardrails_list.json
+
+    - name: End playbook (check-only mode)
+      when: litemaas_guardrails_check_only | bool
+      ansible.builtin.meta: end_play
+
+    # -------------------------------------------------------------------------
+    # Remove guardrails (state=absent)
+    # -------------------------------------------------------------------------
+
+    - name: Remove guardrails ConfigMap
+      when: litemaas_guardrails_state == "absent"
+      kubernetes.core.k8s:
+        state: absent
+        api_version: v1
+        kind: ConfigMap
+        namespace: "{{ litemaas_namespace }}"
+        name: "{{ litemaas_configmap_name }}"
+
+    - name: Remove guardrails from LiteLLM deployment
+      when: litemaas_guardrails_state == "absent"
+      kubernetes.core.k8s:
+        state: patched
+        api_version: apps/v1
+        kind: Deployment
+        namespace: "{{ litemaas_namespace }}"
+        name: litellm
+        definition:
+          spec:
+            template:
+              spec:
+                containers:
+                  - name: litellm
+                    command: []
+                    args: []
+
+    - name: Wait for rollout after removal
+      when: litemaas_guardrails_state == "absent"
+      kubernetes.core.k8s_rollout_status:
+        api_version: apps/v1
+        kind: Deployment
+        namespace: "{{ litemaas_namespace }}"
+        name: litellm
+        wait_timeout: 180
+
+    - name: End playbook (removal complete)
+      when: litemaas_guardrails_state == "absent"
+      ansible.builtin.debug:
+        msg: "Guardrails removed from {{ litemaas_namespace }}. LiteLLM restarted."
+
+    - name: End play after removal
+      when: litemaas_guardrails_state == "absent"
+      ansible.builtin.meta: end_play
+
+    # -------------------------------------------------------------------------
+    # Apply guardrails (state=present)
+    # -------------------------------------------------------------------------
+
+    - name: Create or update guardrails ConfigMap
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: "{{ litemaas_configmap_name }}"
+            namespace: "{{ litemaas_namespace }}"
+            labels:
+              app: litellm
+              component: guardrails
+          data:
+            config.yaml: "{{ litemaas_guardrails_config }}"
+
+    - name: Patch LiteLLM deployment to mount config and set startup args
+      kubernetes.core.k8s:
+        state: patched
+        api_version: apps/v1
+        kind: Deployment
+        namespace: "{{ litemaas_namespace }}"
+        name: litellm
+        definition:
+          spec:
+            template:
+              spec:
+                volumes:
+                  - name: guardrails-config
+                    configMap:
+                      name: "{{ litemaas_configmap_name }}"
+                containers:
+                  - name: litellm
+                    command:
+                      - /usr/bin/python3.13
+                      - /usr/bin/litellm
+                    args:
+                      - "--port"
+                      - "4000"
+                      - "--config"
+                      - "{{ litemaas_config_mountpath }}/config.yaml"
+                    volumeMounts:
+                      - name: guardrails-config
+                        mountPath: "{{ litemaas_config_mountpath }}"
+
+    - name: Wait for rolling restart to complete
+      kubernetes.core.k8s_rollout_status:
+        api_version: apps/v1
+        kind: Deployment
+        namespace: "{{ litemaas_namespace }}"
+        name: litellm
+        wait_timeout: 180
+
+    # -------------------------------------------------------------------------
+    # Verify guardrails are active
+    # -------------------------------------------------------------------------
+
+    - name: Verify guardrails loaded via API
+      ansible.builtin.uri:
+        url: "{{ litellm_url }}/guardrails/list"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ litellm_master_key }}"
+        validate_certs: false
+      register: r_guardrails_verify
+      retries: 5
+      delay: 10
+      until: r_guardrails_verify.status == 200
+
+    - name: Verify SSN blocking works
+      ansible.builtin.uri:
+        url: "{{ litellm_url }}/v1/chat/completions"
+        method: POST
+        headers:
+          Authorization: "Bearer {{ litellm_master_key }}"
+          Content-Type: "application/json"
+        body_format: json
+        body:
+          model: "granite-3-2-8b-instruct"
+          messages:
+            - role: "user"
+              content: "My SSN is 123-45-6789"
+        validate_certs: false
+        status_code: [403]
+      register: r_ssn_test
+
+    - name: Display results
+      ansible.builtin.debug:
+        msg:
+          - "Guardrails configured successfully in namespace: {{ litemaas_namespace }}"
+          - "Active guardrails: {{ r_guardrails_verify.json.guardrails | map(attribute='guardrail_name') | list }}"
+          - "SSN blocking test: {{ 'PASS' if r_ssn_test.status == 403 else 'FAIL' }}"
+          - "LiteLLM URL: {{ litellm_url }}"
