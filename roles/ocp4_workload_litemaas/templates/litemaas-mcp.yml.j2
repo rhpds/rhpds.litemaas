@@ -1,0 +1,160 @@
+---
+# ── ServiceAccount ────────────────────────────────────────────────────────────
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: litemaas-mcp
+  namespace: "{{ ocp4_workload_litemaas_namespace }}"
+  labels:
+    app: litemaas-mcp
+---
+# ── Role — read pods in namespace ─────────────────────────────────────────────
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: litemaas-mcp
+  namespace: "{{ ocp4_workload_litemaas_namespace }}"
+  labels:
+    app: litemaas-mcp
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: litemaas-mcp
+  namespace: "{{ ocp4_workload_litemaas_namespace }}"
+  labels:
+    app: litemaas-mcp
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: litemaas-mcp
+subjects:
+  - kind: ServiceAccount
+    name: litemaas-mcp
+    namespace: "{{ ocp4_workload_litemaas_namespace }}"
+---
+# ── Secret ────────────────────────────────────────────────────────────────────
+apiVersion: v1
+kind: Secret
+metadata:
+  name: litemaas-mcp-secret
+  namespace: "{{ ocp4_workload_litemaas_namespace }}"
+  labels:
+    app: litemaas-mcp
+type: Opaque
+stringData:
+  MCP_API_KEY: "{{ ocp4_workload_litemaas_mcp_api_key }}"
+---
+# ── Deployment ────────────────────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: litemaas-mcp
+  namespace: "{{ ocp4_workload_litemaas_namespace }}"
+  labels:
+    app: litemaas-mcp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: litemaas-mcp
+  template:
+    metadata:
+      labels:
+        app: litemaas-mcp
+    spec:
+      serviceAccountName: litemaas-mcp
+      containers:
+        - name: mcp
+          image: "{{ ocp4_workload_litemaas_mcp_image }}"
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+              name: http
+          env:
+            - name: LITELLM_API_URL
+              value: "http://litellm:4000"
+            - name: LITELLM_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: litellm-secret
+                  key: LITELLM_MASTER_KEY
+            - name: LITEMAAS_ADMIN_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: backend-secret
+                  key: ADMIN_API_KEY
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: litemaas-db
+                  key: DATABASE_URL
+            - name: MCP_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: litemaas-mcp-secret
+                  key: MCP_API_KEY
+            - name: NAMESPACE
+              value: "{{ ocp4_workload_litemaas_namespace }}"
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 30
+            failureThreshold: 3
+---
+# ── Service ───────────────────────────────────────────────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: litemaas-mcp
+  namespace: "{{ ocp4_workload_litemaas_namespace }}"
+  labels:
+    app: litemaas-mcp
+spec:
+  selector:
+    app: litemaas-mcp
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+---
+# ── Route ─────────────────────────────────────────────────────────────────────
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: litemaas-mcp
+  namespace: "{{ ocp4_workload_litemaas_namespace }}"
+  labels:
+    app: litemaas-mcp
+  annotations:
+    haproxy.router.openshift.io/timeout: 300s
+spec:
+  host: "{{ ocp4_workload_litemaas_mcp_route_prefix }}.{{ ocp4_workload_litemaas_cluster_domain }}"
+  to:
+    kind: Service
+    name: litemaas-mcp
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect

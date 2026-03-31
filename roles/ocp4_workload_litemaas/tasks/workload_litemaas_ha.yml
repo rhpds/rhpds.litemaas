@@ -334,3 +334,49 @@
   include_tasks: configure_models.yml
   vars:
     _litemaas_namespace: "{{ _litemaas_ha_namespace }}"
+
+# Deploy MCP server (optional — off by default)
+- name: Deploy LiteMaaS MCP server
+  when: ocp4_workload_litemaas_deploy_mcp | default(false) | bool
+  block:
+    - name: Deploy MCP resources
+      kubernetes.core.k8s:
+        state: present
+        namespace: "{{ _litemaas_ha_namespace }}"
+        definition: "{{ item }}"
+      loop: "{{ lookup('template', 'litemaas-mcp.yml.j2') | from_yaml_all | list }}"
+
+    - name: Wait for MCP pod to be ready
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Pod
+        namespace: "{{ _litemaas_ha_namespace }}"
+        label_selectors:
+          - app=litemaas-mcp
+      register: r_mcp_pod
+      until:
+        - r_mcp_pod.resources | length > 0
+        - r_mcp_pod.resources[0].status.phase == "Running"
+      retries: 20
+      delay: 10
+
+    - name: Get MCP route
+      kubernetes.core.k8s_info:
+        api_version: route.openshift.io/v1
+        kind: Route
+        namespace: "{{ _litemaas_ha_namespace }}"
+        name: litemaas-mcp
+      register: r_mcp_route
+
+    - name: Send MCP server info
+      agnosticd_user_info:
+        msg: "{{ item }}"
+      loop:
+        - "LiteMaaS MCP Server: https://{{ r_mcp_route.resources[0].spec.host }}"
+        - "MCP API Key: {{ ocp4_workload_litemaas_mcp_api_key }}"
+
+    - name: Send MCP server data
+      agnosticd_user_info:
+        data:
+          litemaas_mcp_url: "https://{{ r_mcp_route.resources[0].spec.host }}"
+          litemaas_mcp_api_key: "{{ ocp4_workload_litemaas_mcp_api_key }}"
