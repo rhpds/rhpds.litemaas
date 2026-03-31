@@ -85,9 +85,9 @@
               - pattern_type: "prebuilt"
                 pattern_name: "terrorism"
                 action: "BLOCK"
-              - pattern_type: "prebuilt"
-                pattern_name: "violence_threats"
-                action: "BLOCK"
+              # violence_threats regex removed — too broad for infosec/security lab contexts.
+              # Words like eliminate, neutralize, execute, kill (process) are standard security terms.
+              # harmful_violence category below provides contextual keyword matching instead.
               - pattern_type: "prebuilt"
                 pattern_name: "harassment_hate"
                 action: "BLOCK"
