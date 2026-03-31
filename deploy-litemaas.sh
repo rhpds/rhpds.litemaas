@@ -85,7 +85,6 @@ while [[ $# -gt 0 ]]; do
             ENABLE_OAUTH=true
             shift
             ;;
-            shift
         --route-prefix)
             ROUTE_PREFIX="$2"
             shift 2
