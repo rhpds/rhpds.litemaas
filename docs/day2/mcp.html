@@ -165,7 +165,7 @@
     <h3 id="step-command">Option A — One Command (Recommended)</h3>
     <p>Run this once in your terminal:</p>
     <pre>claude mcp add --transport http --scope user litemaas \
-  https://litemaas-mcp.apps.maas.redhatworkshops.io/mcp</pre>
+  https://litemaas-mcp.apps.<your-cluster>/mcp</pre>
 
     <p>Then restart Claude Code. Done.</p>
 
@@ -175,7 +175,7 @@
   <span class="string">"mcpServers"</span>: {
     <span class="string">"litemaas"</span>: {
       <span class="string">"type"</span>: <span class="string">"http"</span>,
-      <span class="string">"url"</span>: <span class="string">"https://litemaas-mcp.apps.maas.redhatworkshops.io/mcp"</span>
+      <span class="string">"url"</span>: <span class="string">"https://litemaas-mcp.apps.<your-cluster>/mcp"</span>
     }
   }
 }</pre>
@@ -312,7 +312,7 @@ ansible-playbook playbooks/deploy_litemaas_ha.yml \
 
     <h3>Health check</h3>
     <pre><span class="comment"># Check MCP server is running and connected</span>
-curl https://litemaas-mcp.apps.maas.redhatworkshops.io/health
+curl https://litemaas-mcp.apps.<your-cluster>/health
 
 <span class="comment"># Expected response</span>
 {"status": "healthy", "database": true, "litellm": true}</pre>
