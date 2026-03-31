@@ -163,18 +163,28 @@ async def tool_get_spend_summary(args):
             conditions.append(f"{col} ${i}")
             params.append(datetime.fromisoformat(args[field]))
             i += 1
-    for field, col in [("model", "model ="), ("user_id", '"user" =')]:
-        if args.get(field):
-            conditions.append(f"{col} ${i}")
-            params.append(args[field])
-            i += 1
+    if args.get("user_id"):
+        conditions.append(f'"user" = ${i}')
+        params.append(args["user_id"])
+        i += 1
+    # Model filter: match on normalized name (strips provider prefix)
+    model_having = ""
+    if args.get("model"):
+        model_having = f"HAVING REGEXP_REPLACE(model, '^[^/]+/', '') = ${i}"
+        params.append(args["model"])
+        i += 1
     rows = await _db(f"""
-        SELECT model, COUNT(*) AS requests, SUM(total_tokens) AS total_tokens,
-               CAST(SUM(spend) AS numeric(12,4)) AS total_spend,
-               SUM(CASE WHEN status='failure' THEN 1 ELSE 0 END) AS failures
+        SELECT
+            REGEXP_REPLACE(model, '^[^/]+/', '') AS model,
+            COUNT(*) AS requests,
+            SUM(total_tokens) AS total_tokens,
+            CAST(SUM(spend) AS numeric(12,4)) AS total_spend,
+            SUM(CASE WHEN status='failure' THEN 1 ELSE 0 END) AS failures
         FROM "LiteLLM_SpendLogs"
         WHERE {" AND ".join(conditions)}
-        GROUP BY model ORDER BY total_spend DESC
+        GROUP BY REGEXP_REPLACE(model, '^[^/]+/', '')
+        {model_having}
+        ORDER BY total_spend DESC
     """, *params)
     return json.dumps(rows, indent=2, default=str)
 
@@ -185,9 +195,11 @@ async def tool_get_daily_stats(args):
         SELECT DATE("startTime") AS date, COUNT(*) AS requests,
                SUM(total_tokens) AS total_tokens,
                CAST(SUM(spend) AS numeric(12,4)) AS total_spend,
-               SUM(CASE WHEN status='failure' THEN 1 ELSE 0 END) AS failures
+               SUM(CASE WHEN status='failure' THEN 1 ELSE 0 END) AS failures,
+               COUNT(DISTINCT REGEXP_REPLACE(model, '^[^/]+/', '')) AS unique_models
         FROM "LiteLLM_SpendLogs"
         WHERE "startTime" >= NOW() - INTERVAL '{days} days'
+          AND spend > 0
         GROUP BY DATE("startTime") ORDER BY date DESC
     """)
     return json.dumps(rows, indent=2, default=str)
