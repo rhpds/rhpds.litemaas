@@ -91,6 +91,12 @@ ocp4_workload_litemaas_frontend_cpu_limit: "250m"
 ocp4_workload_litemaas_litellm_memory_limit: "1Gi"
 ocp4_workload_litemaas_litellm_cpu_limit: "1000m"
 
+# MCP server (Claude Code integration)
+ocp4_workload_litemaas_deploy_mcp: false
+ocp4_workload_litemaas_mcp_image: "quay.io/rhpds/litemaas-mcp:latest"
+ocp4_workload_litemaas_mcp_route_prefix: "litemaas-mcp"
+ocp4_workload_litemaas_mcp_api_key: "{{ lookup('password', '/dev/null length=32 chars=ascii_letters,digits') }}"
+
 # Workload control
 ocp4_workload_litemaas_remove: false
 
