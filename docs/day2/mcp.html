@@ -160,12 +160,14 @@
   <div class="section" id="setup">
     <h2>Setup (2 Steps)</h2>
 
-    <p>Ask your LiteMaaS admin for the MCP server URL before starting.</p>
+    <p>Your LiteMaaS admin will give you two things: the <strong>MCP server URL</strong> and an <strong>API token</strong>. Both are required — the token is embedded in the URL as a query parameter.</p>
+
+    <div class="info-box"><p><strong>What to ask your admin:</strong> "Can you give me the LiteMaaS MCP URL and token?" They will provide something like <code>https://litemaas-mcp.apps.&lt;cluster&gt;/mcp?token=&lt;your-token&gt;</code> as a single string to copy-paste.</p></div>
 
     <h3 id="step-command">Option A — One Command (Recommended)</h3>
-    <p>Run this once in your terminal:</p>
+    <p>Run this once in your terminal, replacing the URL and token with the values your admin gave you:</p>
     <pre>claude mcp add --transport http --scope user litemaas \
-  https://litemaas-mcp.apps.<your-cluster>/mcp</pre>
+  "https://litemaas-mcp.apps.maas.example.com/mcp?token=abc123xyz456def789"</pre>
 
     <p>Then restart Claude Code. Done.</p>
 
@@ -175,11 +177,13 @@
   <span class="string">"mcpServers"</span>: {
     <span class="string">"litemaas"</span>: {
       <span class="string">"type"</span>: <span class="string">"http"</span>,
-      <span class="string">"url"</span>: <span class="string">"https://litemaas-mcp.apps.<your-cluster>/mcp"</span>
+      <span class="string">"url"</span>: <span class="string">"https://litemaas-mcp.apps.maas.example.com/mcp?token=abc123xyz456def789"</span>
     }
   }
 }</pre>
-    <p>Save the file and restart Claude Code.</p>
+    <p>Replace <code>maas.example.com</code> and <code>abc123xyz456def789</code> with the actual values from your admin. Save the file and restart Claude Code.</p>
+
+    <div class="warn-box"><p><strong>Treat the URL as a secret.</strong> The token appears in the URL — don't share it publicly or commit it to source control.</p></div>
 
     <h3 id="step-verify">Verify the Connection</h3>
     <p>After restarting, run <code>/mcp</code> in Claude Code. You should see <code>litemaas</code> listed as <strong>connected</strong>. Then open a new conversation and ask:</p>
@@ -312,10 +316,16 @@ ansible-playbook playbooks/deploy_litemaas_ha.yml \
 
     <h3>Health check</h3>
     <pre><span class="comment"># Check MCP server is running and connected</span>
-curl https://litemaas-mcp.apps.<your-cluster>/health
+curl https://litemaas-mcp.apps.maas.example.com/health
 
 <span class="comment"># Expected response</span>
-{"status": "healthy", "database": true, "litellm": true}</pre>
+{"status": "healthy", "database": true, "litellm": true}
+
+<span class="comment"># Test auth — should return 401</span>
+curl -X POST https://litemaas-mcp.apps.maas.example.com/mcp
+
+<span class="comment"># Test with token — should NOT return 401</span>
+curl -X POST "https://litemaas-mcp.apps.maas.example.com/mcp?token=abc123xyz456def789"</pre>
 
     <h3>Logs</h3>
     <pre>oc logs -n litellm-rhpds -l app=litemaas-mcp --tail=50</pre>
