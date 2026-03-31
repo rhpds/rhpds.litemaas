@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LiteMaaS — Claude Code MCP Integration</title>
+  <meta name="description" content="Connect Claude Code to RHDP LiteMaaS via MCP — setup, available tools, and example queries for the LiteMaaS MCP server.">
+  <link rel="canonical" href="https://rhpds.github.io/rhpds.litemaas/docs/day2/mcp.html">
+  <link rel="stylesheet" href="../assets/style.css">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Red Hat Text', 'Segoe UI', sans-serif; background: #f5f5f5; color: #151515; line-height: 1.6; }
+    header { background: #cc0000; color: white; padding: 1.5rem 3rem; display: flex; align-items: center; gap: 1.5rem; }
+    header h1 { font-size: 1.5rem; font-weight: 700; }
+    header p { opacity: 0.85; font-size: 0.9rem; margin-top: 0.2rem; }
+    nav { background: #151515; padding: 0 3rem; display: flex; gap: 0; flex-wrap: wrap; }
+    nav a { color: #e0e0e0; text-decoration: none; padding: 0.85rem 1.2rem; font-size: 0.9rem; display: block; transition: background 0.15s; }
+    nav a:hover, nav a.active { background: #cc0000; color: white; }
+    .container { max-width: 1100px; margin: 2rem auto; padding: 0 2rem; }
+    .breadcrumb { font-size: 0.82rem; color: #666; margin-bottom: 1.5rem; }
+    .breadcrumb a { color: #cc0000; text-decoration: none; }
+    .breadcrumb a:hover { text-decoration: underline; }
+    h1.page-title { font-size: 1.8rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .page-subtitle { color: #555; margin-bottom: 2rem; font-size: 1rem; }
+    .section { background: white; border-radius: 8px; padding: 2rem; margin-bottom: 1.5rem; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+    .section h2 { font-size: 1.2rem; font-weight: 700; margin-bottom: 1rem; color: #151515; border-bottom: 2px solid #cc0000; padding-bottom: 0.5rem; }
+    .section h3 { font-size: 1rem; font-weight: 700; margin: 1.4rem 0 0.5rem; color: #333; }
+    .section p { margin-bottom: 0.8rem; color: #333; font-size: 0.92rem; }
+    .section ul, .section ol { padding-left: 1.5rem; margin-bottom: 0.8rem; }
+    .section li { margin-bottom: 0.4rem; color: #333; font-size: 0.92rem; }
+    pre { background: #1e1e1e; color: #d4d4d4; padding: 1.2rem 1.5rem; border-radius: 6px; overflow-x: auto; font-size: 0.82rem; line-height: 1.5; margin: 0.8rem 0; }
+    pre .comment { color: #6a9955; }
+    pre .string { color: #ce9178; }
+    pre .keyword { color: #569cd6; }
+    pre .var { color: #9cdcfe; }
+    code { font-family: 'Courier New', monospace; font-size: 0.85em; background: #f0f0f0; padding: 0.1em 0.3em; border-radius: 3px; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.86rem; }
+    th { background: #151515; color: white; padding: 0.6rem 0.8rem; text-align: left; font-weight: 600; }
+    td { padding: 0.6rem 0.8rem; border-bottom: 1px solid #e8e8e8; vertical-align: top; }
+    tr:nth-child(even) { background: #f9f9f9; }
+    td code { background: #f0f0f0; padding: 0.1em 0.3em; border-radius: 3px; font-size: 0.82rem; }
+    .info-box { background: #e8f4fd; border-left: 4px solid #0066cc; padding: 1rem 1.5rem; border-radius: 0 6px 6px 0; margin: 1rem 0; }
+    .info-box p { margin: 0; font-size: 0.88rem; color: #004080; }
+    .warn-box { background: #fff8e1; border-left: 4px solid #f0a500; padding: 1rem 1.5rem; border-radius: 0 6px 6px 0; margin: 1rem 0; }
+    .warn-box p { margin: 0; font-size: 0.88rem; color: #5d3900; }
+    .toc { background: white; border-radius: 8px; padding: 1.5rem 2rem; margin-bottom: 1.5rem; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+    .toc h3 { font-size: 0.9rem; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.8rem; }
+    .toc ul { list-style: none; padding: 0; margin: 0; }
+    .toc li { margin-bottom: 0.3rem; }
+    .toc a { color: #cc0000; text-decoration: none; font-size: 0.88rem; }
+    .toc a:hover { text-decoration: underline; }
+    .toc li li { padding-left: 1rem; }
+    .query-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin: 1rem 0; }
+    .query-card { background: #f9f9f9; border: 1px solid #e0e0e0; border-radius: 6px; padding: 0.9rem 1.1rem; font-size: 0.88rem; color: #333; font-style: italic; }
+    .query-card::before { content: '"'; color: #cc0000; font-weight: 700; font-style: normal; }
+    .query-card::after  { content: '"'; color: #cc0000; font-weight: 700; font-style: normal; }
+    .step { display: flex; gap: 1rem; margin-bottom: 1.2rem; align-items: flex-start; }
+    .step-num { flex-shrink: 0; background: #cc0000; color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem; margin-top: 0.1rem; }
+    .step-body { flex: 1; }
+    .step-body p { margin-bottom: 0.4rem; }
+    .badge { display: inline-block; background: #e8f4fd; color: #0066cc; border-radius: 3px; padding: 0.15rem 0.5rem; font-size: 0.75rem; font-weight: 600; margin-left: 0.4rem; vertical-align: middle; }
+    footer { background: #151515; color: #888; text-align: center; padding: 1.5rem; font-size: 0.82rem; margin-top: 2rem; }
+    .footer-updated { display: block; margin-top: 0.3rem; font-size: 0.8rem; color: #777; }
+    .page-nav { display: flex; justify-content: space-between; margin: 2rem 0; gap: 1rem; }
+    .page-nav a { display: flex; flex-direction: column; padding: 1rem 1.5rem; background: white; border-radius: 8px; text-decoration: none; color: #151515; box-shadow: 0 1px 4px rgba(0,0,0,0.1); flex: 1; max-width: 48%; transition: box-shadow 0.15s; }
+    .page-nav a:hover { box-shadow: 0 3px 10px rgba(0,0,0,0.15); }
+    .pn-label { font-size: 0.78rem; color: #888; margin-bottom: 0.2rem; }
+    .pn-title { font-size: 0.95rem; font-weight: 600; color: #cc0000; }
+    .pn-prev { align-items: flex-start; }
+    .pn-next { align-items: flex-end; }
+    .nav-hamburger { display: none; background: none; border: none; color: #e0e0e0; font-size: 1.5rem; cursor: pointer; padding: 0.85rem 1.2rem; }
+    @media (max-width: 768px) {
+      header { padding: 1rem 1.5rem; }
+      nav { padding: 0; flex-direction: column; }
+      .nav-hamburger { display: block; }
+      .nav-links { display: none; flex-direction: column; width: 100%; }
+      .nav-links.open { display: flex; }
+      .nav-links a { padding: 0.7rem 1.5rem; border-top: 1px solid #2a2a2a; }
+      .container { padding: 0 1rem; }
+      .page-nav { flex-direction: column; }
+      .page-nav a { max-width: 100%; }
+      .query-grid { grid-template-columns: 1fr; }
+    }
+    .anchor-link { opacity: 0; margin-left: 0.4rem; color: #cc0000; font-size: 0.8rem; text-decoration: none; }
+    .section h2:hover .anchor-link, .section h3:hover .anchor-link { opacity: 1; }
+    .copy-btn { position: absolute; right: 0.5rem; top: 0.5rem; background: #333; color: #ccc; border: none; border-radius: 4px; padding: 0.2rem 0.6rem; font-size: 0.75rem; cursor: pointer; opacity: 0; transition: opacity 0.15s; }
+    pre { position: relative; }
+    pre:hover .copy-btn { opacity: 1; }
+    .copy-btn.copied { background: #28a745; color: white; }
+    .back-to-top { position: fixed; bottom: 2rem; right: 2rem; background: #cc0000; color: white; border: none; border-radius: 50%; width: 2.5rem; height: 2.5rem; font-size: 1.2rem; cursor: pointer; opacity: 0; transition: opacity 0.3s; z-index: 100; }
+    .back-to-top.visible { opacity: 1; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>RHDP LiteMaaS</h1>
+    <p>Model as a Service for Red Hat Demo Platform</p>
+  </div>
+</header>
+
+<nav>
+  <button class="nav-hamburger" id="navToggle" aria-label="Toggle navigation">&#9776;</button>
+  <div class="nav-links" id="navLinks">
+    <a href="../index.html">Home</a>
+    <a href="../architecture.html">Architecture</a>
+    <a href="../product/overview.html">Overview</a>
+    <a href="../product/models.html">Models</a>
+    <a href="../install/deployment.html">Install</a>
+    <a href="operations.html">Day-2</a>
+    <a href="model-routing.html">Model Routing</a>
+    <a href="model-management.html">Model Management</a>
+    <a href="analytics.html">Analytics &amp; Backup</a>
+    <a href="cost-analysis.html">Cost Analysis</a>
+    <a href="mcp.html" class="active">Claude Code MCP</a>
+    <a href="../monitoring.html">Monitoring</a>
+    <a href="../infrastructure.html">Infrastructure</a>
+    <a href="../troubleshooting/common.html">Troubleshooting</a>
+  </div>
+</nav>
+
+<div class="container">
+
+  <div class="breadcrumb">
+    <a href="../index.html">Home</a> / <a href="operations.html">Day-2</a> / Claude Code MCP
+  </div>
+
+  <h1 class="page-title">Claude Code MCP Integration</h1>
+  <p class="page-subtitle">Connect Claude Code directly to LiteMaaS — query models, users, spend, and pod status in plain English without leaving your terminal.</p>
+
+  <div class="toc">
+    <h3>On This Page</h3>
+    <ul>
+      <li><a href="#what-is-mcp">What Is the MCP Server?</a></li>
+      <li><a href="#setup">Setup (2 Steps)</a>
+        <ul>
+          <li><a href="#step-command">Option A — One Command</a></li>
+          <li><a href="#step-manual">Option B — Manual Config</a></li>
+          <li><a href="#step-verify">Verify the Connection</a></li>
+        </ul>
+      </li>
+      <li><a href="#tools">Available Tools</a></li>
+      <li><a href="#examples">Example Queries</a></li>
+      <li><a href="#admin">For Admins</a></li>
+    </ul>
+  </div>
+
+  <!-- What is MCP -->
+  <div class="section" id="what-is-mcp">
+    <h2>What Is the MCP Server?</h2>
+    <p>The LiteMaaS MCP (Model Context Protocol) server lets Claude Code query and manage your LiteMaaS deployment in plain English. Instead of running <code>oc exec</code> commands or writing SQL, you just ask Claude Code a question and it calls the right tool automatically.</p>
+
+    <p>The server runs as a pod in the <code>litellm-rhpds</code> namespace on the MaaS cluster, with direct in-cluster access to PostgreSQL and the LiteLLM API. It exposes an HTTP endpoint that Claude Code connects to.</p>
+
+    <div class="info-box"><p><strong>No local installation needed.</strong> The MCP server is already deployed and running. You only need to add one configuration entry to your Claude Code setup.</p></div>
+  </div>
+
+  <!-- Setup -->
+  <div class="section" id="setup">
+    <h2>Setup (2 Steps)</h2>
+
+    <p>Ask your LiteMaaS admin for the MCP server URL before starting.</p>
+
+    <h3 id="step-command">Option A — One Command (Recommended)</h3>
+    <p>Run this once in your terminal:</p>
+    <pre>claude mcp add --transport http --scope user litemaas \
+  https://litemaas-mcp.apps.maas.redhatworkshops.io/mcp</pre>
+
+    <p>Then restart Claude Code. Done.</p>
+
+    <h3 id="step-manual">Option B — Edit <code>~/.claude.json</code></h3>
+    <p>Open <code>~/.claude.json</code> and add <code>litemaas</code> to the <code>mcpServers</code> object:</p>
+    <pre>{
+  <span class="string">"mcpServers"</span>: {
+    <span class="string">"litemaas"</span>: {
+      <span class="string">"type"</span>: <span class="string">"http"</span>,
+      <span class="string">"url"</span>: <span class="string">"https://litemaas-mcp.apps.maas.redhatworkshops.io/mcp"</span>
+    }
+  }
+}</pre>
+    <p>Save the file and restart Claude Code.</p>
+
+    <h3 id="step-verify">Verify the Connection</h3>
+    <p>After restarting, run <code>/mcp</code> in Claude Code. You should see <code>litemaas</code> listed as <strong>connected</strong>. Then open a new conversation and ask:</p>
+    <pre>What models are available in LiteMaaS?</pre>
+    <p>Claude Code will call the <code>list_models</code> tool and return a live response from the server.</p>
+
+    <div class="warn-box"><p><strong>Start a new conversation after connecting.</strong> MCP tool definitions are injected at the start of each session. If you configure MCP while a conversation is already open, the tools won't appear until you open a fresh one.</p></div>
+  </div>
+
+  <!-- Tools -->
+  <div class="section" id="tools">
+    <h2>Available Tools</h2>
+    <p>Claude Code picks the right tool automatically based on your question. You never call tools directly.</p>
+
+    <table>
+      <thead>
+        <tr><th>Tool</th><th>What it does</th><th>Key parameters</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>list_models</code></td>
+          <td>All models in LiteMaaS — name, provider, availability, pricing ($/1M tokens), TPM/RPM limits, restricted access flag</td>
+          <td>none</td>
+        </tr>
+        <tr>
+          <td><code>get_model_health</code></td>
+          <td>Live health check via LiteLLM — healthy vs unhealthy backend endpoints for a specific model or all models</td>
+          <td><code>model</code> (optional — empty checks all)</td>
+        </tr>
+        <tr>
+          <td><code>list_users</code></td>
+          <td>All users sorted by spend — email, cumulative spend, max budget, budget duration, TPM/RPM limits</td>
+          <td>none</td>
+        </tr>
+        <tr>
+          <td><code>get_spend_summary</code></td>
+          <td>Token and dollar spend from LiteLLM logs, grouped by model. Supports date range, model, and user filters</td>
+          <td><code>date_from</code>, <code>date_to</code>, <code>model</code>, <code>user_id</code> (all optional)</td>
+        </tr>
+        <tr>
+          <td><code>get_daily_stats</code></td>
+          <td>Day-by-day totals — requests, tokens, spend, and failures for the past N days</td>
+          <td><code>days</code> (default: 7)</td>
+        </tr>
+        <tr>
+          <td><code>get_pod_status</code></td>
+          <td>Pod status in the <code>litellm-rhpds</code> namespace — phase, readiness, restart count, age in hours</td>
+          <td>none</td>
+        </tr>
+        <tr>
+          <td><code>update_user_budget</code></td>
+          <td>Update a user's spending limit and reset period via the LiteLLM API</td>
+          <td><code>user_id</code> (required), <code>max_budget</code> (required), <code>budget_duration</code></td>
+        </tr>
+        <tr>
+          <td><code>list_virtual_keys</code></td>
+          <td>Virtual API keys — alias, spend, budget, scoped models, expiry date (latest 100 keys)</td>
+          <td>none</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Examples -->
+  <div class="section" id="examples">
+    <h2>Example Queries</h2>
+    <p>Type these directly in Claude Code — no commands or syntax needed.</p>
+
+    <h3>Models &amp; Health</h3>
+    <div class="query-grid">
+      <div class="query-card">What models are available in LiteMaaS?</div>
+      <div class="query-card">Is llama-scout-17b healthy right now?</div>
+      <div class="query-card">Which models have restricted access?</div>
+      <div class="query-card">Check the health of all models</div>
+    </div>
+
+    <h3>Usage &amp; Spend</h3>
+    <div class="query-grid">
+      <div class="query-card">Who has spent the most this week?</div>
+      <div class="query-card">Show me today's spend broken down by model</div>
+      <div class="query-card">How many tokens did we serve yesterday?</div>
+      <div class="query-card">Show me daily stats for the past 14 days</div>
+      <div class="query-card">What was the spend on March 25th?</div>
+      <div class="query-card">How many requests failed today?</div>
+    </div>
+
+    <h3>Users &amp; Keys</h3>
+    <div class="query-grid">
+      <div class="query-card">List all users and their budgets</div>
+      <div class="query-card">Set alopezme's budget to $500 daily</div>
+      <div class="query-card">Show all virtual keys and their spend</div>
+      <div class="query-card">Which keys expire this month?</div>
+    </div>
+
+    <h3>Infrastructure</h3>
+    <div class="query-grid">
+      <div class="query-card">Are all pods running?</div>
+      <div class="query-card">Which pods have restarted recently?</div>
+    </div>
+  </div>
+
+  <!-- Admin -->
+  <div class="section" id="admin">
+    <h2>For Admins</h2>
+
+    <h3>Deployment</h3>
+    <p>The MCP server is deployed in the <code>litellm-rhpds</code> namespace alongside the main LiteMaaS stack. It is <strong>off by default</strong> in the Ansible collection and must be enabled explicitly:</p>
+    <pre><span class="comment"># Enable MCP server during deployment</span>
+ansible-playbook playbooks/deploy_litemaas_ha.yml \
+  -e ocp4_workload_litemaas_namespace=litemaas \
+  -e ocp4_workload_litemaas_deploy_mcp=true</pre>
+
+    <h3>Key defaults</h3>
+    <table>
+      <thead><tr><th>Variable</th><th>Default</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>ocp4_workload_litemaas_deploy_mcp</code></td><td><code>false</code></td><td>Enable MCP server deployment</td></tr>
+        <tr><td><code>ocp4_workload_litemaas_mcp_image</code></td><td><code>quay.io/rhpds/litemaas-mcp:latest</code></td><td>Container image</td></tr>
+        <tr><td><code>ocp4_workload_litemaas_mcp_route_prefix</code></td><td><code>litemaas-mcp</code></td><td>Route hostname prefix</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Architecture</h3>
+    <p>The MCP server uses the <a href="https://spec.modelcontextprotocol.io/specification/2025-03-26/" target="_blank">MCP 2025-03-26 Streamable HTTP transport</a>. It connects to:</p>
+    <ul>
+      <li><strong>PostgreSQL</strong> — direct in-cluster connection for SpendLogs, models, and user queries</li>
+      <li><strong>LiteLLM API</strong> — <code>http://litellm:4000</code> for user management and health checks</li>
+      <li><strong>Kubernetes API</strong> — in-cluster service account for pod status (read-only, namespace-scoped)</li>
+    </ul>
+
+    <h3>Health check</h3>
+    <pre><span class="comment"># Check MCP server is running and connected</span>
+curl https://litemaas-mcp.apps.maas.redhatworkshops.io/health
+
+<span class="comment"># Expected response</span>
+{"status": "healthy", "database": true, "litellm": true}</pre>
+
+    <h3>Logs</h3>
+    <pre>oc logs -n litellm-rhpds -l app=litemaas-mcp --tail=50</pre>
+  </div>
+
+  <div class="page-nav">
+    <a href="cost-analysis.html" class="pn-prev">
+      <span class="pn-label">&larr; Previous</span>
+      <span class="pn-title">Cost Analysis</span>
+    </a>
+    <a href="../monitoring.html" class="pn-next">
+      <span class="pn-label">Next &rarr;</span>
+      <span class="pn-title">Monitoring</span>
+    </a>
+  </div>
+
+</div>
+
+<footer>
+  <p>RHDP LiteMaaS Documentation &mdash; Red Hat Demo Platform &mdash; maas.redhatworkshops.io</p>
+  <span class="footer-updated">Last updated: 2026-04-01</span>
+</footer>
+
+<button class="back-to-top" id="backToTop" title="Back to top">&#8679;</button>
+
+<script>
+  document.getElementById('navToggle').addEventListener('click', function() {
+    document.getElementById('navLinks').classList.toggle('open');
+  });
+  var btt = document.getElementById('backToTop');
+  window.addEventListener('scroll', function() {
+    btt.classList.toggle('visible', window.scrollY > 400);
+  });
+  btt.addEventListener('click', function() { window.scrollTo({ top: 0, behavior: 'smooth' }); });
+  document.querySelectorAll('pre').forEach(function(pre) {
+    var btn = document.createElement('button');
+    btn.className = 'copy-btn'; btn.textContent = 'Copy';
+    btn.addEventListener('click', function() {
+      navigator.clipboard.writeText(pre.innerText).then(function() {
+        btn.textContent = 'Copied!'; btn.classList.add('copied');
+        setTimeout(function() { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+      });
+    });
+    pre.appendChild(btn);
+  });
+  document.querySelectorAll('.section h2, .section h3').forEach(function(h) {
+    if (!h.id) h.id = h.textContent.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    var a = document.createElement('a');
+    a.className = 'anchor-link'; a.href = '#' + h.id; a.textContent = '#'; a.setAttribute('aria-label', 'Link to section');
+    h.appendChild(a);
+  });
+</script>
+
+</body>
+</html>
