@@ -95,6 +95,10 @@
 <body>
 
 <header>
+  <svg width="36" height="36" viewBox="0 0 32 32" fill="none" style="flex-shrink:0" aria-hidden="true">
+    <path d="M16 2l12 7v14l-12 7L4 23V9z" stroke="rgba(255,255,255,0.55)" stroke-width="1.5" fill="rgba(255,255,255,0.1)"/>
+    <path d="M16 8l7 4v8l-7 4-7-4V12z" fill="rgba(255,255,255,0.18)"/>
+  </svg>
   <div>
     <h1>RHDP LiteMaaS</h1>
     <p>Model as a Service for Red Hat Demo Platform</p>
@@ -151,11 +155,11 @@
     <h2>Backup Operations</h2>
 
     <h3>Setup Automated Monthly Backup</h3>
-    <pre><span class="comment"># Requires S3 bucket with IAM role attached to bastion EC2 instance</span>
+    <pre data-lang="bash"><span class="comment"># Requires S3 bucket with IAM role attached to bastion EC2 instance</span>
 ./setup-litemaas-backup-cronjob.sh litellm-rhpds maas-db-backup</pre>
 
     <h3>Manual Database Backup</h3>
-    <pre><span class="comment"># Backup LiteMaaS + LiteLLM shared database</span>
+    <pre data-lang="bash"><span class="comment"># Backup LiteMaaS + LiteLLM shared database</span>
 oc exec -n litellm-rhpds litellm-postgres-0 -- \
   pg_dump -U litellm litellm | gzip > litellm-backup-$(date +%Y%m%d).sql.gz
 
@@ -164,7 +168,7 @@ aws s3 cp litellm-backup-$(date +%Y%m%d).sql.gz \
   s3://maas-db-backup/litemaas-backups/</pre>
 
     <h3>List and Verify Backups</h3>
-    <pre>aws s3 ls s3://maas-db-backup/litemaas-backups/ --human-readable | sort -r</pre>
+    <pre data-lang="bash">aws s3 ls s3://maas-db-backup/litemaas-backups/ --human-readable | sort -r</pre>
   </div>
 
   <!-- Backup & Restore -->
@@ -195,7 +199,7 @@ aws s3 cp litellm-backup-$(date +%Y%m%d).sql.gz \
     </ol>
 
     <h3>Taking a Backup — via API</h3>
-    <pre><span class="comment"># Create a backup</span>
+    <pre data-lang="bash"><span class="comment"># Create a backup</span>
 curl -X POST https://litellm-prod-admin.apps.maas.redhatworkshops.io/api/v1/admin/backup/create \
   -H "Authorization: Bearer &lt;admin-jwt&gt;"
 
@@ -220,13 +224,13 @@ curl https://litellm-prod-admin.apps.maas.redhatworkshops.io/api/v1/admin/backup
 
     <h3>Automated Backup — Bastion Cronjob (S3)</h3>
     <p>For scheduled backups to S3, the <code>rhpds.litemaas</code> collection includes a setup script. This runs monthly on the bastion host and uploads compressed PostgreSQL dumps to an S3 bucket, keeping the last 12 (1 year of monthly backups).</p>
-    <pre><span class="comment"># Run on bastion — installs monthly backup cronjob to S3</span>
+    <pre data-lang="bash"><span class="comment"># Run on bastion — installs monthly backup cronjob to S3</span>
 ./setup-litemaas-backup-cronjob.sh litellm-rhpds my-s3-bucket
 
 <span class="comment"># Prerequisites: AWS CLI + IAM instance profile on bastion with S3 write access</span></pre>
 
     <h3>Manual Database Backup</h3>
-    <pre><span class="comment"># Dump the full database (litemaas_db + litellm_db share one PostgreSQL instance)</span>
+    <pre data-lang="bash"><span class="comment"># Dump the full database (litemaas_db + litellm_db share one PostgreSQL instance)</span>
 oc exec -n litellm-rhpds litellm-postgres-0 -- \
   pg_dump -U litellm litellm | gzip > litemaas-backup-$(date +%Y%m%d).sql.gz
 
@@ -246,7 +250,7 @@ aws s3 cp litemaas-backup-$(date +%Y%m%d).sql.gz s3://my-bucket/backups/</pre>
 
     <h3>Unique users &amp; spend — last 30 days (API)</h3>
     <p>Use this when you need a quick user count or want to see who is spending the most. No cluster access required.</p>
-    <pre><span class="comment"># Set your master key first</span>
+    <pre data-lang="bash"><span class="comment"># Set your master key first</span>
 export LITELLM_URL=https://litellm-prod.apps.maas.redhatworkshops.io
 export MASTER_KEY=sk-...
 
@@ -262,7 +266,7 @@ for u in sorted(users, key=lambda x: x.get('spend', 0), reverse=True)[:10]:
 
     <h3>Spend by model — last 30 days (API)</h3>
     <p>Shows cost breakdown per model. Useful for understanding which models are driving spend.</p>
-    <pre>curl -sk "$LITELLM_URL/global/spend/models?start_date=$(date -v-30d '+%Y-%m-%d')&amp;end_date=$(date '+%Y-%m-%d')" \
+    <pre data-lang="bash">curl -sk "$LITELLM_URL/global/spend/models?start_date=$(date -v-30d '+%Y-%m-%d')&amp;end_date=$(date '+%Y-%m-%d')" \
   -H "Authorization: Bearer $MASTER_KEY" | python3 -c "
 import sys, json
 for m in sorted(json.load(sys.stdin), key=lambda x: x.get('total_spend',0), reverse=True):
@@ -270,12 +274,12 @@ for m in sorted(json.load(sys.stdin), key=lambda x: x.get('total_spend',0), reve
 "</pre>
 
     <h3>Total spend (API)</h3>
-    <pre>curl -sk "$LITELLM_URL/global/spend?start_date=$(date -v-30d '+%Y-%m-%d')&amp;end_date=$(date '+%Y-%m-%d')" \
+    <pre data-lang="bash">curl -sk "$LITELLM_URL/global/spend?start_date=$(date -v-30d '+%Y-%m-%d')&amp;end_date=$(date '+%Y-%m-%d')" \
   -H "Authorization: Bearer $MASTER_KEY" | python3 -m json.tool</pre>
 
     <h3>Unique users &amp; tokens — monthly breakdown (DB)</h3>
     <p>Use this when you need <strong>token counts</strong>. The LiteLLM API does not expose tokens without an Enterprise licence — query the database directly instead.</p>
-    <pre><span class="comment"># Requires oc exec access to the postgres pod</span>
+    <pre data-lang="bash"><span class="comment"># Requires oc exec access to the postgres pod</span>
 oc exec -n litellm-rhpds litellm-postgres-0 -- \
   psql -U litellm -d litellm -t -c "
 SELECT
@@ -289,7 +293,7 @@ GROUP BY 1
 ORDER BY 1 DESC;"</pre>
 
     <h3>Top models by token consumption (DB)</h3>
-    <pre>oc exec -n litellm-rhpds litellm-postgres-0 -- \
+    <pre data-lang="bash">oc exec -n litellm-rhpds litellm-postgres-0 -- \
   psql -U litellm -d litellm -t -c "
 SELECT
   model,
@@ -304,7 +308,7 @@ ORDER BY total_tokens DESC
 LIMIT 10;"</pre>
 
     <h3>Daily active users — last 7 days (DB)</h3>
-    <pre>oc exec -n litellm-rhpds litellm-postgres-0 -- \
+    <pre data-lang="bash">oc exec -n litellm-rhpds litellm-postgres-0 -- \
   psql -U litellm -d litellm -t -c "
 SELECT
   TO_CHAR(DATE_TRUNC('day', \"startTime\"), 'YYYY-MM-DD') as day,

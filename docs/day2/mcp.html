@@ -97,6 +97,10 @@
 <body>
 
 <header>
+  <svg width="36" height="36" viewBox="0 0 32 32" fill="none" style="flex-shrink:0" aria-hidden="true">
+    <path d="M16 2l12 7v14l-12 7L4 23V9z" stroke="rgba(255,255,255,0.55)" stroke-width="1.5" fill="rgba(255,255,255,0.1)"/>
+    <path d="M16 8l7 4v8l-7 4-7-4V12z" fill="rgba(255,255,255,0.18)"/>
+  </svg>
   <div>
     <h1>RHDP LiteMaaS</h1>
     <p>Model as a Service for Red Hat Demo Platform</p>
@@ -177,14 +181,14 @@
 
     <h3 id="step-command">Option A — One Command (Recommended)</h3>
     <p>Run this once in your terminal, replacing the URL and token with the values your admin gave you:</p>
-    <pre>claude mcp add --transport http --scope user litemaas \
+    <pre data-lang="bash">claude mcp add --transport http --scope user litemaas \
   "https://litemaas-mcp.apps.maas.example.com/mcp?token=abc123xyz456def789"</pre>
 
     <p>Then restart Claude Code. Done.</p>
 
     <h3 id="step-manual">Option B — Edit <code>~/.claude.json</code></h3>
     <p>Open <code>~/.claude.json</code> and add <code>litemaas</code> to the <code>mcpServers</code> object:</p>
-    <pre>{
+    <pre data-lang="json">{
   <span class="string">"mcpServers"</span>: {
     <span class="string">"litemaas"</span>: {
       <span class="string">"type"</span>: <span class="string">"http"</span>,
@@ -198,7 +202,7 @@
 
     <h3 id="step-verify">Verify the Connection</h3>
     <p>After restarting, run <code>/mcp</code> in Claude Code. You should see <code>litemaas</code> listed as <strong>connected</strong>. Then open a new conversation and ask:</p>
-    <pre>What models are available in LiteMaaS?</pre>
+    <pre data-lang="bash">What models are available in LiteMaaS?</pre>
     <p>Claude Code will call the <code>list_models</code> tool and return a live response from the server.</p>
 
     <div class="warn-box"><p><strong>Start a new conversation after connecting.</strong> MCP tool definitions are injected at the start of each session. If you configure MCP while a conversation is already open, the tools won't appear until you open a fresh one.</p></div>
@@ -302,7 +306,7 @@
 
     <h3>Deployment</h3>
     <p>The MCP server is deployed in the <code>litellm-rhpds</code> namespace alongside the main LiteMaaS stack. It is <strong>off by default</strong> in the Ansible collection and must be enabled explicitly:</p>
-    <pre><span class="comment"># Enable MCP server during deployment</span>
+    <pre data-lang="bash"><span class="comment"># Enable MCP server during deployment</span>
 ansible-playbook playbooks/deploy_litemaas_ha.yml \
   -e ocp4_workload_litemaas_namespace=litemaas \
   -e ocp4_workload_litemaas_deploy_mcp=true</pre>
@@ -326,7 +330,7 @@ ansible-playbook playbooks/deploy_litemaas_ha.yml \
     </ul>
 
     <h3>Health check</h3>
-    <pre><span class="comment"># Check MCP server is running and connected</span>
+    <pre data-lang="bash"><span class="comment"># Check MCP server is running and connected</span>
 curl https://litemaas-mcp.apps.maas.example.com/health
 
 <span class="comment"># Expected response</span>
@@ -339,7 +343,7 @@ curl -X POST https://litemaas-mcp.apps.maas.example.com/mcp
 curl -X POST "https://litemaas-mcp.apps.maas.example.com/mcp?token=abc123xyz456def789"</pre>
 
     <h3>Logs</h3>
-    <pre>oc logs -n litellm-rhpds -l app=litemaas-mcp --tail=50</pre>
+    <pre data-lang="bash">oc logs -n litellm-rhpds -l app=litemaas-mcp --tail=50</pre>
   </div>
 
   <div class="page-nav">

@@ -64,6 +64,10 @@
 <body>
 
 <header>
+  <svg width="36" height="36" viewBox="0 0 32 32" fill="none" style="flex-shrink:0" aria-hidden="true">
+    <path d="M16 2l12 7v14l-12 7L4 23V9z" stroke="rgba(255,255,255,0.55)" stroke-width="1.5" fill="rgba(255,255,255,0.1)"/>
+    <path d="M16 8l7 4v8l-7 4-7-4V12z" fill="rgba(255,255,255,0.18)"/>
+  </svg>
   <div>
     <h1>RHDP LiteMaaS</h1>
     <p>Model as a Service for Red Hat Demo Platform</p>
@@ -175,7 +179,7 @@ graph LR
     </table>
 
     <h3>Access Grafana</h3>
-    <pre><span class="comment"># Get the Grafana route</span>
+    <pre data-lang="bash"><span class="comment"># Get the Grafana route</span>
 oc get route -n llm-hosting | grep grafana
 
 <span class="comment"># Or check all services and find the grafana service</span>
@@ -227,7 +231,7 @@ oc get route -n llm-hosting</pre>
     </table>
 
     <h3>Deploy the Metrics Role</h3>
-    <pre><span class="comment"># Deploy RHOAI metrics and Grafana dashboards</span>
+    <pre data-lang="bash"><span class="comment"># Deploy RHOAI metrics and Grafana dashboards</span>
 ansible-playbook playbooks/deploy_rhoai_metrics.yml \
   -e ocp4_workload_rhoai_metrics_namespace=llm-hosting \
   -e ocp4_workload_rhoai_metrics_enable_gpu=true
@@ -358,7 +362,7 @@ ansible-playbook playbooks/deploy_rhoai_metrics.yml \
     </table>
 
     <h3>Verify ServiceMonitors are Working</h3>
-    <pre><span class="comment"># List ServiceMonitors</span>
+    <pre data-lang="bash"><span class="comment"># List ServiceMonitors</span>
 oc get servicemonitor -n llm-hosting
 
 <span class="comment"># Check Prometheus can reach them</span>
@@ -380,7 +384,7 @@ oc exec -n llm-hosting \
     </p>
 
     <h3>Verify UWM is Enabled</h3>
-    <pre><span class="comment"># Check the cluster monitoring config</span>
+    <pre data-lang="bash"><span class="comment"># Check the cluster monitoring config</span>
 oc get configmap cluster-monitoring-config \
   -n openshift-monitoring -o yaml | grep enableUserWorkload
 
@@ -391,13 +395,13 @@ oc get configmap cluster-monitoring-config \
 oc get pods -n openshift-user-workload-monitoring</pre>
 
     <h3>Configure Prometheus Retention</h3>
-    <pre><span class="comment"># The role sets retention to 7d via ConfigMap patch</span>
+    <pre data-lang="bash"><span class="comment"># The role sets retention to 7d via ConfigMap patch</span>
 <span class="comment"># To change it manually:</span>
 oc edit configmap user-workload-monitoring-config \
   -n openshift-user-workload-monitoring</pre>
 
     <h3>Add Grafana Data Source Pointing to UWM Prometheus</h3>
-    <pre><span class="comment"># The role creates a GrafanaDataSource CR automatically</span>
+    <pre data-lang="bash"><span class="comment"># The role creates a GrafanaDataSource CR automatically</span>
 <span class="comment"># Verify it exists:</span>
 oc get grafanadatasource -n llm-hosting
 
@@ -410,7 +414,7 @@ oc get grafanadatasource -n llm-hosting
     <h2>Accessing Grafana</h2>
 
     <h3>Find the Grafana URL</h3>
-    <pre><span class="comment"># Look for a route in llm-hosting namespace</span>
+    <pre data-lang="bash"><span class="comment"># Look for a route in llm-hosting namespace</span>
 oc get routes -n llm-hosting
 
 <span class="comment"># Or port-forward to access locally</span>
@@ -422,7 +426,7 @@ open http://localhost:3000</pre>
       The Grafana instance deployed by the role uses basic authentication by default. The admin credentials
       are set in the GrafanaInstance custom resource. Check the Grafana secret:
     </p>
-    <pre><span class="comment"># Get Grafana admin credentials</span>
+    <pre data-lang="bash"><span class="comment"># Get Grafana admin credentials</span>
 oc get secret -n llm-hosting | grep grafana
 
 <span class="comment"># Retrieve the secret (name may vary)</span>
@@ -466,7 +470,7 @@ oc get secret rhoai-grafana-admin-credentials -n llm-hosting \
 
     <h3>LiteLLM Admin Portal Spend Tracking</h3>
     <p>The LiteLLM admin UI also provides spend tracking directly against the <code>LiteLLM_SpendLogs</code> table:</p>
-    <pre><span class="comment"># Access LiteLLM admin portal</span>
+    <pre data-lang="bash"><span class="comment"># Access LiteLLM admin portal</span>
 <span class="comment"># URL: https://litellm-prod.apps.maas.redhatworkshops.io</span>
 <span class="comment"># Navigate to: Usage tab → Spend Logs</span>
 

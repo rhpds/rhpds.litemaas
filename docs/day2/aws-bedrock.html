@@ -95,6 +95,10 @@
 <body>
 
 <header>
+  <svg width="36" height="36" viewBox="0 0 32 32" fill="none" style="flex-shrink:0" aria-hidden="true">
+    <path d="M16 2l12 7v14l-12 7L4 23V9z" stroke="rgba(255,255,255,0.55)" stroke-width="1.5" fill="rgba(255,255,255,0.1)"/>
+    <path d="M16 8l7 4v8l-7 4-7-4V12z" fill="rgba(255,255,255,0.18)"/>
+  </svg>
   <div>
     <h1>RHDP LiteMaaS</h1>
     <p>Model as a Service for Red Hat Demo Platform</p>
@@ -287,7 +291,7 @@ flowchart LR
     <h3 id="iam-policy">IAM Policy (Final Correct Version)</h3>
     <p>The policy grants <code>InvokeModel</code> and <code>InvokeModelWithResponseStream</code> only on the specific Bedrock model ARNs in use, plus list permissions on <code>*</code> (required by LiteLLM's health-check path).</p>
 
-    <pre>{
+    <pre data-lang="json">{
   <span class="string">"Version"</span>: <span class="string">"2012-10-17"</span>,
   <span class="string">"Statement"</span>: [
     {
@@ -362,7 +366,7 @@ flowchart TD
     </div>
 
     <h3>Create and Mount the Secret</h3>
-    <pre><span class="comment"># Create the secret from literals (never commit actual values)</span>
+    <pre data-lang="bash"><span class="comment"># Create the secret from literals (never commit actual values)</span>
 oc create secret generic litellm-aws-bedrock \
   --from-literal=AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE \
   --from-literal=AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY \
@@ -387,7 +391,7 @@ oc exec -n litellm-rhpds deployment/litellm -- env | grep AWS</pre>
     <h2>Cost-Based Router Configuration</h2>
     <p>LiteLLM groups all deployments that share the same <code>model_name</code> (e.g., the Vertex <code>gpt-oss-120b</code> and the Bedrock <code>gpt-oss-120b</code>) and routes between them based on the registered cost per token. The router configuration lives in the <code>litellm-router-config</code> ConfigMap.</p>
 
-    <pre><span class="comment"># litellm-router-config ConfigMap — relevant router_settings block</span>
+    <pre data-lang="bash"><span class="comment"># litellm-router-config ConfigMap — relevant router_settings block</span>
 <span class="var">router_settings</span>:
   <span class="var">routing_strategy</span>: cost-based-routing
   <span class="var">num_retries</span>: 3
@@ -428,7 +432,7 @@ oc exec -n litellm-rhpds deployment/litellm -- env | grep AWS</pre>
     <div class="info-box"><p><strong>Why the same model_name matters.</strong> Users and workshops send requests to <code>gpt-oss-120b</code>. LiteLLM internally resolves this to all deployments registered under that name — both Vertex and Bedrock. Registering under a different name (e.g., <code>gpt-oss-120b-bedrock</code>) would expose it as a separate, user-visible model, which is not the goal.</p></div>
 
     <h3>Register gpt-oss-120b on Bedrock</h3>
-    <pre><span class="comment"># Register the Bedrock backend for gpt-oss-120b</span>
+    <pre data-lang="bash"><span class="comment"># Register the Bedrock backend for gpt-oss-120b</span>
 <span class="comment"># Note: model_name matches the existing Vertex AI deployment exactly</span>
 curl -X POST <span class="string">"https://litellm-prod.apps.maas.redhatworkshops.io/model/new"</span> \
   -H <span class="string">"Authorization: Bearer $MASTER_KEY"</span> \
@@ -446,7 +450,7 @@ curl -X POST <span class="string">"https://litellm-prod.apps.maas.redhatworkshop
   }'</span></pre>
 
     <h3>Register gpt-oss-20b on Bedrock</h3>
-    <pre>curl -X POST <span class="string">"https://litellm-prod.apps.maas.redhatworkshops.io/model/new"</span> \
+    <pre data-lang="bash">curl -X POST <span class="string">"https://litellm-prod.apps.maas.redhatworkshops.io/model/new"</span> \
   -H <span class="string">"Authorization: Bearer $MASTER_KEY"</span> \
   -H <span class="string">"Content-Type: application/json"</span> \
   -d <span class="string">'{
@@ -462,7 +466,7 @@ curl -X POST <span class="string">"https://litellm-prod.apps.maas.redhatworkshop
   }'</span></pre>
 
     <h3>Register minimax-m2 on Bedrock</h3>
-    <pre>curl -X POST <span class="string">"https://litellm-prod.apps.maas.redhatworkshops.io/model/new"</span> \
+    <pre data-lang="bash">curl -X POST <span class="string">"https://litellm-prod.apps.maas.redhatworkshops.io/model/new"</span> \
   -H <span class="string">"Authorization: Bearer $MASTER_KEY"</span> \
   -H <span class="string">"Content-Type: application/json"</span> \
   -d <span class="string">'{
@@ -478,7 +482,7 @@ curl -X POST <span class="string">"https://litellm-prod.apps.maas.redhatworkshop
   }'</span></pre>
 
     <h3>Register qwen3-235b on Bedrock</h3>
-    <pre>curl -X POST <span class="string">"https://litellm-prod.apps.maas.redhatworkshops.io/model/new"</span> \
+    <pre data-lang="bash">curl -X POST <span class="string">"https://litellm-prod.apps.maas.redhatworkshops.io/model/new"</span> \
   -H <span class="string">"Authorization: Bearer $MASTER_KEY"</span> \
   -H <span class="string">"Content-Type: application/json"</span> \
   -d <span class="string">'{
@@ -494,7 +498,7 @@ curl -X POST <span class="string">"https://litellm-prod.apps.maas.redhatworkshop
   }'</span></pre>
 
     <h3>Verify Registration</h3>
-    <pre><span class="comment"># List all registered model deployments — both Vertex and Bedrock should appear</span>
+    <pre data-lang="bash"><span class="comment"># List all registered model deployments — both Vertex and Bedrock should appear</span>
 <span class="comment"># under the same model_name entries</span>
 curl -s <span class="string">"https://litellm-prod.apps.maas.redhatworkshops.io/model/info"</span> \
   -H <span class="string">"Authorization: Bearer $MASTER_KEY"</span> | jq <span class="string">'.data[] | {model_name, provider: .litellm_params.model}'</span></pre>
@@ -513,7 +517,7 @@ curl -s <span class="string">"https://litellm-prod.apps.maas.redhatworkshops.io/
     <ol>
       <li><strong>Export all model configurations</strong> before changing the key while the old key is still active:</li>
     </ol>
-    <pre><span class="comment"># Export all model configs to a local file while old key is active</span>
+    <pre data-lang="bash"><span class="comment"># Export all model configs to a local file while old key is active</span>
 curl -s <span class="string">"https://litellm-prod.apps.maas.redhatworkshops.io/model/info"</span> \
   -H <span class="string">"Authorization: Bearer $OLD_MASTER_KEY"</span> \
   | jq <span class="string">'.data'</span> > model-backup.json</pre>
@@ -524,7 +528,7 @@ curl -s <span class="string">"https://litellm-prod.apps.maas.redhatworkshops.io/
       <li><strong>Re-register all models</strong> from the exported backup using the new key. This re-encrypts every entry with the new master key.</li>
     </ol>
 
-    <pre><span class="comment"># After rotating the key, re-register models from backup</span>
+    <pre data-lang="bash"><span class="comment"># After rotating the key, re-register models from backup</span>
 <span class="comment"># (loop over the exported JSON and POST each entry)</span>
 jq -c <span class="string">'.[]'</span> model-backup.json | while read model; do
   curl -X POST <span class="string">"https://litellm-prod.apps.maas.redhatworkshops.io/model/new"</span> \

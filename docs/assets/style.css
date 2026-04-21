@@ -16,7 +16,9 @@ body {
   font-family: 'Red Hat Text', 'Segoe UI', system-ui, sans-serif;
   font-size: 16px;
   line-height: 1.7;
-  background: #f5f5f5;
+  background-color: #f5f5f5;
+  background-image: radial-gradient(#d4d4d4 1px, transparent 1px);
+  background-size: 24px 24px;
   color: #151515;
 }
 
@@ -447,3 +449,136 @@ a.card:hover {
 
 .breadcrumb a:hover { text-decoration: underline; }
 .breadcrumb span { color: #999; margin: 0 0.3rem; }
+
+/* ---- Header diagonal texture (improvement 2) ---- */
+header {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 20px,
+    rgba(0,0,0,0.04) 20px,
+    rgba(0,0,0,0.04) 40px
+  );
+}
+
+/* ---- Section left-border accent (improvement 3) ---- */
+.section {
+  border-left: 3px solid #cc0000;
+}
+
+/* ---- Code block language label tab (improvement 5) ---- */
+pre[data-lang]::before {
+  content: attr(data-lang);
+  display: block;
+  background: #cc0000;
+  color: white;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.75rem;
+  border-radius: 0 0 5px 0;
+  position: absolute;
+  top: 0;
+  left: 0;
+  font-family: 'Red Hat Text', sans-serif;
+  line-height: 1.8;
+}
+pre[data-lang] { padding-top: 2.5rem !important; }
+
+/* ---- Homepage hero (improvement 1) ---- */
+.hero-dark {
+  position: relative;
+  background: #151515;
+  background-image: radial-gradient(rgba(255,255,255,0.07) 1px, transparent 1px);
+  background-size: 20px 20px;
+  border-top: 3px solid #cc0000;
+  padding: 3rem 2rem;
+  margin-bottom: 2rem;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.hero-dark .hero-badge {
+  display: inline-block;
+  background: rgba(204,0,0,0.25);
+  border: 1px solid rgba(204,0,0,0.5);
+  color: #ff9999;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.7rem;
+  border-radius: 20px;
+  margin-bottom: 1rem;
+}
+.hero-dark .hero-title {
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 1.15;
+  margin-bottom: 0.6rem;
+}
+.hero-dark .hero-title span { color: #cc0000; }
+.hero-dark .hero-tagline {
+  font-size: 1.05rem;
+  color: #aaa;
+  margin-bottom: 1.8rem;
+  max-width: 540px;
+}
+.hero-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+.hero-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: #ccc;
+  font-size: 0.78rem;
+  font-weight: 500;
+  padding: 0.3rem 0.75rem;
+  border-radius: 20px;
+  text-decoration: none;
+  transition: background 0.15s, border-color 0.15s;
+}
+.hero-chip:hover { background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.22); color: white; }
+.hero-chip .chip-dot {
+  width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+}
+.chip-dot-green { background: #3e8635; }
+.chip-dot-blue  { background: #0066cc; }
+
+/* ---- Card upgrades (improvement 1) ---- */
+.card {
+  position: relative;
+  overflow: hidden;
+}
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: #cc0000;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.25s ease;
+}
+.card:hover::before { transform: scaleX(1); }
+.card .card-arrow {
+  position: absolute;
+  bottom: 1.2rem; right: 1.2rem;
+  color: #cc0000;
+  font-size: 1rem;
+  opacity: 0;
+  transform: translateX(-4px);
+  transition: opacity 0.2s, transform 0.2s;
+}
+.card:hover .card-arrow { opacity: 1; transform: translateX(0); }
+.card-icon svg {
+  width: 28px; height: 28px;
+  color: #cc0000;
+  display: block;
+}
