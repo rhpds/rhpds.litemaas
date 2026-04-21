@@ -91,6 +91,10 @@
 <body>
 
 <header>
+  <svg width="36" height="36" viewBox="0 0 32 32" fill="none" style="flex-shrink:0" aria-hidden="true">
+    <path d="M16 2l12 7v14l-12 7L4 23V9z" stroke="rgba(255,255,255,0.55)" stroke-width="1.5" fill="rgba(255,255,255,0.1)"/>
+    <path d="M16 8l7 4v8l-7 4-7-4V12z" fill="rgba(255,255,255,0.18)"/>
+  </svg>
   <div>
     <h1>RHDP LiteMaaS</h1>
     <p>Model as a Service for Red Hat Demo Platform</p>
@@ -342,7 +346,7 @@
     <h3 id="ocp-secrets">OCP Secrets</h3>
     <p>Create (or update) the secrets in the <code>litellm-rhpds</code> namespace. Each secret contains a single key named <code>key.json</code> holding the full GCP SA JSON key file content.</p>
 
-    <pre><span class="comment"># Create the OSS model SA secret (rhdp-infra project)</span>
+    <pre data-lang="bash"><span class="comment"># Create the OSS model SA secret (rhdp-infra project)</span>
 oc create secret generic vertex-ai-sa-key \
   --from-file=key.json=/path/to/litemaas-vertex-sa-key.json \
   -n litellm-rhpds
@@ -359,7 +363,7 @@ oc create secret generic vertex-claude-sa-key \
     <h3 id="volume-mounts">Volume Mounts</h3>
     <p>The secrets are projected into the pod via the following volume and volumeMount configuration in the <code>litellm</code> Deployment spec:</p>
 
-    <pre><span class="comment"># Volumes (add to .spec.template.spec.volumes)</span>
+    <pre data-lang="bash"><span class="comment"># Volumes (add to .spec.template.spec.volumes)</span>
 volumes:
   - name: vertex-sa-key
     secret:
@@ -379,7 +383,7 @@ volumeMounts:
 
     <p>After patching the deployment, verify that both files are visible inside the running pod:</p>
 
-    <pre><span class="comment"># Verify credential files are present in the pod</span>
+    <pre data-lang="bash"><span class="comment"># Verify credential files are present in the pod</span>
 oc exec -n litellm-rhpds deploy/litellm -- ls -la /etc/vertex-credentials/
 oc exec -n litellm-rhpds deploy/litellm -- ls -la /etc/vertex-claude-credentials/
 
@@ -402,7 +406,7 @@ drwxr-xr-x 1 root root  60 Apr 21 00:00 ..
     <h3 id="register-claude">Registering Claude Models</h3>
     <p>Claude models use the <code>itpc-gcp-product-all-claude</code> GCP project and the SA key mounted at <code>/etc/vertex-claude-credentials/key.json</code>.</p>
 
-    <pre><span class="comment"># Register claude-sonnet-4-6 via Vertex AI</span>
+    <pre data-lang="bash"><span class="comment"># Register claude-sonnet-4-6 via Vertex AI</span>
 curl -X POST "$LITELLM_URL/model/new" \
   -H <span class="string">"Authorization: Bearer $MASTER_KEY"</span> \
   -H <span class="string">"Content-Type: application/json"</span> \
@@ -459,7 +463,7 @@ curl -X POST "$LITELLM_URL/model/new" \
     <h3 id="register-oss">Registering OSS Models</h3>
     <p>Model Garden OSS models use the <code>rhdp-infra</code> project and the SA key mounted at <code>/etc/vertex-credentials/key.json</code>. The backend model path uses the extended <code>vertex_ai/&lt;provider&gt;/&lt;model-id&gt;-maas</code> format.</p>
 
-    <pre><span class="comment"># Register gpt-oss-120b (Model Garden)</span>
+    <pre data-lang="bash"><span class="comment"># Register gpt-oss-120b (Model Garden)</span>
 curl -X POST "$LITELLM_URL/model/new" \
   -H <span class="string">"Authorization: Bearer $MASTER_KEY"</span> \
   -H <span class="string">"Content-Type: application/json"</span> \
@@ -587,7 +591,7 @@ flowchart TD
     <h3>Syncing models to LiteMaaS</h3>
     <p>Because <code>LITELLM_AUTO_SYNC=false</code>, a model can be registered in LiteLLM but not yet visible to users in the LiteMaaS UI or <code>/v1/models</code> endpoint. After registering a model in LiteLLM, explicitly add it to the LiteMaaS backend via the LiteMaaS admin API or UI to make it available.</p>
 
-    <pre><span class="comment"># Check which models are registered in LiteLLM</span>
+    <pre data-lang="bash"><span class="comment"># Check which models are registered in LiteLLM</span>
 curl -s "$LITELLM_URL/model/info" \
   -H <span class="string">"Authorization: Bearer $MASTER_KEY"</span> | jq '.[].model_name'
 
@@ -604,7 +608,7 @@ curl -s "$LITEMAAS_URL/v1/models" \
     <p>This IBM-origin error code surfaces when per-model SA credentials fail during multi-turn conversations (i.e., the second or later message in a thread). The root cause is that LiteLLM re-reads the credential file on each request, and a timing or file-permission issue causes a transient failure.</p>
     <p><strong>Fix:</strong> Set the Vertex credentials as deployment-level environment variables instead of relying solely on the per-model <code>vertex_credentials</code> path. Add <code>GOOGLE_APPLICATION_CREDENTIALS</code> as an env var pointing to the primary SA key path, and LiteLLM will use it as a fallback.</p>
 
-    <pre><span class="comment"># Add as env var on the litellm deployment</span>
+    <pre data-lang="bash"><span class="comment"># Add as env var on the litellm deployment</span>
 oc set env deploy/litellm \
   GOOGLE_APPLICATION_CREDENTIALS=/etc/vertex-claude-credentials/key.json \
   -n litellm-rhpds</pre>
@@ -614,7 +618,7 @@ oc set env deploy/litellm \
 
     <h3>HTTP 403 on Vertex API calls</h3>
     <p>A 403 from Vertex means the SA does not have the required IAM role on the GCP project. Verify that the SA email has <code>roles/aiplatform.user</code> by checking the GCP IAM console or running:</p>
-    <pre><span class="comment"># Verify IAM binding for the OSS SA</span>
+    <pre data-lang="bash"><span class="comment"># Verify IAM binding for the OSS SA</span>
 gcloud projects get-iam-policy rhdp-infra \
   --flatten="bindings[].members" \
   --filter="bindings.members:litemaas-vertex-sa@rhdp-infra.iam.gserviceaccount.com" \
@@ -630,7 +634,7 @@ gcloud projects get-iam-policy itpc-gcp-product-all-claude \
     <p>A model with <code>LEGACY</code> status in the LiteMaaS UI is still fully functional — it continues to serve inference requests. LEGACY status indicates that a newer version of the same model is available. Consider upgrading the registered backend model string to the latest version at your next maintenance window.</p>
 
     <h3>Checking Vertex connectivity from the pod</h3>
-    <pre><span class="comment"># Test that the OSS SA can reach Vertex</span>
+    <pre data-lang="bash"><span class="comment"># Test that the OSS SA can reach Vertex</span>
 oc exec -n litellm-rhpds deploy/litellm -- \
   curl -s -o /dev/null -w "%{http_code}" \
   -H "Authorization: Bearer $(cat /etc/vertex-credentials/key.json | python3 -c 'import sys,json; print(json.load(sys.stdin)[\"private_key\"][:20])')" \

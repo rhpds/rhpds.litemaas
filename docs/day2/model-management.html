@@ -97,6 +97,10 @@
 <body>
 
 <header>
+  <svg width="36" height="36" viewBox="0 0 32 32" fill="none" style="flex-shrink:0" aria-hidden="true">
+    <path d="M16 2l12 7v14l-12 7L4 23V9z" stroke="rgba(255,255,255,0.55)" stroke-width="1.5" fill="rgba(255,255,255,0.1)"/>
+    <path d="M16 8l7 4v8l-7 4-7-4V12z" fill="rgba(255,255,255,0.18)"/>
+  </svg>
   <div>
     <h1>RHDP LiteMaaS</h1>
     <p>Model as a Service for Red Hat Demo Platform</p>
@@ -214,13 +218,13 @@ graph TD
     </ol>
 
     <h3>Option 2: API</h3>
-    <pre>curl -sk -X POST "$LITELLM_URL/model/new" \
+    <pre data-lang="bash">curl -sk -X POST "$LITELLM_URL/model/new" \
   -H "Authorization: Bearer $ADMIN_KEY" \
   -H "Content-Type: application/json" \
   -d '{"model_name":"my-new-model","litellm_params":{"model":"openai/my-new-model","api_base":"http://my-model-predictor.llm-hosting.svc.cluster.local/v1","custom_llm_provider":"openai"}}'</pre>
 
     <h3>Verify the model is visible to users</h3>
-    <pre>curl -sk "$LITELLM_URL/v1/models" -H "Authorization: Bearer $ADMIN_KEY" | python3 -c "import sys,json; [print(m['id']) for m in json.load(sys.stdin)['data']]"</pre>
+    <pre data-lang="bash">curl -sk "$LITELLM_URL/v1/models" -H "Authorization: Bearer $ADMIN_KEY" | python3 -c "import sys,json; [print(m['id']) for m in json.load(sys.stdin)['data']]"</pre>
   </div>
 
   <!-- AUTO_SYNC -->
@@ -248,11 +252,11 @@ sequenceDiagram
     </div>
 
     <h3>Check Current Setting</h3>
-    <pre>oc exec -n litellm-rhpds deployment/litellm-backend -- \
+    <pre data-lang="bash">oc exec -n litellm-rhpds deployment/litellm-backend -- \
   sh -c 'echo LITELLM_AUTO_SYNC=$LITELLM_AUTO_SYNC'</pre>
 
     <h3>Enable Auto-Sync</h3>
-    <pre><span class="comment"># Set env var on the backend deployment</span>
+    <pre data-lang="bash"><span class="comment"># Set env var on the backend deployment</span>
 oc set env deployment/litellm-backend \
   LITELLM_AUTO_SYNC=true \
   -n litellm-rhpds
@@ -314,7 +318,7 @@ oc rollout restart deployment/litellm-backend -n litellm-rhpds</pre>
     </table>
 
     <h3>Check for Orphaned Keys (LiteMaaS keys with no LiteLLM record)</h3>
-    <pre>oc exec -n litellm-rhpds litellm-postgres-0 -- \
+    <pre data-lang="bash">oc exec -n litellm-rhpds litellm-postgres-0 -- \
   psql -U litellm -d litellm -c "
 SELECT ak.id, ak.litellm_key_alias, ak.is_active, ak.created_at
 FROM api_keys ak
@@ -327,7 +331,7 @@ WHERE ak.is_active = true
 LIMIT 20;"</pre>
 
     <h3>Fix Orphaned Keys</h3>
-    <pre><span class="comment"># Mark orphaned LiteMaaS keys as inactive</span>
+    <pre data-lang="bash"><span class="comment"># Mark orphaned LiteMaaS keys as inactive</span>
 oc exec -n litellm-rhpds litellm-postgres-0 -- \
   psql -U litellm -d litellm -c "
 UPDATE api_keys
@@ -344,7 +348,7 @@ WHERE is_active = true
   );"</pre>
 
     <h3>Check for Models in LiteLLM but Not in LiteMaaS</h3>
-    <pre><span class="comment"># List LiteLLM models missing from LiteMaaS models table</span>
+    <pre data-lang="bash"><span class="comment"># List LiteLLM models missing from LiteMaaS models table</span>
 curl -X GET "${LITELLM_URL}/model/info" \
   -H "Authorization: Bearer ${LITELLM_KEY}" | \
   jq '.data[].model_name' | sort > /tmp/litellm-models.txt
@@ -357,7 +361,7 @@ oc exec -n litellm-rhpds litellm-postgres-0 -- \
 diff /tmp/litellm-models.txt /tmp/litemaas-models.txt</pre>
 
     <h3>Trigger Manual Sync</h3>
-    <pre><span class="comment"># Backend exposes a sync endpoint (admin auth required)</span>
+    <pre data-lang="bash"><span class="comment"># Backend exposes a sync endpoint (admin auth required)</span>
 ADMIN_KEY=$(oc get secret backend-secret -n litellm-rhpds \
   -o jsonpath='{.data.ADMIN_API_KEY}' | base64 -d)
 BACKEND_URL=$(oc get route litellm-prod-admin -n litellm-rhpds \
@@ -418,12 +422,12 @@ curl -X POST "${BACKEND_URL}/api/admin/sync-models" \
     <p>Vertex AI models authenticate via a GCP Service Account JSON key. The key is stored as an OCP secret and volume-mounted into the LiteLLM pod — LiteMaaS backend has no knowledge of it.</p>
 
     <h4>Step 1 — Store the key as an OCP secret</h4>
-    <pre>oc create secret generic vertex-ai-sa-key \
+    <pre data-lang="bash">oc create secret generic vertex-ai-sa-key \
   --from-file=key.json=/path/to/service-account.json \
   -n litellm-rhpds</pre>
 
     <h4>Step 2 — Mount the secret into the LiteLLM pod</h4>
-    <pre>oc set volume deployment/litellm -n litellm-rhpds \
+    <pre data-lang="bash">oc set volume deployment/litellm -n litellm-rhpds \
   --add --name=vertex-sa-key \
   --type=secret \
   --secret-name=vertex-ai-sa-key \
@@ -432,7 +436,7 @@ curl -X POST "${BACKEND_URL}/api/admin/sync-models" \
 
     <h4>Step 3 — Reference the path when registering the model</h4>
     <p>Pass <code>vertex_credentials</code> pointing to the mounted file when calling <code>/model/new</code>:</p>
-    <pre>curl -sk -X POST "$LITELLM_URL/model/new" \
+    <pre data-lang="bash">curl -sk -X POST "$LITELLM_URL/model/new" \
   -H "Authorization: Bearer $ADMIN_KEY" \
   -H "Content-Type: application/json" \
   -d '{"model_name":"my-vertex-model",
@@ -520,7 +524,7 @@ curl -X POST "${BACKEND_URL}/api/admin/sync-models" \
 
     <h3>Calling an external model</h3>
     <p>No change in how you call the API — use the same endpoint and your virtual key:</p>
-    <pre><span class="comment"># Works exactly the same as on-cluster models</span>
+    <pre data-lang="bash"><span class="comment"># Works exactly the same as on-cluster models</span>
 curl https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions \
   -H "Authorization: Bearer $YOUR_VIRTUAL_KEY" \
   -H "Content-Type: application/json" \

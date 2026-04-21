@@ -39,6 +39,10 @@
 <body>
 
 <header>
+  <svg width="36" height="36" viewBox="0 0 32 32" fill="none" style="flex-shrink:0" aria-hidden="true">
+    <path d="M16 2l12 7v14l-12 7L4 23V9z" stroke="rgba(255,255,255,0.55)" stroke-width="1.5" fill="rgba(255,255,255,0.1)"/>
+    <path d="M16 8l7 4v8l-7 4-7-4V12z" fill="rgba(255,255,255,0.18)"/>
+  </svg>
   <div>
     <h1>RHDP LiteMaaS</h1>
     <p>Model as a Service for Red Hat Demo Platform</p>
@@ -68,65 +72,72 @@
     <p class="search-no-results" id="searchNoResults">No results found.</p>
   </div>
 
-  <div class="status-bar">
-    <span style="font-weight:700; font-size:0.9rem;">Production Status</span>
-    <div class="status-item"><span class="dot"></span> LiteMaaS <span class="badge badge-green">v0.4.0</span></div>
-    <div class="status-item"><span class="dot dot-blue"></span> maas.redhatworkshops.io</div>
-    <div class="status-item"><span class="dot dot-blue"></span> <a href="https://github.com/rhpds/rhpds.litemaas" style="color:#151515;">rhpds/rhpds.litemaas</a></div>
-    <div class="status-item"><span class="dot dot-blue"></span> <a href="https://github.com/rh-aiservices-bu/litemaas" style="color:#151515;">upstream: rh-aiservices-bu/litemaas</a></div>
-  </div>
-
-  <div class="hero">
-    <h2>What is RHDP MaaS?</h2>
-    <p><strong>RHDP MaaS</strong> is the Red Hat Demo Platform's Model-as-a-Service implementation — giving users managed access to AI/LLM models with API key management, subscriptions, usage tracking, rate limiting, and budget controls. Users get a simple OpenAI-compatible endpoint without managing any infrastructure.</p>
-    <p style="margin-top:0.5rem;">RHDP MaaS is built on <strong><a href="https://github.com/rh-aiservices-bu/litemaas">LiteMaaS</a></strong>, an open-source platform by the Red Hat AI Services BU. This documentation covers the RHDP-specific deployment using the <a href="https://github.com/rhpds/rhpds.litemaas"><code>rhpds.litemaas</code></a> Ansible collection.</p>
+  <div class="hero-dark">
+    <div class="hero-badge">v0.4.0 · Production</div>
+    <h1 class="hero-title">RHDP <span>LiteMaaS</span></h1>
+    <p class="hero-tagline">Model-as-a-Service for Red Hat Demo Platform — managed LLM access with API key management, usage tracking, rate limiting, and budget controls. OpenAI-compatible endpoint, zero infrastructure overhead.</p>
+    <div class="hero-chips">
+      <span class="hero-chip"><span class="chip-dot chip-dot-green"></span> Production</span>
+      <span class="hero-chip"><span class="chip-dot chip-dot-blue"></span> maas.redhatworkshops.io</span>
+      <a href="https://github.com/rhpds/rhpds.litemaas" class="hero-chip"><span class="chip-dot chip-dot-blue"></span> rhpds/rhpds.litemaas</a>
+      <a href="https://github.com/rh-aiservices-bu/litemaas" class="hero-chip"><span class="chip-dot chip-dot-blue"></span> upstream: rh-aiservices-bu/litemaas</a>
+    </div>
   </div>
 
   <div class="grid">
     <a class="card" href="architecture.html">
-      <div class="card-icon">🏗</div>
+      <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 3h8v8H3zM13 3h8v8h-8zM3 13h8v8H3zM13 13h8v8h-8z"/></svg></div>
       <h3>Architecture</h3>
-      <p>Full component diagram — all LiteMaaS layers, PostgreSQL, Redis, model servers, GitOps flow, and sequence diagrams. Click any diagram to expand.</p>
+      <p>Full component diagram — all LiteMaaS layers, PostgreSQL, Redis, model servers, GitOps flow, and sequence diagrams.</p>
+      <span class="card-arrow" aria-hidden="true">→</span>
     </a>
     <a class="card" href="product/overview.html">
-      <div class="card-icon">📖</div>
+      <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M9 12h6M9 8h6M9 16h4M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"/></svg></div>
       <h3>Product Overview</h3>
       <p>What LiteMaaS is, the problem it solves, key features, role hierarchy, and the end-to-end user flow.</p>
+      <span class="card-arrow" aria-hidden="true">→</span>
     </a>
     <a class="card" href="product/models.html">
-      <div class="card-icon">🤖</div>
+      <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M6 14h.01M10 10h4M10 14h4M18 10h.01M18 14h.01"/></svg></div>
       <h3>Models Reference</h3>
       <p>Model capability types (Chat, Embeddings, Document Conversion), API endpoints, and curl/SDK examples.</p>
+      <span class="card-arrow" aria-hidden="true">→</span>
     </a>
     <a class="card" href="install/deployment.html">
-      <div class="card-icon">🚀</div>
+      <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg></div>
       <h3>Deployment Guide</h3>
       <p>Prerequisites, Ansible collection variables reference, step-by-step deployment, post-install checklist.</p>
+      <span class="card-arrow" aria-hidden="true">→</span>
     </a>
     <a class="card" href="day2/operations.html">
-      <div class="card-icon">🛠</div>
+      <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></div>
       <h3>Day-2 Operations</h3>
       <p>Upgrading, scaling, key cleanup cronjob, adding models, LITELLM_AUTO_SYNC, DB sync, admin operations.</p>
+      <span class="card-arrow" aria-hidden="true">→</span>
     </a>
     <a class="card" href="monitoring.html">
-      <div class="card-icon">📊</div>
+      <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
       <h3>Monitoring</h3>
-      <p>Grafana dashboards, vLLM and GPU metrics, ServiceMonitors, LiteMaaS usage analytics, and the automated key cleanup cronjob.</p>
+      <p>Grafana dashboards, vLLM and GPU metrics, ServiceMonitors, LiteMaaS usage analytics, and key cleanup cronjob.</p>
+      <span class="card-arrow" aria-hidden="true">→</span>
     </a>
     <a class="card" href="troubleshooting/common.html">
-      <div class="card-icon">🔍</div>
+      <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35M11 8v3M11 14h.01"/></svg></div>
       <h3>Troubleshooting</h3>
       <p>10 common issues with exact fix commands — model sync, OAuth, migrations, cache, OOMKills, timeouts.</p>
+      <span class="card-arrow" aria-hidden="true">→</span>
     </a>
     <a class="card" href="infrastructure.html">
-      <div class="card-icon">🖥</div>
+      <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="2" y="3" width="20" height="5" rx="1"/><rect x="2" y="10" width="20" height="5" rx="1"/><rect x="2" y="17" width="20" height="5" rx="1"/><path d="M6 5.5h.01M6 12.5h.01M6 19.5h.01"/></svg></div>
       <h3>Infrastructure & Hardware</h3>
-      <p>GPU nodes (L40S, L4, T4), model placement, OpenShift AI, KServe InferenceServices, and how models are deployed.</p>
+      <p>GPU nodes (L40S, L4, T4), model placement, OpenShift AI, KServe InferenceServices, and model deployment.</p>
+      <span class="card-arrow" aria-hidden="true">→</span>
     </a>
     <a class="card" href="https://github.com/rhpds/rhpds.litemaas">
-      <div class="card-icon">📦</div>
+      <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div>
       <h3>Ansible Collection</h3>
       <p>rhpds/rhpds.litemaas on GitHub — Ansible roles, playbooks, templates and scripts for RHDP deployment.</p>
+      <span class="card-arrow" aria-hidden="true">→</span>
     </a>
   </div>
 
