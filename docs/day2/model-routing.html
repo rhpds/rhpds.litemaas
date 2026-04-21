@@ -49,6 +49,8 @@
     .warn-box p { margin: 0; font-size: 0.88rem; color: #5d3900; }
     .danger-box { background: #fce8e8; border-left: 4px solid #cc0000; padding: 1rem 1.5rem; border-radius: 0 6px 6px 0; margin: 1rem 0; }
     .danger-box p { margin: 0; font-size: 0.88rem; color: #7a0000; }
+    .ok-box { background: #e8f5e9; border-left: 4px solid #2e7d32; padding: 1rem 1.5rem; border-radius: 0 6px 6px 0; margin: 1rem 0; }
+    .ok-box p { margin: 0; font-size: 0.88rem; color: #1b5e20; }
     .toc { background: #f9f9f9; border: 1px solid #e0e0e0; border-radius: 8px; padding: 1.2rem 1.5rem; margin-bottom: 2rem; }
     .toc h3 { font-size: 0.9rem; font-weight: 700; margin-bottom: 0.8rem; }
     .toc ul { padding-left: 1.2rem; margin: 0; }
@@ -327,6 +329,21 @@ flowchart LR
     <div class="info-box">
       <p><strong>No user-facing change.</strong> Both providers are registered under the same <code>model_name</code>. Users call <code>gpt-oss-120b</code> — the router selects the provider silently. Bedrock backends are hidden from the LiteMaaS UI entirely.</p>
     </div>
+
+    <h3>Automatic failover — cost-based routing doubles as fallback</h3>
+    <p>
+      Cost-based routing isn't just about cost — it also provides <strong>automatic failover at no extra configuration cost</strong>.
+      When the preferred provider (Vertex AI) starts failing, LiteLLM doesn't drop the request.
+      After <code>allowed_fails: 2</code> consecutive errors, the Vertex backend enters a 60-second cooldown
+      and every subsequent request is automatically routed to Bedrock until Vertex recovers.
+    </p>
+    <p>
+      This means a full Vertex AI outage is handled transparently — users see no errors,
+      just slightly higher latency from the first two failed attempts before the switch kicks in.
+      The same works in reverse: if Bedrock is the preferred provider (equal price models like <code>minimax-m2</code>)
+      and Bedrock goes down, traffic shifts to Vertex.
+    </p>
+    <div class="ok-box"><p><strong>Cost-based routing = cost optimisation + automatic failover in one.</strong> No separate fallback config is needed when you register both providers under the same <code>model_name</code> with cost-based routing enabled.</p></div>
 
     <h3>Models with Vertex + Bedrock backends</h3>
     <table>
