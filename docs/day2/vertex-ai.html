@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LiteMaaS — Google Vertex AI Integration</title>
+  <meta name="description" content="Google Vertex AI integration for RHDP LiteMaaS — service accounts, model configuration, credential mounting, and operational notes.">
+  <link rel="canonical" href="https://rhpds.github.io/rhpds.litemaas/docs/day2/vertex-ai.html">
+  <link rel="stylesheet" href="../assets/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Red Hat Text', 'Segoe UI', sans-serif; background: #f5f5f5; color: #151515; line-height: 1.6; }
+    header { background: #cc0000; color: white; padding: 1.5rem 3rem; display: flex; align-items: center; gap: 1.5rem; }
+    header h1 { font-size: 1.5rem; font-weight: 700; }
+    header p { opacity: 0.85; font-size: 0.9rem; margin-top: 0.2rem; }
+    nav { background: #151515; padding: 0 3rem; display: flex; gap: 0; flex-wrap: wrap; }
+    nav a { color: #e0e0e0; text-decoration: none; padding: 0.85rem 1.2rem; font-size: 0.9rem; display: block; transition: background 0.15s; }
+    nav a:hover, nav a.active { background: #cc0000; color: white; }
+    .container { max-width: 1100px; margin: 2rem auto; padding: 0 2rem; }
+    .breadcrumb { font-size: 0.82rem; color: #666; margin-bottom: 1.5rem; }
+    .breadcrumb a { color: #cc0000; text-decoration: none; }
+    .breadcrumb a:hover { text-decoration: underline; }
+    h1.page-title { font-size: 1.8rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .page-subtitle { color: #555; margin-bottom: 2rem; font-size: 1rem; }
+    .section { background: white; border-radius: 8px; padding: 2rem; margin-bottom: 1.5rem; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+    .section h2 { font-size: 1.2rem; font-weight: 700; margin-bottom: 1rem; color: #151515; border-bottom: 2px solid #cc0000; padding-bottom: 0.5rem; }
+    .section h3 { font-size: 1rem; font-weight: 700; margin: 1.4rem 0 0.5rem; color: #333; }
+    .section p { margin-bottom: 0.8rem; color: #333; font-size: 0.92rem; }
+    .section ul, .section ol { padding-left: 1.5rem; margin-bottom: 0.8rem; }
+    .section li { margin-bottom: 0.4rem; color: #333; font-size: 0.92rem; }
+    pre { background: #1e1e1e; color: #d4d4d4; padding: 1.2rem 1.5rem; border-radius: 6px; overflow-x: auto; font-size: 0.82rem; line-height: 1.5; margin: 0.8rem 0; position: relative; }
+    pre .comment { color: #6a9955; }
+    pre .string { color: #ce9178; }
+    pre .keyword { color: #569cd6; }
+    pre .var { color: #9cdcfe; }
+    code { font-family: 'Courier New', monospace; font-size: 0.85em; background: #f0f0f0; padding: 0.1em 0.3em; border-radius: 3px; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.86rem; }
+    th { background: #151515; color: white; padding: 0.6rem 0.8rem; text-align: left; font-weight: 600; }
+    td { padding: 0.6rem 0.8rem; border-bottom: 1px solid #e8e8e8; vertical-align: top; }
+    tr:nth-child(even) { background: #f9f9f9; }
+    td code { background: #f0f0f0; padding: 0.1em 0.3em; border-radius: 3px; font-size: 0.82rem; }
+    .info-box { background: #e8f4fd; border-left: 4px solid #0066cc; padding: 1rem 1.5rem; border-radius: 0 6px 6px 0; margin: 1rem 0; }
+    .info-box p, .info-box li { margin: 0; font-size: 0.88rem; color: #004080; }
+    .info-box ul { margin: 0.5rem 0 0 0; padding-left: 1.3rem; }
+    .warn-box { background: #fff8e1; border-left: 4px solid #f0a500; padding: 1rem 1.5rem; border-radius: 0 6px 6px 0; margin: 1rem 0; }
+    .warn-box p { margin: 0; font-size: 0.88rem; color: #5d3900; }
+    .ok-box { background: #e8f5e9; border-left: 4px solid #2e7d32; padding: 1rem 1.5rem; border-radius: 0 6px 6px 0; margin: 1rem 0; }
+    .ok-box p { margin: 0; font-size: 0.88rem; color: #1b5e20; }
+    .toc { background: #f9f9f9; border: 1px solid #e0e0e0; border-radius: 8px; padding: 1.2rem 1.5rem; margin-bottom: 2rem; }
+    .toc h3 { font-size: 0.9rem; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.8rem; }
+    .toc ul { list-style: none; padding: 0; margin: 0; }
+    .toc li { margin-bottom: 0.3rem; }
+    .toc a { color: #cc0000; text-decoration: none; font-size: 0.88rem; }
+    .toc a:hover { text-decoration: underline; }
+    .toc li li { padding-left: 1rem; }
+    footer { background: #151515; color: #888; text-align: center; padding: 1.5rem; font-size: 0.82rem; margin-top: 2rem; }
+    .footer-updated { display: block; margin-top: 0.3rem; font-size: 0.8rem; color: #777; }
+    .page-nav { display: flex; justify-content: space-between; margin: 2rem 0; gap: 1rem; }
+    .page-nav a { display: flex; flex-direction: column; padding: 1rem 1.5rem; background: white; border-radius: 8px; text-decoration: none; color: #151515; box-shadow: 0 1px 4px rgba(0,0,0,0.1); flex: 1; max-width: 48%; transition: box-shadow 0.15s; }
+    .page-nav a:hover { box-shadow: 0 3px 10px rgba(0,0,0,0.15); }
+    .pn-label { font-size: 0.78rem; color: #888; margin-bottom: 0.2rem; }
+    .pn-title { font-size: 0.95rem; font-weight: 600; color: #cc0000; }
+    .pn-prev { align-items: flex-start; }
+    .pn-next { align-items: flex-end; }
+    .nav-hamburger { display: none; background: none; border: none; color: #e0e0e0; font-size: 1.5rem; cursor: pointer; padding: 0.85rem 1.2rem; }
+    .mermaid { background: white; border-radius: 8px; padding: 1.5rem; margin: 1rem 0; overflow-x: auto; border: 1px solid #e0e0e0; }
+    .anchor-link { opacity: 0; margin-left: 0.4rem; color: #cc0000; font-size: 0.8rem; text-decoration: none; }
+    .section h2:hover .anchor-link, .section h3:hover .anchor-link { opacity: 1; }
+    .copy-btn { position: absolute; right: 0.5rem; top: 0.5rem; background: #333; color: #ccc; border: none; border-radius: 4px; padding: 0.2rem 0.6rem; font-size: 0.75rem; cursor: pointer; opacity: 0; transition: opacity 0.15s; }
+    pre:hover .copy-btn { opacity: 1; }
+    .copy-btn.copied { background: #28a745; color: white; }
+    .back-to-top { position: fixed; bottom: 2rem; right: 2rem; background: #cc0000; color: white; border: none; border-radius: 50%; width: 2.5rem; height: 2.5rem; font-size: 1.2rem; cursor: pointer; opacity: 0; transition: opacity 0.3s; z-index: 100; }
+    .back-to-top.visible { opacity: 1; }
+    @media (max-width: 768px) {
+      header { padding: 1rem 1.5rem; }
+      nav { padding: 0; flex-direction: column; }
+      .nav-hamburger { display: block; }
+      .nav-links { display: none; flex-direction: column; width: 100%; }
+      .nav-links.open { display: flex; }
+      .nav-links a { padding: 0.7rem 1.5rem; border-top: 1px solid #2a2a2a; }
+      .container { padding: 0 1rem; }
+      .page-nav { flex-direction: column; }
+      .page-nav a { max-width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>RHDP LiteMaaS</h1>
+    <p>Model as a Service for Red Hat Demo Platform</p>
+  </div>
+</header>
+
+<nav>
+  <button class="nav-hamburger" id="navToggle" aria-label="Toggle navigation">&#9776;</button>
+  <div class="nav-links" id="navLinks">
+    <a href="../index.html">Home</a>
+    <a href="../architecture.html">Architecture</a>
+    <a href="../product/overview.html">Overview</a>
+    <a href="../product/models.html">Models</a>
+    <a href="../install/deployment.html">Install</a>
+    <a href="operations.html">Day-2</a>
+    <a href="model-routing.html">Model Routing</a>
+    <a href="model-management.html">Model Management</a>
+    <a href="guardrails.html">Guardrails</a>
+    <a href="analytics.html">Analytics &amp; Backup</a>
+    <a href="cost-analysis.html">Cost Analysis</a>
+    <a href="mcp.html">Claude Code MCP</a>
+    <a href="vertex-ai.html">Vertex AI</a>
+    <a href="aws-bedrock.html">AWS Bedrock</a>
+    <a href="vertex-ai.html" class="active">Vertex AI</a>
+    <a href="aws-bedrock.html">AWS Bedrock</a>
+    <a href="../monitoring.html">Monitoring</a>
+    <a href="../infrastructure.html">Infrastructure</a>
+    <a href="../troubleshooting/common.html">Troubleshooting</a>
+  </div>
+</nav>
+
+<div class="container">
+
+  <div class="breadcrumb">
+    <a href="../index.html">Home</a> / <a href="operations.html">Day-2</a> / Vertex AI
+  </div>
+
+  <h1 class="page-title">Google Vertex AI Integration</h1>
+  <p class="page-subtitle">How LiteMaaS connects to Google Cloud Vertex AI — service accounts, model registration, credential mounting, and operational configuration.</p>
+
+  <div class="toc">
+    <h3>On This Page</h3>
+    <ul>
+      <li><a href="#overview">Overview</a></li>
+      <li><a href="#why-vertex">Why Vertex AI</a></li>
+      <li><a href="#two-service-accounts">Two GCP Service Accounts</a></li>
+      <li><a href="#models">Models on Vertex AI</a></li>
+      <li><a href="#rate-limits">Rate Limits</a></li>
+      <li><a href="#credential-mounting">Credential Mounting</a>
+        <ul>
+          <li><a href="#ocp-secrets">OCP Secrets</a></li>
+          <li><a href="#volume-mounts">Volume Mounts</a></li>
+        </ul>
+      </li>
+      <li><a href="#model-registration">Model Registration</a>
+        <ul>
+          <li><a href="#register-claude">Registering Claude Models</a></li>
+          <li><a href="#register-oss">Registering OSS Models</a></li>
+        </ul>
+      </li>
+      <li><a href="#architecture-diagram">Architecture Diagram</a></li>
+      <li><a href="#operational-config">Operational Configuration</a></li>
+      <li><a href="#troubleshooting">Troubleshooting</a></li>
+    </ul>
+  </div>
+
+  <!-- Overview -->
+  <div class="section" id="overview">
+    <h2>Overview</h2>
+    <p>Google Cloud Vertex AI is the <strong>primary provider</strong> for the majority of models in LiteMaaS. This includes all Claude models (via Anthropic on Vertex), Gemini 2.5 Pro, and all Model Garden OSS models such as GPT-OSS, Qwen3, and MiniMax.</p>
+    <p>LiteMaaS routes requests to Vertex AI through the LiteLLM proxy, using two distinct GCP service accounts — one per GCP billing project. All credentials are stored as OpenShift secrets and mounted as read-only volumes inside the <code>litellm</code> pod.</p>
+    <div class="ok-box"><p><strong>Traffic stays on Google's network.</strong> All Vertex AI calls use Private Service Connect endpoints, keeping inference traffic off the public internet.</p></div>
+  </div>
+
+  <!-- Why Vertex -->
+  <div class="section" id="why-vertex">
+    <h2>Why Vertex AI</h2>
+    <p>Vertex AI is preferred over direct API access (e.g., <code>api.anthropic.com</code>) for several operational reasons:</p>
+    <ul>
+      <li><strong>Unified billing</strong> — all model spend consolidates through the RHDP GCP project, simplifying cost allocation and chargeback reporting.</li>
+      <li><strong>Model Garden access</strong> — OSS models like GPT-OSS 120B, Qwen3-235B, and MiniMax M2 are only available through Google's Model Garden hosted inference endpoints.</li>
+      <li><strong>Private Service Connect</strong> — traffic stays within Google's network perimeter rather than traversing the public internet.</li>
+      <li><strong>No per-key API rate limits</strong> — direct Anthropic API keys have per-key RPM/TPM caps that are harder to manage at scale. Vertex capacity is provisioned at the GCP project level.</li>
+      <li><strong>SLA coverage</strong> — enterprise GCP SLAs apply to Vertex-hosted models, providing stronger uptime guarantees for production use.</li>
+    </ul>
+  </div>
+
+  <!-- Two Service Accounts -->
+  <div class="section" id="two-service-accounts">
+    <h2>Two GCP Service Accounts</h2>
+    <p>LiteMaaS uses <strong>two separate GCP service accounts</strong>, each associated with a different GCP project. The SA selection determines both the billing project and which models are accessible.</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Service Account</th>
+          <th>GCP Project</th>
+          <th>Models Served</th>
+          <th>OCP Secret</th>
+          <th>Mount Path</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>litemaas-vertex-sa@rhdp-infra.iam.gserviceaccount.com</code></td>
+          <td><code>rhdp-infra</code></td>
+          <td>OSS models: GPT-OSS 120B, GPT-OSS 20B, Qwen3-235B, MiniMax M2</td>
+          <td><code>vertex-ai-sa-key</code></td>
+          <td><code>/etc/vertex-credentials/key.json</code></td>
+        </tr>
+        <tr>
+          <td><code>rhdp-vertex-app-sa@itpc-gcp-product-all-claude.iam.gserviceaccount.com</code></td>
+          <td><code>itpc-gcp-product-all-claude</code></td>
+          <td>Claude (all versions), Gemini 2.5 Pro</td>
+          <td><code>vertex-claude-sa-key</code></td>
+          <td><code>/etc/vertex-claude-credentials/key.json</code></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="info-box">
+      <p><strong>Required IAM role:</strong> Both service accounts must have <code>roles/aiplatform.user</code> granted on their respective GCP projects. Without this role, all inference calls return HTTP 403.</p>
+    </div>
+
+    <div class="warn-box">
+      <p><strong>Do not mix SA paths.</strong> Registering a Claude model with <code>/etc/vertex-credentials/key.json</code> (the OSS SA) will fail — that SA is not authorized on the <code>itpc-gcp-product-all-claude</code> project. Always match the <code>vertex_credentials</code> path to the correct GCP project.</p>
+    </div>
+  </div>
+
+  <!-- Models -->
+  <div class="section" id="models">
+    <h2>Models on Vertex AI</h2>
+    <p>The following models are currently registered in LiteMaaS via Vertex AI backends. Costs are listed per 1M tokens (input / output).</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>LiteMaaS Name</th>
+          <th>Vertex Backend</th>
+          <th>GCP Project</th>
+          <th>Cost (in / out per 1M)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>claude-sonnet-4-6</code></td>
+          <td><code>vertex_ai/claude-sonnet-4-6</code></td>
+          <td><code>itpc-gcp-product-all-claude</code></td>
+          <td>$3.00 / $15.00</td>
+        </tr>
+        <tr>
+          <td><code>claude-opus-4-6</code></td>
+          <td><code>vertex_ai/claude-opus-4-6-v1</code></td>
+          <td><code>itpc-gcp-product-all-claude</code></td>
+          <td>$5.00 / $25.00</td>
+        </tr>
+        <tr>
+          <td><code>claude-sonnet-4-5</code></td>
+          <td><code>vertex_ai/claude-sonnet-4-5</code></td>
+          <td><code>itpc-gcp-product-all-claude</code></td>
+          <td>$3.00 / $15.00</td>
+        </tr>
+        <tr>
+          <td><code>claude-3-5-haiku</code></td>
+          <td><code>vertex_ai/claude-3-5-haiku</code></td>
+          <td><code>itpc-gcp-product-all-claude</code></td>
+          <td>$1.00 / $5.00</td>
+        </tr>
+        <tr>
+          <td><code>gemini-2.5-pro</code></td>
+          <td><code>vertex_ai/gemini-2.5-pro</code></td>
+          <td><code>itpc-gcp-product-all-claude</code> (Gemini AI Studio key)</td>
+          <td>$1.25 / $10.00</td>
+        </tr>
+        <tr>
+          <td><code>gpt-oss-120b</code></td>
+          <td><code>vertex_ai/openai/gpt-oss-120b-maas</code></td>
+          <td><code>rhdp-infra</code></td>
+          <td>$0.09 / $0.36</td>
+        </tr>
+        <tr>
+          <td><code>gpt-oss-20b</code></td>
+          <td><code>vertex_ai/openai/gpt-oss-20b-maas</code></td>
+          <td><code>rhdp-infra</code></td>
+          <td>$0.07 / $0.25</td>
+        </tr>
+        <tr>
+          <td><code>minimax-m2</code></td>
+          <td><code>vertex_ai/minimaxai/minimax-m2-maas</code></td>
+          <td><code>rhdp-infra</code></td>
+          <td>$0.30 / $1.20</td>
+        </tr>
+        <tr>
+          <td><code>qwen3-235b</code></td>
+          <td><code>vertex_ai/qwen/qwen3-235b-a22b-instruct-2507-maas</code></td>
+          <td><code>rhdp-infra</code></td>
+          <td>$0.22 / $0.88</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="info-box">
+      <p><strong>Model Garden path format:</strong> OSS models served through Google's Model Garden use an extended path format — <code>vertex_ai/&lt;provider&gt;/&lt;model-id&gt;-maas</code>. The <code>-maas</code> suffix is required by the Model Garden endpoint and is not a LiteMaaS convention.</p>
+    </div>
+  </div>
+
+  <!-- Rate Limits -->
+  <div class="section" id="rate-limits">
+    <h2>Rate Limits</h2>
+    <p>All Vertex AI-backed models share the following rate limits, which are set on the admin key <code>rhdp-automation-admin</code> in LiteLLM:</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Limit Type</th>
+          <th>Value</th>
+          <th>Scope</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Tokens per minute (TPM)</td>
+          <td>400,000</td>
+          <td>Per key</td>
+        </tr>
+        <tr>
+          <td>Requests per minute (RPM)</td>
+          <td>500</td>
+          <td>Per key</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>These limits are enforced by LiteLLM at the virtual key level, not at the Vertex API level. Vertex-side quotas are provisioned separately per GCP project and are generally higher than the LiteMaaS-enforced limits.</p>
+
+    <div class="warn-box">
+      <p><strong>If users report 429 errors</strong>, check whether the issue is a LiteLLM-enforced per-key limit or an actual Vertex quota. Run <code>oc logs -n litellm-rhpds -l app=litellm</code> and look for <code>RateLimitError</code> vs <code>QuotaExceeded</code> to distinguish the source.</p>
+    </div>
+  </div>
+
+  <!-- Credential Mounting -->
+  <div class="section" id="credential-mounting">
+    <h2>Credential Mounting</h2>
+    <p>GCP service account JSON key files are stored as OpenShift secrets and mounted as read-only volumes into the <code>litellm</code> deployment. LiteLLM reads the file path at inference time when the model's <code>vertex_credentials</code> parameter is set.</p>
+
+    <h3 id="ocp-secrets">OCP Secrets</h3>
+    <p>Create (or update) the secrets in the <code>litellm-rhpds</code> namespace. Each secret contains a single key named <code>key.json</code> holding the full GCP SA JSON key file content.</p>
+
+    <pre><span class="comment"># Create the OSS model SA secret (rhdp-infra project)</span>
+oc create secret generic vertex-ai-sa-key \
+  --from-file=key.json=/path/to/litemaas-vertex-sa-key.json \
+  -n litellm-rhpds
+
+<span class="comment"># Create the Claude / Gemini SA secret (itpc-gcp-product-all-claude project)</span>
+oc create secret generic vertex-claude-sa-key \
+  --from-file=key.json=/path/to/rhdp-vertex-app-sa-key.json \
+  -n litellm-rhpds</pre>
+
+    <div class="warn-box">
+      <p><strong>Never commit SA key files to git.</strong> Treat them as passwords. Use <code>oc create secret generic</code> directly from the downloaded JSON file, then delete the local copy.</p>
+    </div>
+
+    <h3 id="volume-mounts">Volume Mounts</h3>
+    <p>The secrets are projected into the pod via the following volume and volumeMount configuration in the <code>litellm</code> Deployment spec:</p>
+
+    <pre><span class="comment"># Volumes (add to .spec.template.spec.volumes)</span>
+volumes:
+  - name: vertex-sa-key
+    secret:
+      secretName: vertex-ai-sa-key
+  - name: vertex-claude-sa-key
+    secret:
+      secretName: vertex-claude-sa-key
+
+<span class="comment"># Volume mounts (add to .spec.template.spec.containers[0].volumeMounts)</span>
+volumeMounts:
+  - name: vertex-sa-key
+    mountPath: /etc/vertex-credentials
+    readOnly: true
+  - name: vertex-claude-sa-key
+    mountPath: /etc/vertex-claude-credentials
+    readOnly: true</pre>
+
+    <p>After patching the deployment, verify that both files are visible inside the running pod:</p>
+
+    <pre><span class="comment"># Verify credential files are present in the pod</span>
+oc exec -n litellm-rhpds deploy/litellm -- ls -la /etc/vertex-credentials/
+oc exec -n litellm-rhpds deploy/litellm -- ls -la /etc/vertex-claude-credentials/
+
+<span class="comment"># Expected output for each directory</span>
+total 8
+drwxr-xr-x 2 root root  60 Apr 21 00:00 .
+drwxr-xr-x 1 root root  60 Apr 21 00:00 ..
+-rw-r--r-- 1 root root 2400 Apr 21 00:00 key.json</pre>
+  </div>
+
+  <!-- Model Registration -->
+  <div class="section" id="model-registration">
+    <h2>Model Registration</h2>
+    <p>When registering a model in LiteLLM, the <code>vertex_credentials</code> field must point to the correct mounted key file path. LiteLLM reads this path at request time — it does not cache the credentials in memory on startup.</p>
+
+    <div class="info-box">
+      <p><strong>Model params are encrypted at rest.</strong> All fields in <code>litellm_params</code> — including <code>vertex_credentials</code> paths and <code>vertex_project</code> — are encrypted in PostgreSQL using the LiteLLM master key. Rotating the master key requires re-registering all models.</p>
+    </div>
+
+    <h3 id="register-claude">Registering Claude Models</h3>
+    <p>Claude models use the <code>itpc-gcp-product-all-claude</code> GCP project and the SA key mounted at <code>/etc/vertex-claude-credentials/key.json</code>.</p>
+
+    <pre><span class="comment"># Register claude-sonnet-4-6 via Vertex AI</span>
+curl -X POST "$LITELLM_URL/model/new" \
+  -H <span class="string">"Authorization: Bearer $MASTER_KEY"</span> \
+  -H <span class="string">"Content-Type: application/json"</span> \
+  -d <span class="string">'{
+    "model_name": "claude-sonnet-4-6",
+    "litellm_params": {
+      "model": "vertex_ai/claude-sonnet-4-6",
+      "vertex_project": "itpc-gcp-product-all-claude",
+      "vertex_location": "us-east5",
+      "vertex_credentials": "/etc/vertex-claude-credentials/key.json"
+    },
+    "model_info": {
+      "input_cost_per_token": 0.000003,
+      "output_cost_per_token": 0.000015
+    }
+  }'</span>
+
+<span class="comment"># Register claude-opus-4-6</span>
+curl -X POST "$LITELLM_URL/model/new" \
+  -H <span class="string">"Authorization: Bearer $MASTER_KEY"</span> \
+  -H <span class="string">"Content-Type: application/json"</span> \
+  -d <span class="string">'{
+    "model_name": "claude-opus-4-6",
+    "litellm_params": {
+      "model": "vertex_ai/claude-opus-4-6-v1",
+      "vertex_project": "itpc-gcp-product-all-claude",
+      "vertex_location": "us-east5",
+      "vertex_credentials": "/etc/vertex-claude-credentials/key.json"
+    },
+    "model_info": {
+      "input_cost_per_token": 0.000005,
+      "output_cost_per_token": 0.000025
+    }
+  }'</span>
+
+<span class="comment"># Register gemini-2.5-pro (also uses the claude SA / GCP project)</span>
+curl -X POST "$LITELLM_URL/model/new" \
+  -H <span class="string">"Authorization: Bearer $MASTER_KEY"</span> \
+  -H <span class="string">"Content-Type: application/json"</span> \
+  -d <span class="string">'{
+    "model_name": "gemini-2.5-pro",
+    "litellm_params": {
+      "model": "vertex_ai/gemini-2.5-pro",
+      "vertex_project": "itpc-gcp-product-all-claude",
+      "vertex_location": "us-central1",
+      "vertex_credentials": "/etc/vertex-claude-credentials/key.json"
+    },
+    "model_info": {
+      "input_cost_per_token": 0.00000125,
+      "output_cost_per_token": 0.00001
+    }
+  }'</span></pre>
+
+    <h3 id="register-oss">Registering OSS Models</h3>
+    <p>Model Garden OSS models use the <code>rhdp-infra</code> project and the SA key mounted at <code>/etc/vertex-credentials/key.json</code>. The backend model path uses the extended <code>vertex_ai/&lt;provider&gt;/&lt;model-id&gt;-maas</code> format.</p>
+
+    <pre><span class="comment"># Register gpt-oss-120b (Model Garden)</span>
+curl -X POST "$LITELLM_URL/model/new" \
+  -H <span class="string">"Authorization: Bearer $MASTER_KEY"</span> \
+  -H <span class="string">"Content-Type: application/json"</span> \
+  -d <span class="string">'{
+    "model_name": "gpt-oss-120b",
+    "litellm_params": {
+      "model": "vertex_ai/openai/gpt-oss-120b-maas",
+      "vertex_project": "rhdp-infra",
+      "vertex_location": "us-central1",
+      "vertex_credentials": "/etc/vertex-credentials/key.json"
+    },
+    "model_info": {
+      "input_cost_per_token": 0.00000009,
+      "output_cost_per_token": 0.00000036
+    }
+  }'</span>
+
+<span class="comment"># Register qwen3-235b (Model Garden)</span>
+curl -X POST "$LITELLM_URL/model/new" \
+  -H <span class="string">"Authorization: Bearer $MASTER_KEY"</span> \
+  -H <span class="string">"Content-Type: application/json"</span> \
+  -d <span class="string">'{
+    "model_name": "qwen3-235b",
+    "litellm_params": {
+      "model": "vertex_ai/qwen/qwen3-235b-a22b-instruct-2507-maas",
+      "vertex_project": "rhdp-infra",
+      "vertex_location": "us-central1",
+      "vertex_credentials": "/etc/vertex-credentials/key.json"
+    },
+    "model_info": {
+      "input_cost_per_token": 0.00000022,
+      "output_cost_per_token": 0.00000088
+    }
+  }'</span>
+
+<span class="comment"># Register minimax-m2 (Model Garden)</span>
+curl -X POST "$LITELLM_URL/model/new" \
+  -H <span class="string">"Authorization: Bearer $MASTER_KEY"</span> \
+  -H <span class="string">"Content-Type: application/json"</span> \
+  -d <span class="string">'{
+    "model_name": "minimax-m2",
+    "litellm_params": {
+      "model": "vertex_ai/minimaxai/minimax-m2-maas",
+      "vertex_project": "rhdp-infra",
+      "vertex_location": "us-central1",
+      "vertex_credentials": "/etc/vertex-credentials/key.json"
+    },
+    "model_info": {
+      "input_cost_per_token": 0.0000003,
+      "output_cost_per_token": 0.0000012
+    }
+  }'</span></pre>
+  </div>
+
+  <!-- Architecture Diagram -->
+  <div class="section" id="architecture-diagram">
+    <h2>Architecture Diagram</h2>
+    <p>The diagram below shows how the two service accounts map to GCP projects and which models each SA serves. OCP secrets are projected into the pod as read-only volume mounts.</p>
+
+    <div class="mermaid">
+flowchart TD
+    LiteLLM["LiteLLM Proxy\nlitellm-rhpds"] --> SA1["SA: litemaas-vertex-sa\nrhdp-infra project"]
+    LiteLLM --> SA2["SA: rhdp-vertex-app-sa\nitpc-gcp-product-all-claude"]
+
+    SA1 -->|"Model Garden OSS"| GPT120["GPT-OSS 120B"]
+    SA1 -->|"Model Garden OSS"| GPT20["GPT-OSS 20B"]
+    SA1 -->|"Model Garden OSS"| Qwen["Qwen3-235B"]
+    SA1 -->|"Model Garden OSS"| MiniMax["MiniMax M2"]
+
+    SA2 -->|"Anthropic on Vertex"| Claude["Claude Sonnet / Opus 4.x\nHaiku 3.5"]
+    SA2 -->|"Gemini AI Studio"| Gemini["Gemini 2.5 Pro"]
+
+    OCP1["OCP Secret\nvertex-ai-sa-key"] -. "mounted at\n/etc/vertex-credentials" .-> LiteLLM
+    OCP2["OCP Secret\nvertex-claude-sa-key"] -. "mounted at\n/etc/vertex-claude-credentials" .-> LiteLLM
+    </div>
+
+    <h3>Request flow</h3>
+    <p>When a user sends a request to the LiteMaaS API, the following sequence occurs:</p>
+    <ol>
+      <li>The request arrives at the LiteLLM proxy and is matched to a registered model by name.</li>
+      <li>LiteLLM reads the model's <code>litellm_params</code> from PostgreSQL (decrypting with the master key).</li>
+      <li>LiteLLM reads the SA key file from the mounted volume path specified in <code>vertex_credentials</code>.</li>
+      <li>LiteLLM exchanges the SA key for a short-lived OAuth2 access token via Google's token endpoint.</li>
+      <li>The inference request is forwarded to the Vertex AI endpoint for the appropriate GCP project and region.</li>
+      <li>The response is streamed back through LiteLLM to the user, and spend is logged to PostgreSQL.</li>
+    </ol>
+  </div>
+
+  <!-- Operational Configuration -->
+  <div class="section" id="operational-config">
+    <h2>Operational Configuration</h2>
+    <p>Several environment variables on the <code>litellm</code> deployment govern how LiteMaaS interacts with the database and with the LiteMaaS backend. Understanding these is important for safe day-2 operations.</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Environment Variable</th>
+          <th>Value</th>
+          <th>Effect</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>DISABLE_SCHEMA_UPDATE</code></td>
+          <td><code>true</code></td>
+          <td>Prevents Prisma from running schema migrations on pod restart. Without this, a LiteLLM version bump could drop LiteMaaS-specific tables.</td>
+        </tr>
+        <tr>
+          <td><code>STORE_MODEL_IN_DB</code></td>
+          <td><code>true</code></td>
+          <td>Model configs (including <code>vertex_credentials</code> paths and <code>vertex_project</code>) are persisted in PostgreSQL, not in a config file. Models survive pod restarts.</td>
+        </tr>
+        <tr>
+          <td><code>LITELLM_AUTO_SYNC</code></td>
+          <td><code>false</code></td>
+          <td>Models registered in LiteLLM are <strong>not</strong> automatically synced to the LiteMaaS backend model list. Models must be registered through the LiteMaaS API or UI to appear to users.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="warn-box">
+      <p><strong>Master key rotation requires model re-registration.</strong> All <code>litellm_params</code> (including SA key file paths and GCP project IDs) are encrypted with the LiteLLM master key. If the master key changes, every model must be deleted and re-registered so that params are re-encrypted under the new key.</p>
+    </div>
+
+    <h3>Syncing models to LiteMaaS</h3>
+    <p>Because <code>LITELLM_AUTO_SYNC=false</code>, a model can be registered in LiteLLM but not yet visible to users in the LiteMaaS UI or <code>/v1/models</code> endpoint. After registering a model in LiteLLM, explicitly add it to the LiteMaaS backend via the LiteMaaS admin API or UI to make it available.</p>
+
+    <pre><span class="comment"># Check which models are registered in LiteLLM</span>
+curl -s "$LITELLM_URL/model/info" \
+  -H <span class="string">"Authorization: Bearer $MASTER_KEY"</span> | jq '.[].model_name'
+
+<span class="comment"># Check which models are visible in LiteMaaS (user-facing endpoint)</span>
+curl -s "$LITEMAAS_URL/v1/models" \
+  -H <span class="string">"Authorization: Bearer $USER_KEY"</span> | jq '.data[].id'</pre>
+  </div>
+
+  <!-- Troubleshooting -->
+  <div class="section" id="troubleshooting">
+    <h2>Troubleshooting</h2>
+
+    <h3>BXNIM0415E — credential error on multi-turn requests</h3>
+    <p>This IBM-origin error code surfaces when per-model SA credentials fail during multi-turn conversations (i.e., the second or later message in a thread). The root cause is that LiteLLM re-reads the credential file on each request, and a timing or file-permission issue causes a transient failure.</p>
+    <p><strong>Fix:</strong> Set the Vertex credentials as deployment-level environment variables instead of relying solely on the per-model <code>vertex_credentials</code> path. Add <code>GOOGLE_APPLICATION_CREDENTIALS</code> as an env var pointing to the primary SA key path, and LiteLLM will use it as a fallback.</p>
+
+    <pre><span class="comment"># Add as env var on the litellm deployment</span>
+oc set env deploy/litellm \
+  GOOGLE_APPLICATION_CREDENTIALS=/etc/vertex-claude-credentials/key.json \
+  -n litellm-rhpds</pre>
+
+    <h3>Model appears in LiteLLM but not in LiteMaaS UI</h3>
+    <p>This is expected when <code>LITELLM_AUTO_SYNC=false</code>. Register the model through the LiteMaaS admin interface or API to make it visible to users. See <a href="model-management.html">Model Management</a> for the full workflow.</p>
+
+    <h3>HTTP 403 on Vertex API calls</h3>
+    <p>A 403 from Vertex means the SA does not have the required IAM role on the GCP project. Verify that the SA email has <code>roles/aiplatform.user</code> by checking the GCP IAM console or running:</p>
+    <pre><span class="comment"># Verify IAM binding for the OSS SA</span>
+gcloud projects get-iam-policy rhdp-infra \
+  --flatten="bindings[].members" \
+  --filter="bindings.members:litemaas-vertex-sa@rhdp-infra.iam.gserviceaccount.com" \
+  --format="table(bindings.role)"
+
+<span class="comment"># Verify IAM binding for the Claude SA</span>
+gcloud projects get-iam-policy itpc-gcp-product-all-claude \
+  --flatten="bindings[].members" \
+  --filter="bindings.members:rhdp-vertex-app-sa@itpc-gcp-product-all-claude.iam.gserviceaccount.com" \
+  --format="table(bindings.role)"</pre>
+
+    <h3>Model shows LEGACY status</h3>
+    <p>A model with <code>LEGACY</code> status in the LiteMaaS UI is still fully functional — it continues to serve inference requests. LEGACY status indicates that a newer version of the same model is available. Consider upgrading the registered backend model string to the latest version at your next maintenance window.</p>
+
+    <h3>Checking Vertex connectivity from the pod</h3>
+    <pre><span class="comment"># Test that the OSS SA can reach Vertex</span>
+oc exec -n litellm-rhpds deploy/litellm -- \
+  curl -s -o /dev/null -w "%{http_code}" \
+  -H "Authorization: Bearer $(cat /etc/vertex-credentials/key.json | python3 -c 'import sys,json; print(json.load(sys.stdin)[\"private_key\"][:20])')" \
+  "https://us-central1-aiplatform.googleapis.com/v1/projects/rhdp-infra/locations/us-central1/publishers/openai/models"
+
+<span class="comment"># View recent Vertex-related errors in the LiteLLM log</span>
+oc logs -n litellm-rhpds -l app=litellm --tail=100 | grep -i "vertex\|403\|quota\|rate"</pre>
+
+    <div class="info-box">
+      <p><strong>When in doubt, check the pod logs first.</strong> LiteLLM logs the full upstream error message from Vertex including status code, error type, and GCP project ID. This is the fastest way to distinguish between an IAM issue, a quota issue, and a model path typo.</p>
+    </div>
+  </div>
+
+  <div class="page-nav">
+    <a href="model-routing.html" class="pn-prev">
+      <span class="pn-label">&larr; Previous</span>
+      <span class="pn-title">Model Routing</span>
+    </a>
+    <a href="aws-bedrock.html" class="pn-next">
+      <span class="pn-label">Next &rarr;</span>
+      <span class="pn-title">AWS Bedrock</span>
+    </a>
+  </div>
+
+</div>
+
+<footer>
+  <p>RHDP LiteMaaS Documentation &mdash; Red Hat Demo Platform &mdash; maas.redhatworkshops.io</p>
+  <span class="footer-updated">Last updated: April 2026</span>
+</footer>
+
+<button class="back-to-top" id="backToTop" title="Back to top">&#8679;</button>
+
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+
+  document.getElementById('navToggle').addEventListener('click', function() {
+    document.getElementById('navLinks').classList.toggle('open');
+  });
+
+  var btt = document.getElementById('backToTop');
+  window.addEventListener('scroll', function() {
+    btt.classList.toggle('visible', window.scrollY > 400);
+  });
+  btt.addEventListener('click', function() { window.scrollTo({ top: 0, behavior: 'smooth' }); });
+
+  document.querySelectorAll('pre').forEach(function(pre) {
+    var btn = document.createElement('button');
+    btn.className = 'copy-btn'; btn.textContent = 'Copy';
+    btn.addEventListener('click', function() {
+      navigator.clipboard.writeText(pre.innerText).then(function() {
+        btn.textContent = 'Copied!'; btn.classList.add('copied');
+        setTimeout(function() { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+      });
+    });
+    pre.appendChild(btn);
+  });
+
+  document.querySelectorAll('.section h2, .section h3').forEach(function(h) {
+    if (!h.id) h.id = h.textContent.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    var a = document.createElement('a');
+    a.className = 'anchor-link'; a.href = '#' + h.id; a.textContent = '#';
+    a.setAttribute('aria-label', 'Link to section');
+    h.appendChild(a);
+  });
+</script>
+
+</body>
+</html>
