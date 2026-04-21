@@ -99,6 +99,10 @@
 <body>
 
 <header>
+  <svg width="36" height="36" viewBox="0 0 32 32" fill="none" style="flex-shrink:0" aria-hidden="true">
+    <path d="M16 2l12 7v14l-12 7L4 23V9z" stroke="rgba(255,255,255,0.55)" stroke-width="1.5" fill="rgba(255,255,255,0.1)"/>
+    <path d="M16 8l7 4v8l-7 4-7-4V12z" fill="rgba(255,255,255,0.18)"/>
+  </svg>
   <div>
     <h1>RHDP LiteMaaS</h1>
     <p>Model as a Service for Red Hat Demo Platform</p>
@@ -217,27 +221,27 @@ graph LR
     </div>
 
     <p>Set your admin key once, then use it for all commands below:</p>
-    <pre>export ADMIN_KEY=sk-1234567890abcdef1234
+    <pre data-lang="bash">export ADMIN_KEY=sk-1234567890abcdef1234
 export LITELLM_URL=https://litellm-prod.apps.maas.redhatworkshops.io</pre>
 
     <h3>Add a second backend (zero disruption)</h3>
     <p>Same <code>model_name</code>, different <code>api_base</code> — load balancing activates automatically:</p>
-    <pre>curl -sk -X POST "$LITELLM_URL/model/new" -H "Authorization: Bearer $ADMIN_KEY" -H "Content-Type: application/json" -d '{"model_name":"qwen3-14b","litellm_params":{"model":"openai/qwen3-14b","api_base":"https://qwen3-14b-llm-hosting.apps.server2.example.com/v1","custom_llm_provider":"openai"}}'</pre>
+    <pre data-lang="bash">curl -sk -X POST "$LITELLM_URL/model/new" -H "Authorization: Bearer $ADMIN_KEY" -H "Content-Type: application/json" -d '{"model_name":"qwen3-14b","litellm_params":{"model":"openai/qwen3-14b","api_base":"https://qwen3-14b-llm-hosting.apps.server2.example.com/v1","custom_llm_provider":"openai"}}'</pre>
 
     <h3>Check live health of both backends</h3>
     <p>Run this during events — shows which backends are active and which are in cooldown:</p>
-    <pre>curl -sk "$LITELLM_URL/health?model=qwen3-14b" -H "Authorization: Bearer $ADMIN_KEY" | python3 -c "import sys,json; d=json.load(sys.stdin); [print('OK  ',e['api_base']) for e in d.get('healthy_endpoints',[]) if isinstance(e,dict)]; [print('DOWN',e['api_base']) for e in d.get('unhealthy_endpoints',[]) if isinstance(e,dict)]"</pre>
+    <pre data-lang="bash">curl -sk "$LITELLM_URL/health?model=qwen3-14b" -H "Authorization: Bearer $ADMIN_KEY" | python3 -c "import sys,json; d=json.load(sys.stdin); [print('OK  ',e['api_base']) for e in d.get('healthy_endpoints',[]) if isinstance(e,dict)]; [print('DOWN',e['api_base']) for e in d.get('unhealthy_endpoints',[]) if isinstance(e,dict)]"</pre>
     <p>Expected output — one line per backend:</p>
-    <pre>OK   https://qwen3-14b-llm-hosting.apps.maas00.rs-dfw3.infra.demo.redhat.com/v1
+    <pre data-lang="bash">OK   https://qwen3-14b-llm-hosting.apps.maas00.rs-dfw3.infra.demo.redhat.com/v1
 OK   https://qwen3-14b-llm-hosting.apps.smc00.rs-dfw3.infra.demo.redhat.com/v1</pre>
 
     <h3>Confirm router is distributing requests</h3>
     <p>Each response includes <code>x-litellm-model-id</code> — different IDs confirm different backends are being hit:</p>
-    <pre>for i in 1 2 3 4 5; do curl -sk -X POST "$LITELLM_URL/v1/chat/completions" -H "Authorization: Bearer $ADMIN_KEY" -H "Content-Type: application/json" -d '{"model":"qwen3-14b","messages":[{"role":"user","content":"hi"}],"max_tokens":1}' -D - -o /dev/null | grep -i "x-litellm-model-id"; done | sort | uniq -c</pre>
+    <pre data-lang="bash">for i in 1 2 3 4 5; do curl -sk -X POST "$LITELLM_URL/v1/chat/completions" -H "Authorization: Bearer $ADMIN_KEY" -H "Content-Type: application/json" -d '{"model":"qwen3-14b","messages":[{"role":"user","content":"hi"}],"max_tokens":1}' -D - -o /dev/null | grep -i "x-litellm-model-id"; done | sort | uniq -c</pre>
 
     <h3>View router settings</h3>
     <p>Current strategy and tunable parameters. Change via <strong>Admin UI &rarr; Router Settings</strong>.</p>
-    <pre>curl -sk "$LITELLM_URL/router/settings" -H "Authorization: Bearer $ADMIN_KEY" | python3 -c "import sys,json; cv=json.load(sys.stdin).get('current_values',{}); [print(f'{k}: {v}') for k,v in cv.items() if v is not None and v != {} and v != []]"</pre>
+    <pre data-lang="bash">curl -sk "$LITELLM_URL/router/settings" -H "Authorization: Bearer $ADMIN_KEY" | python3 -c "import sys,json; cv=json.load(sys.stdin).get('current_values',{}); [print(f'{k}: {v}') for k,v in cv.items() if v is not None and v != {} and v != []]"</pre>
   </div>
 
   <!-- Fallback -->
@@ -262,14 +266,14 @@ graph LR
     </div>
 
     <p>Configure fallbacks in the LiteLLM config or via the Admin UI. Example <code>config.yaml</code> snippet:</p>
-    <pre><span class="comment"># litellm config.yaml</span>
+    <pre data-lang="bash"><span class="comment"># litellm config.yaml</span>
 router_settings:
   fallbacks:
     - qwen3-14b:
         - qwen3-7b   <span class="comment"># used only when qwen3-14b group is fully down</span></pre>
 
     <p>You can also set fallbacks per-request using the <code>fallbacks</code> field in the API payload:</p>
-    <pre>curl -sk -X POST "$LITELLM_URL/v1/chat/completions" \
+    <pre data-lang="bash">curl -sk -X POST "$LITELLM_URL/v1/chat/completions" \
   -H "Authorization: Bearer $ADMIN_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -393,7 +397,7 @@ flowchart LR
 
     <h3>Router configuration</h3>
     <p>The <code>routing_strategy</code> is set globally in the <code>litellm-router-config</code> ConfigMap and applies to all multi-backend model groups:</p>
-    <pre><span class="comment"># litellm-router-config ConfigMap</span>
+    <pre data-lang="bash"><span class="comment"># litellm-router-config ConfigMap</span>
 <span class="var">router_settings</span>:
   <span class="var">routing_strategy</span>: cost-based-routing
   <span class="var">num_retries</span>: 3
