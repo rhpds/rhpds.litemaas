@@ -13,9 +13,6 @@
     header { background: #cc0000; color: white; padding: 1.5rem 3rem; display: flex; align-items: center; gap: 1.5rem; }
     header h1 { font-size: 1.5rem; font-weight: 700; }
     header p { opacity: 0.85; font-size: 0.9rem; margin-top: 0.2rem; }
-    nav { background: #151515; padding: 0 3rem; display: flex; gap: 0; flex-wrap: wrap; }
-    nav a { color: #e0e0e0; text-decoration: none; padding: 0.85rem 1.2rem; font-size: 0.9rem; display: block; transition: background 0.15s; }
-    nav a:hover, nav a.active { background: #cc0000; color: white; }
     .container { max-width: 1100px; margin: 2rem auto; padding: 0 2rem; }
     .breadcrumb { font-size: 0.82rem; color: #666; margin-bottom: 1.5rem; }
     .breadcrumb a { color: #cc0000; text-decoration: none; }
@@ -64,15 +61,9 @@
     .pn-title { font-size: 0.95rem; font-weight: 600; color: #cc0000; }
     .pn-prev { align-items: flex-start; }
     .pn-next { align-items: flex-end; }
-    .nav-hamburger { display: none; background: none; border: none; color: #e0e0e0; font-size: 1.5rem; cursor: pointer; padding: 0.85rem 1.2rem; }
     @media (max-width: 768px) {
       header { padding: 1rem 1.5rem; }
-      nav { padding: 0; flex-direction: column; }
-      .nav-hamburger { display: block; }
-      .nav-links { display: none; flex-direction: column; width: 100%; }
-      .nav-links.open { display: flex; }
-      .nav-links a { padding: 0.7rem 1.5rem; border-top: 1px solid #2a2a2a; }
-      .container { padding: 0 1rem; }
+        .container { padding: 0 1rem; }
       .page-nav { flex-direction: column; }
       .page-nav a { max-width: 100%; }
     }
@@ -95,6 +86,18 @@
     td.good { background: #e8f5e9; color: #1b5e20; font-weight: 600; }
     td.bad { background: #fce8e8; color: #7a0000; }
     td.muted { color: #888; font-style: italic; }
+    .nav-primary { background: #151515; display: flex; align-items: stretch; padding: 0 2rem; }
+    .nav-primary-links { display: flex; overflow-x: auto; scrollbar-width: none; }
+    .nav-primary-links::-webkit-scrollbar { display: none; }
+    .nav-primary-links a { color: #b0b0b0; text-decoration: none; padding: 0.85rem 1rem; font-size: 0.875rem; font-weight: 500; display: flex; align-items: center; white-space: nowrap; border-bottom: 3px solid transparent; transition: color 0.15s, border-color 0.15s; }
+    .nav-primary-links a:hover { color: #fff; }
+    .nav-primary-links a.active { color: #fff; border-bottom-color: #cc0000; }
+    .nav-secondary { background: #fff; border-bottom: 1px solid #e0e0e0; padding: 0 2rem; }
+    .nav-secondary-links { display: flex; overflow-x: auto; scrollbar-width: none; }
+    .nav-secondary-links::-webkit-scrollbar { display: none; }
+    .nav-secondary-links a { color: #666; text-decoration: none; padding: 0.6rem 0.9rem; font-size: 0.82rem; font-weight: 500; white-space: nowrap; display: block; border-bottom: 2px solid transparent; transition: color 0.15s, border-color 0.15s; }
+    .nav-secondary-links a:hover { color: #cc0000; }
+    .nav-secondary-links a.active { color: #cc0000; border-bottom-color: #cc0000; font-weight: 600; }
   </style>
 </head>
 <body>
@@ -106,22 +109,31 @@
   </div>
 </header>
 
-<nav>
-  <button class="nav-hamburger" id="navToggle" aria-label="Toggle navigation">&#9776;</button>
-  <div class="nav-links" id="navLinks">
+<nav class="nav-primary">
+  <div class="nav-primary-links">
     <a href="../index.html">Home</a>
     <a href="../architecture.html">Architecture</a>
     <a href="../product/overview.html">Overview</a>
     <a href="../product/models.html">Models</a>
     <a href="../install/deployment.html">Install</a>
-    <a href="operations.html">Day-2</a>
-    <a href="model-routing.html">Model Routing</a>
-    <a href="model-management.html">Model Management</a>
-    <a href="analytics.html">Analytics &amp; Backup</a>
-    <a href="cost-analysis.html" class="active">Cost Analysis</a>
+    <a href="operations.html" class="active">Day-2</a>
     <a href="../monitoring.html">Monitoring</a>
     <a href="../infrastructure.html">Infrastructure</a>
     <a href="../troubleshooting/common.html">Troubleshooting</a>
+  </div>
+</nav>
+
+<nav class="nav-secondary">
+  <div class="nav-secondary-links">
+    <a href="operations.html">Overview</a>
+    <a href="model-routing.html">Model Routing</a>
+    <a href="model-management.html">Model Management</a>
+    <a href="guardrails.html">Guardrails</a>
+    <a href="analytics.html">Analytics &amp; Backup</a>
+    <a href="cost-analysis.html" class="active">Cost Analysis</a>
+    <a href="mcp.html">Claude Code MCP</a>
+    <a href="vertex-ai.html">Vertex AI</a>
+    <a href="aws-bedrock.html">AWS Bedrock</a>
   </div>
 </nav>
 
