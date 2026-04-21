@@ -130,7 +130,7 @@
   </div>
 
   <h1 class="page-title">LiteLLM Router &amp; Load Balancing</h1>
-  <p class="page-subtitle">Distributing traffic across multiple GPU backends and configuring fallback when a server goes down.</p>
+  <p class="page-subtitle">How LiteLLM routes traffic — GPU load balancing across on-prem servers, fallback configuration, and cost-based routing between cloud providers (Vertex AI and AWS Bedrock).</p>
 
   <div class="toc">
     <h3>On This Page</h3>
@@ -139,6 +139,7 @@
       <li><a href="#when-to-use">When to Use This</a></li>
       <li><a href="#load-balancing">Load Balancing — Adding Multiple Backends</a></li>
       <li><a href="#fallback">Fallback — Primary + Standby</a></li>
+      <li><a href="#cross-provider">Cost-Based Cross-Provider Routing</a></li>
     </ul>
   </div>
 
@@ -270,6 +271,113 @@ router_settings:
 
     <div class="info-box">
       <p><strong>Fallback vs. load balancing:</strong> If you want both maas00 and smc00 to serve <code>qwen3-14b</code> simultaneously, register both under the same <code>model_name</code> (load balancing). If you want smc00 only as a safety net, use fallback configuration.</p>
+    </div>
+  </div>
+
+  <!-- Cross-Provider Routing -->
+
+  <div class="section" id="cross-provider">
+    <h2>Cost-Based Cross-Provider Routing</h2>
+    <p>
+      The same <code>model_name</code> grouping that drives GPU load balancing also works across <strong>cloud providers</strong>.
+      RHDP LiteMaaS uses this in production to route four OSS models between Google Vertex AI and AWS Bedrock,
+      using LiteLLM's <code>cost-based-routing</code> strategy instead of round-robin.
+    </p>
+    <p>
+      Each model has two registrations — one Vertex AI backend and one Bedrock backend — both under the same <code>model_name</code>.
+      For every request, LiteLLM estimates the cost on each provider and dispatches to the cheapest one.
+      If that provider accumulates two failures it enters a 60-second cooldown and all traffic shifts to the other automatically.
+    </p>
+
+    <div class="mermaid">
+flowchart LR
+    U([User]) -->|model: gpt-oss-120b| Router{LiteLLM\nCost Router}
+    Router -->|"$0.09/1M in — preferred"| V["Google Vertex AI\nModel Garden"]
+    Router -->|"$0.15/1M in — fallback"| B["AWS Bedrock\nus-west-2"]
+    V -.->|"≥2 failures → cooldown"| B
+    </div>
+
+    <p>This differs from GPU load balancing in a key way:</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Strategy</th>
+          <th>Traffic distribution</th>
+          <th>Primary driver</th>
+          <th>Example</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Round-robin</strong> (GPU)</td>
+          <td>Every request rotates across all backends</td>
+          <td>Even load spread</td>
+          <td><code>qwen3-14b</code> on maas00 + smc00</td>
+        </tr>
+        <tr>
+          <td><strong>Cost-based</strong> (cloud)</td>
+          <td>Cheapest provider gets all traffic; other is standby</td>
+          <td>Lowest cost per request</td>
+          <td><code>gpt-oss-120b</code> on Vertex + Bedrock</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="info-box">
+      <p><strong>No user-facing change.</strong> Both providers are registered under the same <code>model_name</code>. Users call <code>gpt-oss-120b</code> — the router selects the provider silently. Bedrock backends are hidden from the LiteMaaS UI entirely.</p>
+    </div>
+
+    <h3>Models with Vertex + Bedrock backends</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>model_name</th>
+          <th>Vertex cost (in/out per 1M)</th>
+          <th>Bedrock cost (in/out per 1M)</th>
+          <th>Router picks</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>gpt-oss-120b</code></td>
+          <td>$0.09 / $0.36</td>
+          <td>$0.15 / $0.60</td>
+          <td>Vertex (cheaper)</td>
+        </tr>
+        <tr>
+          <td><code>gpt-oss-20b</code></td>
+          <td>$0.07 / $0.25</td>
+          <td>$0.07 / $0.30</td>
+          <td>Vertex (cheaper)</td>
+        </tr>
+        <tr>
+          <td><code>minimax-m2</code></td>
+          <td>$0.30 / $1.20</td>
+          <td>$0.30 / $1.20</td>
+          <td>Either (same price)</td>
+        </tr>
+        <tr>
+          <td><code>qwen3-235b</code></td>
+          <td>$0.22 / $0.88</td>
+          <td>$0.22 / $0.88</td>
+          <td>Either (same price)</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>Router configuration</h3>
+    <p>The <code>routing_strategy</code> is set globally in the <code>litellm-router-config</code> ConfigMap and applies to all multi-backend model groups:</p>
+    <pre><span class="comment"># litellm-router-config ConfigMap</span>
+<span class="var">router_settings</span>:
+  <span class="var">routing_strategy</span>: cost-based-routing
+  <span class="var">num_retries</span>: 3
+  <span class="var">retry_after</span>: 5
+  <span class="var">allowed_fails</span>: 2
+  <span class="var">cooldown_time</span>: 60</pre>
+
+    <div class="info-box">
+      <p>For the full implementation — IAM setup, OCP secret creation, Bedrock model registration commands, and master key rotation gotcha — see the <a href="vertex-ai.html">Vertex AI</a> and <a href="aws-bedrock.html">AWS Bedrock</a> provider pages.</p>
     </div>
   </div>
 
