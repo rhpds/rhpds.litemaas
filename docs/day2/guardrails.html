@@ -95,6 +95,10 @@
 <body>
 
 <header>
+  <svg width="36" height="36" viewBox="0 0 32 32" fill="none" style="flex-shrink:0" aria-hidden="true">
+    <path d="M16 2l12 7v14l-12 7L4 23V9z" stroke="rgba(255,255,255,0.55)" stroke-width="1.5" fill="rgba(255,255,255,0.1)"/>
+    <path d="M16 8l7 4v8l-7 4-7-4V12z" fill="rgba(255,255,255,0.18)"/>
+  </svg>
   <div>
     <h1>RHDP LiteMaaS</h1>
     <p>Model as a Service for Red Hat Demo Platform</p>
@@ -202,7 +206,7 @@
       to define guardrails — no <code>model_list</code> is required. The two systems coexist cleanly.
     </p>
     <h3>Request flow</h3>
-    <pre>
+    <pre data-lang="bash">
 User request
     │
     ▼
@@ -239,18 +243,18 @@ Response returned to user</pre>
     </ul>
 
     <h3>Apply to production</h3>
-    <pre><button class="copy-btn">copy</button>ansible-playbook playbooks/configure_guardrails.yml \
+    <pre data-lang="bash"><button class="copy-btn">copy</button>ansible-playbook playbooks/configure_guardrails.yml \
   -e litemaas_namespace=litellm-rhpds</pre>
 
     <h3>Apply to dev or staging</h3>
-    <pre><button class="copy-btn">copy</button>ansible-playbook playbooks/configure_guardrails.yml \
+    <pre data-lang="bash"><button class="copy-btn">copy</button>ansible-playbook playbooks/configure_guardrails.yml \
   -e litemaas_namespace=litellm-dev
 
 ansible-playbook playbooks/configure_guardrails.yml \
   -e litemaas_namespace=litellm-staging</pre>
 
     <h3>Check current guardrails without applying</h3>
-    <pre><button class="copy-btn">copy</button>ansible-playbook playbooks/configure_guardrails.yml \
+    <pre data-lang="bash"><button class="copy-btn">copy</button>ansible-playbook playbooks/configure_guardrails.yml \
   -e litemaas_namespace=litellm-rhpds \
   -e litemaas_guardrails_check_only=true</pre>
 
@@ -368,7 +372,7 @@ ansible-playbook playbooks/configure_guardrails.yml \
     <p>Run these against the production LiteLLM endpoint to verify guardrails are active. Use the team test key.</p>
 
     <h3>Quick smoke test</h3>
-    <pre><button class="copy-btn">copy</button>LITELLM_URL="https://litellm-prod.apps.maas.redhatworkshops.io"
+    <pre data-lang="bash"><button class="copy-btn">copy</button>LITELLM_URL="https://litellm-prod.apps.maas.redhatworkshops.io"
 TEST_KEY="sk-REDACTED"
 
 # SSN — expect 403
@@ -392,14 +396,14 @@ curl -s -o /dev/null -w "%{http_code}" -X POST "$LITELLM_URL/v1/chat/completions
   -d '{"model":"granite-3-2-8b-instruct","messages":[{"role":"user","content":"What is the capital of France?"}],"max_tokens":10}'</pre>
 
     <h3>View active guardrails (admin)</h3>
-    <pre><button class="copy-btn">copy</button>MASTER_KEY=$(oc get secret litellm-secret -n litellm-rhpds \
+    <pre data-lang="bash"><button class="copy-btn">copy</button>MASTER_KEY=$(oc get secret litellm-secret -n litellm-rhpds \
   -o jsonpath='{.data.LITELLM_MASTER_KEY}' | base64 -d)
 
 curl -s "$LITELLM_URL/guardrails/list" \
   -H "Authorization: Bearer $MASTER_KEY" | python3 -m json.tool</pre>
 
     <h3>Expected blocked response</h3>
-    <pre><button class="copy-btn">copy</button>{
+    <pre data-lang="bash"><button class="copy-btn">copy</button>{
   "error": {
     "message": "{'error': 'Content blocked: us_ssn pattern detected', 'pattern': 'us_ssn'}",
     "type": "None",
@@ -419,7 +423,7 @@ curl -s "$LITELLM_URL/guardrails/list" \
     </p>
 
     <h3>Add a custom regex pattern</h3>
-    <pre><button class="copy-btn">copy</button><span class="comment"># In configure_guardrails.yml, under patterns:</span>
+    <pre data-lang="bash"><button class="copy-btn">copy</button><span class="comment"># In configure_guardrails.yml, under patterns:</span>
 - pattern_type: <span class="string">"regex"</span>
   name: <span class="string">"redhat-internal-id"</span>
   pattern: <span class="string">"RH-[0-9]{6}"</span>
@@ -427,19 +431,19 @@ curl -s "$LITELLM_URL/guardrails/list" \
 
     <h3>Change action from BLOCK to MASK</h3>
     <p>Use <code>MASK</code> to redact the matched content instead of blocking the entire request. Useful for output filtering where you want the response but with sensitive data removed.</p>
-    <pre><button class="copy-btn">copy</button>- pattern_type: <span class="string">"prebuilt"</span>
+    <pre data-lang="bash"><button class="copy-btn">copy</button>- pattern_type: <span class="string">"prebuilt"</span>
   pattern_name: <span class="string">"email"</span>
   action: <span class="string">"MASK"</span>   <span class="comment"># replaces with [email_REDACTED]</span></pre>
 
     <h3>Enable additional categories</h3>
-    <pre><button class="copy-btn">copy</button><span class="comment"># Add under categories in the pii-and-credentials guardrail:</span>
+    <pre data-lang="bash"><button class="copy-btn">copy</button><span class="comment"># Add under categories in the pii-and-credentials guardrail:</span>
 - category: <span class="string">"denied_medical_advice"</span>
   enabled: true
   action: <span class="string">"BLOCK"</span>
   severity_threshold: <span class="string">"high"</span>   <span class="comment"># high | medium | low</span></pre>
 
     <h3>Update ConfigMap without full playbook run</h3>
-    <pre><button class="copy-btn">copy</button><span class="comment"># Edit the ConfigMap directly, then restart to pick up changes</span>
+    <pre data-lang="bash"><button class="copy-btn">copy</button><span class="comment"># Edit the ConfigMap directly, then restart to pick up changes</span>
 oc edit configmap litellm-guardrails-config -n litellm-rhpds
 oc rollout restart deployment/litellm -n litellm-rhpds</pre>
   </div>
@@ -448,7 +452,7 @@ oc rollout restart deployment/litellm -n litellm-rhpds</pre>
   <div class="section" id="removing">
     <h2>Removing Guardrails <a class="anchor-link" href="#removing">#</a></h2>
     <p>To disable guardrails entirely:</p>
-    <pre><button class="copy-btn">copy</button>ansible-playbook playbooks/configure_guardrails.yml \
+    <pre data-lang="bash"><button class="copy-btn">copy</button>ansible-playbook playbooks/configure_guardrails.yml \
   -e litemaas_namespace=litellm-rhpds \
   -e litemaas_guardrails_state=absent</pre>
     <p>This removes the ConfigMap and restores the LiteLLM deployment to its original startup command (no <code>--config</code> flag).</p>

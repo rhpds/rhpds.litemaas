@@ -103,6 +103,10 @@
 <body>
 
 <header>
+  <svg width="36" height="36" viewBox="0 0 32 32" fill="none" style="flex-shrink:0" aria-hidden="true">
+    <path d="M16 2l12 7v14l-12 7L4 23V9z" stroke="rgba(255,255,255,0.55)" stroke-width="1.5" fill="rgba(255,255,255,0.1)"/>
+    <path d="M16 8l7 4v8l-7 4-7-4V12z" fill="rgba(255,255,255,0.18)"/>
+  </svg>
   <div>
     <h1>RHDP LiteMaaS</h1>
     <p>Model as a Service for Red Hat Demo Platform</p>
@@ -498,7 +502,7 @@
 
     <h3>Step 1 — Extract GPU instance costs from the CSV</h3>
     <p>The CSV had one row per AWS instance type per month. We summed each GPU instance type over the full 6-month period:</p>
-    <pre>g6e.12xlarge (L40S×4)  → $7,899 total
+    <pre data-lang="bash">g6e.12xlarge (L40S×4)  → $7,899 total
 g6e.2xlarge  (L40S×1)  → $7,365 total
 g6.2xlarge   (L4×1)    → $3,804 total
 g4dn.2xlarge (T4×1)    → $2,597 total
@@ -506,14 +510,14 @@ Total GPU cost          → $21,665</pre>
 
     <h3>Step 2 — Calculate the overhead multiplier</h3>
     <p>The total cluster cost over 6 months was <strong>$116,984</strong>. GPU nodes represent only 18.5% of that. The remaining 81.5% covers workers, control plane, database, networking, storage, and other overhead.</p>
-    <pre>Overhead multiplier = Total cluster cost / GPU cost
+    <pre data-lang="bash">Overhead multiplier = Total cluster cost / GPU cost
                     = $116,984 / $21,665
                     = 5.40x</pre>
     <p>This means for every $1 spent on GPU hardware, $4.40 goes to supporting infrastructure.</p>
 
     <h3>Step 3 — Map models to instance types</h3>
     <p>We queried the OpenShift cluster to confirm exactly which InferenceServices are running and which instance type each uses:</p>
-    <pre>oc get inferenceservice -n llm-hosting</pre>
+    <pre data-lang="bash">oc get inferenceservice -n llm-hosting</pre>
     <p>
       This confirmed exactly <strong>7 models</strong> deployed as InferenceServices in the
       <code>llm-hosting</code> namespace: granite-3-2-8b-instruct, llama-scout-17b, codellama-7b-instruct,
@@ -525,17 +529,17 @@ Total GPU cost          → $21,665</pre>
 
     <h3>Step 4 — Get token usage from the database</h3>
     <p>We queried the LiteLLM spend logs for the last 3 months:</p>
-    <pre>SELECT model, SUM(total_tokens)
+    <pre data-lang="sql">SELECT model, SUM(total_tokens)
 FROM "LiteLLM_SpendLogs"
 WHERE "startTime" >= NOW() - INTERVAL '3 months'
 GROUP BY model ORDER BY 2 DESC;</pre>
     <p>Model names were normalised (e.g. <code>openai/granite-3-2-8b-instruct</code> and <code>granite-3-2-8b-instruct</code> were combined) to get total tokens per logical model.</p>
 
     <h3>Step 5 — Calculate GPU-only $/1M tokens</h3>
-    <pre>Monthly GPU cost for model / (tokens used in 3 months / 3 / 1,000,000)</pre>
+    <pre data-lang="bash">Monthly GPU cost for model / (tokens used in 3 months / 3 / 1,000,000)</pre>
 
     <h3>Step 6 — Apply overhead multiplier</h3>
-    <pre>Full cost per 1M tokens = GPU-only cost × 5.40</pre>
+    <pre data-lang="bash">Full cost per 1M tokens = GPU-only cost × 5.40</pre>
     <p>Embedding models use input cost only (output tokens = 0). Chat models use a combined token count.</p>
 
     <div class="info-box">

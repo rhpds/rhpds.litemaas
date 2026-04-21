@@ -98,6 +98,10 @@
 <body>
 
 <header>
+  <svg width="36" height="36" viewBox="0 0 32 32" fill="none" style="flex-shrink:0" aria-hidden="true">
+    <path d="M16 2l12 7v14l-12 7L4 23V9z" stroke="rgba(255,255,255,0.55)" stroke-width="1.5" fill="rgba(255,255,255,0.1)"/>
+    <path d="M16 8l7 4v8l-7 4-7-4V12z" fill="rgba(255,255,255,0.18)"/>
+  </svg>
   <div>
     <h1>RHDP LiteMaaS</h1>
     <p>Model as a Service for Red Hat Demo Platform</p>
@@ -178,7 +182,7 @@
     </table>
 
     <h3>Upgrade LiteMaaS Backend/Frontend</h3>
-    <pre><span class="comment"># Set namespace variable</span>
+    <pre data-lang="bash"><span class="comment"># Set namespace variable</span>
 NS=litellm-rhpds
 NEW_VERSION=0.5.0
 
@@ -206,7 +210,7 @@ oc rollout status deployment/litellm-frontend -n ${NS}</pre>
     </div>
 
     <h3>Upgrade LiteLLM Proxy</h3>
-    <pre><span class="comment"># Before upgrading LiteLLM, take a database backup</span>
+    <pre data-lang="bash"><span class="comment"># Before upgrading LiteLLM, take a database backup</span>
 oc exec -n ${NS} litellm-postgres-0 -- \
   pg_dump -U litellm litellm | gzip > /tmp/litellm-pre-upgrade.sql.gz
 
@@ -223,7 +227,7 @@ oc rollout status deployment/litellm -n ${NS}
 oc logs -n ${NS} deployment/litellm --tail=50 | grep -i migrat</pre>
 
     <h3>Upgrade via Ansible (Re-deploy)</h3>
-    <pre><span class="comment"># Override image tags in your vars file, then re-run the playbook</span>
+    <pre data-lang="bash"><span class="comment"># Override image tags in your vars file, then re-run the playbook</span>
 ansible-playbook playbooks/deploy_litemaas_ha.yml \
   -e ocp4_workload_litemaas_namespace=litellm-rhpds \
   -e ocp4_workload_litemaas_litellm_tag=main-v1.85.0-stable-custom \
@@ -237,7 +241,7 @@ ansible-playbook playbooks/deploy_litemaas_ha.yml \
     <p>All three main deployments (LiteLLM, Backend, Frontend) support horizontal scaling. Scaling is stateless for Backend and Frontend; LiteLLM uses Redis for shared session state across replicas.</p>
 
     <h3>Scale LiteLLM (the most common scale target)</h3>
-    <pre><span class="comment"># Scale LiteLLM to 5 replicas</span>
+    <pre data-lang="bash"><span class="comment"># Scale LiteLLM to 5 replicas</span>
 oc scale deployment/litellm --replicas=5 -n litellm-rhpds
 
 <span class="comment"># Or via patch</span>
@@ -248,11 +252,11 @@ oc patch deployment/litellm -n litellm-rhpds \
 oc get deployment/litellm -n litellm-rhpds</pre>
 
     <h3>Scale Backend and Frontend</h3>
-    <pre>oc scale deployment/litellm-backend --replicas=3 -n litellm-rhpds
+    <pre data-lang="bash">oc scale deployment/litellm-backend --replicas=3 -n litellm-rhpds
 oc scale deployment/litellm-frontend --replicas=3 -n litellm-rhpds</pre>
 
     <h3>Check Current Scale</h3>
-    <pre>oc get deployments -n litellm-rhpds -o wide</pre>
+    <pre data-lang="bash">oc get deployments -n litellm-rhpds -o wide</pre>
 
     <div class="info-box">
       <p>
@@ -312,7 +316,7 @@ graph LR
     </ol>
 
     <h3>Setup</h3>
-    <pre><span class="comment"># Run from the rhpds.litemaas repository root</span>
+    <pre data-lang="bash"><span class="comment"># Run from the rhpds.litemaas repository root</span>
 <span class="comment"># Detects whether running on bastion (direct write) or workstation (SSH)</span>
 ./setup-key-cleanup-cronjob.sh litellm-rhpds</pre>
 
@@ -324,7 +328,7 @@ graph LR
     </ul>
 
     <h3>Manual Test Run</h3>
-    <pre><span class="comment"># Run manually (dry-run not supported — this will actually delete keys)</span>
+    <pre data-lang="bash"><span class="comment"># Run manually (dry-run not supported — this will actually delete keys)</span>
 sudo /usr/local/bin/cleanup-litemaas-keys-litellm-rhpds.sh
 
 <span class="comment"># Tail the log</span>
@@ -334,7 +338,7 @@ sudo tail -f /var/log/litemaas-key-cleanup.log
 sudo crontab -l | grep cleanup-litemaas</pre>
 
     <h3>Remove the Cronjob</h3>
-    <pre>sudo crontab -l | grep -v cleanup-litemaas-keys-litellm-rhpds.sh | sudo crontab -
+    <pre data-lang="bash">sudo crontab -l | grep -v cleanup-litemaas-keys-litellm-rhpds.sh | sudo crontab -
 sudo rm /usr/local/bin/cleanup-litemaas-keys-litellm-rhpds.sh</pre>
   </div>
 
@@ -345,7 +349,7 @@ sudo rm /usr/local/bin/cleanup-litemaas-keys-litellm-rhpds.sh</pre>
 
     <h3>Promote a User to Admin</h3>
     <p>The user must have logged in via OAuth at least once before being promoted.</p>
-    <pre><span class="comment"># Using the helper script (recommended)</span>
+    <pre data-lang="bash"><span class="comment"># Using the helper script (recommended)</span>
 ./promote-admin.sh litellm-rhpds user@redhat.com
 
 <span class="comment"># Or directly via psql</span>
@@ -360,7 +364,7 @@ oc exec -n litellm-rhpds litellm-postgres-0 -- \
   "SELECT username, email, roles FROM users WHERE 'admin' = ANY(roles);"</pre>
 
     <h3>Retrieve Credentials</h3>
-    <pre><span class="comment"># LiteMaaS admin API key</span>
+    <pre data-lang="bash"><span class="comment"># LiteMaaS admin API key</span>
 oc get secret backend-secret -n litellm-rhpds \
   -o jsonpath='{.data.ADMIN_API_KEY}' | base64 -d
 
@@ -377,7 +381,7 @@ oc get secret backend-secret -n litellm-rhpds \
 
   <div class="section" id="quick-ref">
     <h2>Quick Reference Commands</h2>
-    <pre><span class="comment"># Namespace shortcut</span>
+    <pre data-lang="bash"><span class="comment"># Namespace shortcut</span>
 NS=litellm-rhpds
 
 <span class="comment"># Get all pod status</span>
