@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LiteMaaS — AWS Bedrock Integration</title>
+  <meta name="description" content="Add AWS Bedrock as a redundant provider alongside Google Vertex AI in RHDP LiteMaaS — IAM setup, cost-based routing, OCP secret management, and model registration.">
+  <link rel="canonical" href="https://rhpds.github.io/rhpds.litemaas/docs/day2/aws-bedrock.html">
+  <link rel="stylesheet" href="../assets/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Red Hat Text', 'Segoe UI', sans-serif; background: #f5f5f5; color: #151515; line-height: 1.6; }
+    header { background: #cc0000; color: white; padding: 1.5rem 3rem; display: flex; align-items: center; gap: 1.5rem; }
+    header h1 { font-size: 1.5rem; font-weight: 700; }
+    header p { opacity: 0.85; font-size: 0.9rem; margin-top: 0.2rem; }
+    nav { background: #151515; padding: 0 3rem; display: flex; gap: 0; flex-wrap: wrap; }
+    nav a { color: #e0e0e0; text-decoration: none; padding: 0.85rem 1.2rem; font-size: 0.9rem; display: block; transition: background 0.15s; }
+    nav a:hover, nav a.active { background: #cc0000; color: white; }
+    .container { max-width: 1100px; margin: 2rem auto; padding: 0 2rem; }
+    .breadcrumb { font-size: 0.82rem; color: #666; margin-bottom: 1.5rem; }
+    .breadcrumb a { color: #cc0000; text-decoration: none; }
+    .breadcrumb a:hover { text-decoration: underline; }
+    h1.page-title { font-size: 1.8rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .page-subtitle { color: #555; margin-bottom: 2rem; font-size: 1rem; }
+    .section { background: white; border-radius: 8px; padding: 2rem; margin-bottom: 1.5rem; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+    .section h2 { font-size: 1.2rem; font-weight: 700; margin-bottom: 1rem; color: #151515; border-bottom: 2px solid #cc0000; padding-bottom: 0.5rem; }
+    .section h3 { font-size: 1rem; font-weight: 700; margin: 1.4rem 0 0.5rem; color: #333; }
+    .section p { margin-bottom: 0.8rem; color: #333; font-size: 0.92rem; }
+    .section ul, .section ol { padding-left: 1.5rem; margin-bottom: 0.8rem; }
+    .section li { margin-bottom: 0.4rem; color: #333; font-size: 0.92rem; }
+    pre { background: #1e1e1e; color: #d4d4d4; padding: 1.2rem 1.5rem; border-radius: 6px; overflow-x: auto; font-size: 0.82rem; line-height: 1.5; margin: 0.8rem 0; position: relative; }
+    pre .comment { color: #6a9955; }
+    pre .string { color: #ce9178; }
+    pre .keyword { color: #569cd6; }
+    pre .var { color: #9cdcfe; }
+    code { font-family: 'Courier New', monospace; font-size: 0.85em; background: #f0f0f0; padding: 0.1em 0.3em; border-radius: 3px; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.86rem; }
+    th { background: #151515; color: white; padding: 0.6rem 0.8rem; text-align: left; font-weight: 600; }
+    td { padding: 0.6rem 0.8rem; border-bottom: 1px solid #e8e8e8; vertical-align: top; }
+    tr:nth-child(even) { background: #f9f9f9; }
+    td code { background: #f0f0f0; padding: 0.1em 0.3em; border-radius: 3px; font-size: 0.82rem; }
+    .info-box { background: #e8f4fd; border-left: 4px solid #0066cc; padding: 1rem 1.5rem; border-radius: 0 6px 6px 0; margin: 1rem 0; }
+    .info-box p { margin: 0; font-size: 0.88rem; color: #004080; }
+    .warn-box { background: #fff8e1; border-left: 4px solid #f0a500; padding: 1rem 1.5rem; border-radius: 0 6px 6px 0; margin: 1rem 0; }
+    .warn-box p { margin: 0; font-size: 0.88rem; color: #5d3900; }
+    .ok-box { background: #e8f5e9; border-left: 4px solid #2e7d32; padding: 1rem 1.5rem; border-radius: 0 6px 6px 0; margin: 1rem 0; }
+    .ok-box p { margin: 0; font-size: 0.88rem; color: #1b5e20; }
+    .toc { background: white; border-radius: 8px; padding: 1.5rem 2rem; margin-bottom: 1.5rem; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+    .toc h3 { font-size: 0.9rem; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.8rem; }
+    .toc ul { list-style: none; padding: 0; margin: 0; }
+    .toc li { margin-bottom: 0.3rem; }
+    .toc a { color: #cc0000; text-decoration: none; font-size: 0.88rem; }
+    .toc a:hover { text-decoration: underline; }
+    .toc li li { padding-left: 1rem; }
+    .page-nav { display: flex; justify-content: space-between; margin: 2rem 0; gap: 1rem; }
+    .page-nav a { display: flex; flex-direction: column; padding: 1rem 1.5rem; background: white; border-radius: 8px; text-decoration: none; color: #151515; box-shadow: 0 1px 4px rgba(0,0,0,0.1); flex: 1; max-width: 48%; transition: box-shadow 0.15s; }
+    .page-nav a:hover { box-shadow: 0 3px 10px rgba(0,0,0,0.15); }
+    .pn-label { font-size: 0.78rem; color: #888; margin-bottom: 0.2rem; }
+    .pn-title { font-size: 0.95rem; font-weight: 600; color: #cc0000; }
+    .pn-prev { align-items: flex-start; }
+    .pn-next { align-items: flex-end; }
+    footer { background: #151515; color: #888; text-align: center; padding: 1.5rem; font-size: 0.82rem; margin-top: 2rem; }
+    .footer-updated { display: block; margin-top: 0.3rem; font-size: 0.8rem; color: #777; }
+    .nav-hamburger { display: none; background: none; border: none; color: #e0e0e0; font-size: 1.5rem; cursor: pointer; padding: 0.85rem 1.2rem; }
+    @media (max-width: 768px) {
+      header { padding: 1rem 1.5rem; }
+      nav { padding: 0; flex-direction: column; }
+      .nav-hamburger { display: block; }
+      .nav-links { display: none; flex-direction: column; width: 100%; }
+      .nav-links.open { display: flex; }
+      .nav-links a { padding: 0.7rem 1.5rem; border-top: 1px solid #2a2a2a; }
+      .container { padding: 0 1rem; }
+      .page-nav { flex-direction: column; }
+      .page-nav a { max-width: 100%; }
+    }
+    .anchor-link { opacity: 0; margin-left: 0.4rem; color: #cc0000; font-size: 0.8rem; text-decoration: none; }
+    .section h2:hover .anchor-link, .section h3:hover .anchor-link { opacity: 1; }
+    .copy-btn { position: absolute; right: 0.5rem; top: 0.5rem; background: #333; color: #ccc; border: none; border-radius: 4px; padding: 0.2rem 0.6rem; font-size: 0.75rem; cursor: pointer; opacity: 0; transition: opacity 0.15s; }
+    pre:hover .copy-btn { opacity: 1; }
+    .copy-btn.copied { background: #28a745; color: white; }
+    .back-to-top { position: fixed; bottom: 2rem; right: 2rem; background: #cc0000; color: white; border: none; border-radius: 50%; width: 2.5rem; height: 2.5rem; font-size: 1.2rem; cursor: pointer; opacity: 0; transition: opacity 0.3s; z-index: 100; }
+    .back-to-top.visible { opacity: 1; }
+    .mermaid { background: #f9f9f9; border-radius: 6px; padding: 1.2rem; margin: 1rem 0; text-align: center; overflow-x: auto; }
+    .badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 3px; font-size: 0.75rem; font-weight: 600; margin-left: 0.3rem; vertical-align: middle; }
+    .badge-pending { background: #fff8e1; color: #7a4f00; border: 1px solid #f0a500; }
+    .badge-live { background: #e8f5e9; color: #1b5e20; border: 1px solid #2e7d32; }
+    .badge-cheaper { background: #e8f4fd; color: #004080; border: 1px solid #0066cc; }
+    .badge-same { background: #f3e8fd; color: #4a0080; border: 1px solid #8800cc; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>RHDP LiteMaaS</h1>
+    <p>Model as a Service for Red Hat Demo Platform</p>
+  </div>
+</header>
+
+<nav>
+  <button class="nav-hamburger" id="navToggle" aria-label="Toggle navigation">&#9776;</button>
+  <div class="nav-links" id="navLinks">
+    <a href="../index.html">Home</a>
+    <a href="../architecture.html">Architecture</a>
+    <a href="../product/overview.html">Overview</a>
+    <a href="../product/models.html">Models</a>
+    <a href="../install/deployment.html">Install</a>
+    <a href="operations.html">Day-2</a>
+    <a href="model-routing.html">Model Routing</a>
+    <a href="model-management.html">Model Management</a>
+    <a href="guardrails.html">Guardrails</a>
+    <a href="analytics.html">Analytics &amp; Backup</a>
+    <a href="cost-analysis.html">Cost Analysis</a>
+    <a href="mcp.html">Claude Code MCP</a>
+    <a href="vertex-ai.html">Vertex AI</a>
+    <a href="aws-bedrock.html">AWS Bedrock</a>
+    <a href="vertex-ai.html">Vertex AI</a>
+    <a href="aws-bedrock.html" class="active">AWS Bedrock</a>
+    <a href="../monitoring.html">Monitoring</a>
+    <a href="../infrastructure.html">Infrastructure</a>
+    <a href="../troubleshooting/common.html">Troubleshooting</a>
+  </div>
+</nav>
+
+<div class="container">
+
+  <div class="breadcrumb">
+    <a href="../index.html">Home</a> / <a href="operations.html">Day-2</a> / AWS Bedrock
+  </div>
+
+  <h1 class="page-title">AWS Bedrock Integration</h1>
+  <p class="page-subtitle">Add AWS Bedrock as a redundant provider alongside Google Vertex AI — same model names, transparent cost-based failover, zero user-facing change.</p>
+
+  <div class="toc">
+    <h3>On This Page</h3>
+    <ul>
+      <li><a href="#overview">Overview &amp; Goals</a></li>
+      <li><a href="#models">Models on Bedrock</a>
+        <ul>
+          <li><a href="#pricing-comparison">Pricing Comparison</a></li>
+          <li><a href="#claude-pending">Claude Models (Pending)</a></li>
+        </ul>
+      </li>
+      <li><a href="#request-flow">Request Flow</a></li>
+      <li><a href="#iam">IAM Setup</a>
+        <ul>
+          <li><a href="#iam-policy">IAM Policy</a></li>
+          <li><a href="#arn-lesson">ARN Lesson: Inference Profiles vs Foundation Models</a></li>
+        </ul>
+      </li>
+      <li><a href="#ocp-credentials">OCP Credentials</a></li>
+      <li><a href="#router">Cost-Based Router Configuration</a></li>
+      <li><a href="#model-registration">Registering Bedrock Models</a></li>
+      <li><a href="#master-key-rotation">Master Key Rotation Gotcha</a></li>
+    </ul>
+  </div>
+
+  <!-- Overview -->
+  <div class="section" id="overview">
+    <h2>Overview &amp; Goals</h2>
+    <p>AWS Bedrock was added as a second provider for four existing LiteMaaS models, all of which already ran on Google Vertex AI. The integration is completely transparent to users — they continue to call the same model names (<code>gpt-oss-120b</code>, <code>gpt-oss-20b</code>, <code>minimax-m2</code>, <code>qwen3-235b</code>) and LiteLLM routes between Vertex and Bedrock automatically using cost-based routing.</p>
+
+    <table>
+      <thead>
+        <tr><th>Property</th><th>Value</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Cluster</td><td><code>maas.redhatworkshops.io</code></td></tr>
+        <tr><td>Namespace</td><td><code>litellm-rhpds</code></td></tr>
+        <tr><td>AWS Region</td><td><code>us-west-2</code></td></tr>
+        <tr><td>IAM User</td><td><code>litemaas-bedrock-user</code></td></tr>
+        <tr><td>IAM Policy</td><td><code>litemaas-bedrock-policy</code></td></tr>
+        <tr><td>OCP Secret</td><td><code>litellm-aws-bedrock</code></td></tr>
+        <tr><td>Routing strategy</td><td>Cost-based routing (LiteLLM built-in)</td></tr>
+      </tbody>
+    </table>
+
+    <div class="ok-box"><p><strong>User-facing impact: none.</strong> Because Bedrock models are registered under the same <code>model_name</code> as their Vertex counterparts, they do not appear as separate entries in the LiteMaaS UI or API. LiteLLM groups them automatically and routes between them.</p></div>
+  </div>
+
+  <!-- Models -->
+  <div class="section" id="models">
+    <h2>Models on Bedrock</h2>
+    <p>Four models are now backed by both Vertex AI and AWS Bedrock. The Bedrock model IDs are the native identifiers used in the <code>litellm_params.model</code> field (prefixed with <code>bedrock/</code>).</p>
+
+    <h3 id="pricing-comparison">Pricing Comparison</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>LiteMaaS model_name</th>
+          <th>Bedrock model ID</th>
+          <th>Vertex pricing (in / out per 1M)</th>
+          <th>Bedrock pricing (in / out per 1M)</th>
+          <th>Router preference</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>gpt-oss-120b</code></td>
+          <td><code>openai.gpt-oss-120b-1:0</code></td>
+          <td>$0.09 / $0.36</td>
+          <td>$0.15 / $0.60</td>
+          <td><span class="badge badge-cheaper">Vertex (cheaper)</span></td>
+        </tr>
+        <tr>
+          <td><code>gpt-oss-20b</code></td>
+          <td><code>openai.gpt-oss-20b-1:0</code></td>
+          <td>$0.07 / $0.25</td>
+          <td>$0.07 / $0.30</td>
+          <td><span class="badge badge-cheaper">Vertex (cheaper)</span></td>
+        </tr>
+        <tr>
+          <td><code>minimax-m2</code></td>
+          <td><code>minimax.minimax-m2</code></td>
+          <td>$0.30 / $1.20</td>
+          <td>$0.30 / $1.20</td>
+          <td><span class="badge badge-same">Either (same price)</span></td>
+        </tr>
+        <tr>
+          <td><code>qwen3-235b</code></td>
+          <td><code>qwen.qwen3-235b-a22b-2507-v1:0</code></td>
+          <td>$0.22 / $0.88</td>
+          <td>$0.22 / $0.88</td>
+          <td><span class="badge badge-same">Either (same price)</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>For <code>gpt-oss-120b</code> and <code>gpt-oss-20b</code>, Vertex AI is consistently cheaper so the cost-based router will always prefer it and use Bedrock only as a fallback. For <code>minimax-m2</code> and <code>qwen3-235b</code> the prices are identical and the router may use either provider freely.</p>
+
+    <h3 id="claude-pending">Claude Models (Pending Access Approval)</h3>
+    <p>The <code>claude-sonnet-4-6</code> and <code>claude-opus-4-6</code> models are awaiting AWS Bedrock model access approval. Once granted, they will be added using the following ARN patterns:</p>
+
+    <table>
+      <thead>
+        <tr><th>ARN type</th><th>Pattern</th><th>Notes</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>System inference profile</td>
+          <td><code>arn:aws:bedrock:*:809721187735:inference-profile/us.anthropic.claude-*</code></td>
+          <td>Account ID required; <code>*</code> for region enables cross-region routing</td>
+        </tr>
+        <tr>
+          <td>Foundation model (cross-region)</td>
+          <td><code>arn:aws:bedrock:*::foundation-model/anthropic.claude-*</code></td>
+          <td>Double colon, no account ID; required alongside the inference profile ARN</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="warn-box"><p><strong>Both ARN types must be in the IAM policy for Claude cross-region inference to work.</strong> Adding only the inference profile ARN will cause <code>AccessDeniedException</code> when Bedrock attempts cross-region routing to foundation model endpoints. See the <a href="#arn-lesson">ARN lesson</a> section below.</p></div>
+  </div>
+
+  <!-- Request Flow -->
+  <div class="section" id="request-flow">
+    <h2>Request Flow</h2>
+    <p>The diagram below shows how a request for <code>gpt-oss-120b</code> is handled end-to-end. The user sees a single model; LiteLLM transparently selects the cheaper backend for each request.</p>
+
+    <div class="mermaid">
+flowchart LR
+    User([User / Workshop]) -->|model: gpt-oss-120b| LiteMaaS[LiteMaaS Frontend]
+    LiteMaaS --> LiteLLM[LiteLLM Proxy]
+    LiteLLM --> Router{Cost-Based Router}
+    Router -->|"preferred: $0.09/1M in"| VertexAI["Google Vertex AI\ngpt-oss-120b-maas"]
+    Router -->|"fallback: $0.15/1M in"| Bedrock["AWS Bedrock\nopenai.gpt-oss-120b-1:0"]
+    VertexAI -->|response| Router
+    Bedrock -->|response| Router
+    Router --> LiteLLM
+    </div>
+
+    <p>Failover is automatic. When a backend accumulates <code>allowed_fails: 2</code> failures, it enters a cooldown period of 60 seconds and all traffic shifts to the other provider. No manual intervention is required.</p>
+  </div>
+
+  <!-- IAM Setup -->
+  <div class="section" id="iam">
+    <h2>IAM Setup</h2>
+    <p>A dedicated IAM user (<code>litemaas-bedrock-user</code>) was created with a minimal policy (<code>litemaas-bedrock-policy</code>) scoped to exactly the actions and resources LiteLLM requires.</p>
+
+    <h3 id="iam-policy">IAM Policy (Final Correct Version)</h3>
+    <p>The policy grants <code>InvokeModel</code> and <code>InvokeModelWithResponseStream</code> only on the specific Bedrock model ARNs in use, plus list permissions on <code>*</code> (required by LiteLLM's health-check path).</p>
+
+    <pre>{
+  <span class="string">"Version"</span>: <span class="string">"2012-10-17"</span>,
+  <span class="string">"Statement"</span>: [
+    {
+      <span class="string">"Effect"</span>: <span class="string">"Allow"</span>,
+      <span class="string">"Action"</span>: [
+        <span class="string">"bedrock:InvokeModel"</span>,
+        <span class="string">"bedrock:InvokeModelWithResponseStream"</span>
+      ],
+      <span class="string">"Resource"</span>: [
+        <span class="comment">// Claude inference profiles (account-scoped, cross-region) — pending access</span>
+        <span class="string">"arn:aws:bedrock:*:ACCOUNT_ID:inference-profile/us.anthropic.claude-*"</span>,
+        <span class="string">"arn:aws:bedrock:*:ACCOUNT_ID:inference-profile/global.anthropic.claude-*"</span>,
+        <span class="comment">// Claude foundation models (no account ID) — required for cross-region routing</span>
+        <span class="string">"arn:aws:bedrock:*::foundation-model/anthropic.claude-*"</span>,
+        <span class="comment">// Currently active non-Claude models</span>
+        <span class="string">"arn:aws:bedrock:us-west-2::foundation-model/openai.gpt-oss-120b-1:0"</span>,
+        <span class="string">"arn:aws:bedrock:us-west-2::foundation-model/openai.gpt-oss-20b-1:0"</span>,
+        <span class="string">"arn:aws:bedrock:us-west-2::foundation-model/minimax.minimax-m2"</span>,
+        <span class="string">"arn:aws:bedrock:us-west-2::foundation-model/qwen.qwen3-235b-a22b-2507-v1:0"</span>
+      ]
+    },
+    {
+      <span class="string">"Effect"</span>: <span class="string">"Allow"</span>,
+      <span class="string">"Action"</span>: [
+        <span class="string">"bedrock:ListFoundationModels"</span>,
+        <span class="string">"bedrock:ListInferenceProfiles"</span>
+      ],
+      <span class="string">"Resource"</span>: <span class="string">"*"</span>
+    }
+  ]
+}</pre>
+
+    <div class="info-box"><p>Replace <code>ACCOUNT_ID</code> with the actual AWS account number (<code>809721187735</code> for the RHDP prod account). The non-Claude models use foundation model ARNs with a double colon and no account ID — this is expected for public Bedrock foundation models.</p></div>
+
+    <h3 id="arn-lesson">ARN Lesson: Inference Profiles vs Foundation Models</h3>
+    <p>Bedrock ARN formats differ significantly depending on whether you are using a system inference profile or a foundation model directly. Getting this wrong produces silent <code>AccessDeniedException</code> errors that are hard to trace.</p>
+
+    <table>
+      <thead>
+        <tr><th>ARN type</th><th>Has account ID?</th><th>Region field</th><th>Example</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>System inference profile (Claude <code>us.*</code> / <code>global.*</code>)</td>
+          <td>Yes</td>
+          <td>Use <code>*</code> for cross-region</td>
+          <td><code>arn:aws:bedrock:*:809721187735:inference-profile/us.anthropic.claude-*</code></td>
+        </tr>
+        <tr>
+          <td>Foundation model (public, e.g. Claude base, OpenAI-compat, Qwen)</td>
+          <td>No (double colon)</td>
+          <td>Specific region or <code>*</code></td>
+          <td><code>arn:aws:bedrock:us-west-2::foundation-model/openai.gpt-oss-120b-1:0</code></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="warn-box"><p><strong>For Claude cross-region inference you need both ARN types in the policy.</strong> The inference profile ARN authorises the initial call. Bedrock then internally routes to a foundation model endpoint in another region — and that second hop requires the foundation model ARN (<code>arn:aws:bedrock:*::foundation-model/anthropic.claude-*</code>) to also be allowed. Omitting either one causes access errors.</p></div>
+  </div>
+
+  <!-- OCP Credentials -->
+  <div class="section" id="ocp-credentials">
+    <h2>OCP Credentials</h2>
+    <p>AWS credentials are stored as an OpenShift Secret in the <code>litellm-rhpds</code> namespace and mounted as environment variables on the <code>litellm</code> Deployment. This approach keeps credentials out of the ConfigMap and out of the LiteLLM database entirely.</p>
+
+    <div class="mermaid">
+flowchart TD
+    IAM["AWS IAM\nlitemaas-bedrock-user\nAccess Key + Secret"] -->|stored in| Secret["OCP Secret\nlitellm-aws-bedrock\n(litellm-rhpds namespace)"]
+    Secret -->|oc set env --from| Deployment["litellm Deployment\nenv: AWS_ACCESS_KEY_ID\nenv: AWS_SECRET_ACCESS_KEY\nenv: AWS_REGION"]
+    Deployment -->|boto3 picks up env vars| LiteLLM["LiteLLM Proxy\nbedrock/openai.gpt-oss-120b-1:0"]
+    LiteLLM -->|SigV4 signed request| Bedrock["AWS Bedrock\nus-west-2"]
+    </div>
+
+    <h3>Create and Mount the Secret</h3>
+    <pre><span class="comment"># Create the secret from literals (never commit actual values)</span>
+oc create secret generic litellm-aws-bedrock \
+  --from-literal=AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE \
+  --from-literal=AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY \
+  --from-literal=AWS_REGION=us-west-2 \
+  -n litellm-rhpds
+
+<span class="comment"># Mount all keys from the secret as environment variables</span>
+oc set env deployment/litellm \
+  --from=secret/litellm-aws-bedrock \
+  -n litellm-rhpds
+
+<span class="comment"># Verify the env vars are present on the new pod</span>
+oc exec -n litellm-rhpds deployment/litellm -- env | grep AWS</pre>
+
+    <div class="info-box"><p>LiteLLM's Bedrock provider uses the standard boto3 credential chain. When <code>AWS_ACCESS_KEY_ID</code> and <code>AWS_SECRET_ACCESS_KEY</code> are set as environment variables, boto3 picks them up automatically — no additional LiteLLM configuration is needed for authentication.</p></div>
+
+    <div class="warn-box"><p><strong>Do not store AWS credentials in the LiteLLM ConfigMap or in model <code>litellm_params</code>.</strong> Anything in the ConfigMap is readable by anyone with <code>oc get configmap</code> access. The OCP Secret is the correct place.</p></div>
+  </div>
+
+  <!-- Router Configuration -->
+  <div class="section" id="router">
+    <h2>Cost-Based Router Configuration</h2>
+    <p>LiteLLM groups all deployments that share the same <code>model_name</code> (e.g., the Vertex <code>gpt-oss-120b</code> and the Bedrock <code>gpt-oss-120b</code>) and routes between them based on the registered cost per token. The router configuration lives in the <code>litellm-router-config</code> ConfigMap.</p>
+
+    <pre><span class="comment"># litellm-router-config ConfigMap — relevant router_settings block</span>
+<span class="var">router_settings</span>:
+  <span class="var">routing_strategy</span>: cost-based-routing
+  <span class="var">num_retries</span>: 3
+  <span class="var">retry_after</span>: 5
+  <span class="var">allowed_fails</span>: 2
+  <span class="var">cooldown_time</span>: 60</pre>
+
+    <h3>How Cost-Based Routing Works</h3>
+    <ol>
+      <li>For each incoming request, LiteLLM estimates the cost of sending that request to every available backend: <code>cost = input_tokens × input_cost_per_token + output_tokens × output_cost_per_token</code>.</li>
+      <li>It selects the backend with the lowest estimated cost. For <code>gpt-oss-120b</code>, Vertex AI wins because $0.09/1M &lt; $0.15/1M (input).</li>
+      <li>If the chosen backend returns an error or times out, LiteLLM retries on the next cheapest backend (Bedrock in this case).</li>
+      <li>After <code>allowed_fails: 2</code> failures, the backend enters a cooldown for <code>cooldown_time: 60</code> seconds. During cooldown, all traffic for that model automatically shifts to the other provider.</li>
+      <li>After the cooldown expires, the backend is re-evaluated on the next request.</li>
+    </ol>
+
+    <table>
+      <thead>
+        <tr><th>Setting</th><th>Value</th><th>Effect</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>routing_strategy</code></td><td><code>cost-based-routing</code></td><td>Picks cheapest backend per request</td></tr>
+        <tr><td><code>num_retries</code></td><td><code>3</code></td><td>Up to 3 retry attempts per request across backends</td></tr>
+        <tr><td><code>retry_after</code></td><td><code>5</code></td><td>Wait 5 seconds between retry attempts</td></tr>
+        <tr><td><code>allowed_fails</code></td><td><code>2</code></td><td>Backend enters cooldown after 2 consecutive failures</td></tr>
+        <tr><td><code>cooldown_time</code></td><td><code>60</code></td><td>Failed backend excluded for 60 seconds</td></tr>
+      </tbody>
+    </table>
+
+    <div class="ok-box"><p><strong>The routing is entirely automatic.</strong> No operator action is needed when a provider has an outage — traffic shifts within seconds of hitting the <code>allowed_fails</code> threshold.</p></div>
+  </div>
+
+  <!-- Model Registration -->
+  <div class="section" id="model-registration">
+    <h2>Registering Bedrock Models</h2>
+    <p>Each Bedrock backend is registered via the LiteLLM admin API using the same <code>model_name</code> as the existing Vertex AI deployment. This is the key to transparent dual-provider routing — LiteLLM uses <code>model_name</code> as the grouping key for the router.</p>
+
+    <div class="info-box"><p><strong>Why the same model_name matters.</strong> Users and workshops send requests to <code>gpt-oss-120b</code>. LiteLLM internally resolves this to all deployments registered under that name — both Vertex and Bedrock. Registering under a different name (e.g., <code>gpt-oss-120b-bedrock</code>) would expose it as a separate, user-visible model, which is not the goal.</p></div>
+
+    <h3>Register gpt-oss-120b on Bedrock</h3>
+    <pre><span class="comment"># Register the Bedrock backend for gpt-oss-120b</span>
+<span class="comment"># Note: model_name matches the existing Vertex AI deployment exactly</span>
+curl -X POST <span class="string">"https://litellm-prod.apps.maas.redhatworkshops.io/model/new"</span> \
+  -H <span class="string">"Authorization: Bearer $MASTER_KEY"</span> \
+  -H <span class="string">"Content-Type: application/json"</span> \
+  -d <span class="string">'{
+    "model_name": "gpt-oss-120b",
+    "litellm_params": {
+      "model": "bedrock/openai.gpt-oss-120b-1:0",
+      "aws_region_name": "us-west-2"
+    },
+    "model_info": {
+      "input_cost_per_token": 1.5e-07,
+      "output_cost_per_token": 6e-07
+    }
+  }'</span></pre>
+
+    <h3>Register gpt-oss-20b on Bedrock</h3>
+    <pre>curl -X POST <span class="string">"https://litellm-prod.apps.maas.redhatworkshops.io/model/new"</span> \
+  -H <span class="string">"Authorization: Bearer $MASTER_KEY"</span> \
+  -H <span class="string">"Content-Type: application/json"</span> \
+  -d <span class="string">'{
+    "model_name": "gpt-oss-20b",
+    "litellm_params": {
+      "model": "bedrock/openai.gpt-oss-20b-1:0",
+      "aws_region_name": "us-west-2"
+    },
+    "model_info": {
+      "input_cost_per_token": 7e-08,
+      "output_cost_per_token": 3e-07
+    }
+  }'</span></pre>
+
+    <h3>Register minimax-m2 on Bedrock</h3>
+    <pre>curl -X POST <span class="string">"https://litellm-prod.apps.maas.redhatworkshops.io/model/new"</span> \
+  -H <span class="string">"Authorization: Bearer $MASTER_KEY"</span> \
+  -H <span class="string">"Content-Type: application/json"</span> \
+  -d <span class="string">'{
+    "model_name": "minimax-m2",
+    "litellm_params": {
+      "model": "bedrock/minimax.minimax-m2",
+      "aws_region_name": "us-west-2"
+    },
+    "model_info": {
+      "input_cost_per_token": 3e-07,
+      "output_cost_per_token": 1.2e-06
+    }
+  }'</span></pre>
+
+    <h3>Register qwen3-235b on Bedrock</h3>
+    <pre>curl -X POST <span class="string">"https://litellm-prod.apps.maas.redhatworkshops.io/model/new"</span> \
+  -H <span class="string">"Authorization: Bearer $MASTER_KEY"</span> \
+  -H <span class="string">"Content-Type: application/json"</span> \
+  -d <span class="string">'{
+    "model_name": "qwen3-235b",
+    "litellm_params": {
+      "model": "bedrock/qwen.qwen3-235b-a22b-2507-v1:0",
+      "aws_region_name": "us-west-2"
+    },
+    "model_info": {
+      "input_cost_per_token": 2.2e-07,
+      "output_cost_per_token": 8.8e-07
+    }
+  }'</span></pre>
+
+    <h3>Verify Registration</h3>
+    <pre><span class="comment"># List all registered model deployments — both Vertex and Bedrock should appear</span>
+<span class="comment"># under the same model_name entries</span>
+curl -s <span class="string">"https://litellm-prod.apps.maas.redhatworkshops.io/model/info"</span> \
+  -H <span class="string">"Authorization: Bearer $MASTER_KEY"</span> | jq <span class="string">'.data[] | {model_name, provider: .litellm_params.model}'</span></pre>
+
+    <div class="info-box"><p>Cost values in the <code>model_info</code> block use per-token pricing (not per-1M). To convert: $0.15 per 1M tokens = <code>1.5e-07</code> per token. LiteLLM uses these values at runtime to compute the expected cost of each request before dispatching it.</p></div>
+  </div>
+
+  <!-- Master Key Rotation -->
+  <div class="section" id="master-key-rotation">
+    <h2>Master Key Rotation Gotcha</h2>
+    <p>LiteLLM encrypts all sensitive model parameters — <code>api_key</code>, <code>api_base</code>, <code>vertex_credentials</code>, and similar fields — in the database using the master key as the encryption key. This has an important operational implication.</p>
+
+    <div class="warn-box"><p><strong>Rotating the master key without re-encrypting DB entries will silently break all models.</strong> LiteLLM will fail to decrypt the stored credentials, log no obvious error, and simply not load the model backends. The UI may show models as available but all calls will fail.</p></div>
+
+    <h3>Safe Master Key Rotation Procedure</h3>
+    <ol>
+      <li><strong>Export all model configurations</strong> before changing the key while the old key is still active:</li>
+    </ol>
+    <pre><span class="comment"># Export all model configs to a local file while old key is active</span>
+curl -s <span class="string">"https://litellm-prod.apps.maas.redhatworkshops.io/model/info"</span> \
+  -H <span class="string">"Authorization: Bearer $OLD_MASTER_KEY"</span> \
+  | jq <span class="string">'.data'</span> > model-backup.json</pre>
+
+    <ol start="2">
+      <li><strong>Delete all model entries</strong> from the database (still using the old key).</li>
+      <li><strong>Rotate the master key</strong> — update the OCP Secret or environment variable that holds <code>LITELLM_MASTER_KEY</code> and restart the deployment.</li>
+      <li><strong>Re-register all models</strong> from the exported backup using the new key. This re-encrypts every entry with the new master key.</li>
+    </ol>
+
+    <pre><span class="comment"># After rotating the key, re-register models from backup</span>
+<span class="comment"># (loop over the exported JSON and POST each entry)</span>
+jq -c <span class="string">'.[]'</span> model-backup.json | while read model; do
+  curl -X POST <span class="string">"https://litellm-prod.apps.maas.redhatworkshops.io/model/new"</span> \
+    -H <span class="string">"Authorization: Bearer $NEW_MASTER_KEY"</span> \
+    -H <span class="string">"Content-Type: application/json"</span> \
+    -d <span class="string">"$model"</span>
+done</pre>
+
+    <div class="info-box"><p>The AWS credentials used for Bedrock are stored as OCP Secret environment variables and are therefore <em>not</em> encrypted by the LiteLLM master key. They are unaffected by key rotation. Only the model entries registered via the <code>/model/new</code> API (which may include Vertex AI credentials) need to be re-registered.</p></div>
+  </div>
+
+  <div class="page-nav">
+    <a href="vertex-ai.html" class="pn-prev">
+      <span class="pn-label">&larr; Previous</span>
+      <span class="pn-title">Vertex AI</span>
+    </a>
+    <a href="model-routing.html" class="pn-next">
+      <span class="pn-label">Next &rarr;</span>
+      <span class="pn-title">Model Routing</span>
+    </a>
+  </div>
+
+</div>
+
+<footer>
+  <p>RHDP LiteMaaS Documentation &mdash; Red Hat Demo Platform &mdash; maas.redhatworkshops.io</p>
+  <span class="footer-updated">Last updated: April 2026</span>
+</footer>
+
+<button class="back-to-top" id="backToTop" title="Back to top">&#8679;</button>
+
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'neutral', flowchart: { useMaxWidth: true } });
+
+  document.getElementById('navToggle').addEventListener('click', function() {
+    document.getElementById('navLinks').classList.toggle('open');
+  });
+
+  var btt = document.getElementById('backToTop');
+  window.addEventListener('scroll', function() {
+    btt.classList.toggle('visible', window.scrollY > 400);
+  });
+  btt.addEventListener('click', function() { window.scrollTo({ top: 0, behavior: 'smooth' }); });
+
+  document.querySelectorAll('pre').forEach(function(pre) {
+    var btn = document.createElement('button');
+    btn.className = 'copy-btn'; btn.textContent = 'Copy';
+    btn.addEventListener('click', function() {
+      navigator.clipboard.writeText(pre.innerText).then(function() {
+        btn.textContent = 'Copied!'; btn.classList.add('copied');
+        setTimeout(function() { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+      });
+    });
+    pre.appendChild(btn);
+  });
+
+  document.querySelectorAll('.section h2, .section h3').forEach(function(h) {
+    if (!h.id) h.id = h.textContent.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    var a = document.createElement('a');
+    a.className = 'anchor-link'; a.href = '#' + h.id; a.textContent = '#'; a.setAttribute('aria-label', 'Link to section');
+    h.appendChild(a);
+  });
+</script>
+
+</body>
+</html>
