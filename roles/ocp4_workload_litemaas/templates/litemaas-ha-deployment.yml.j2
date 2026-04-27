@@ -31,6 +31,7 @@ spec:
         component: ai-proxy
     spec:
       initContainers:
+{% if not (ocp4_workload_litemaas_external_db_enabled | default(false) | bool) %}
         - name: wait-for-postgres
           image: busybox:1.36
           command:
@@ -42,6 +43,7 @@ spec:
                 sleep 2
               done
               echo "PostgreSQL is ready"
+{% endif %}
         - name: wait-for-redis
           image: busybox:1.36
           command:
@@ -93,9 +95,9 @@ spec:
             - name: REDIS_PORT
               value: "6379"
             - name: DB_HOST
-              value: "litellm-postgres"
+              value: "{{ ocp4_workload_litemaas_external_db_host | default('litellm-postgres') }}"
             - name: DB_PORT
-              value: "5432"
+              value: "{{ ocp4_workload_litemaas_external_db_port | default('5432') }}"
             - name: DB_NAME
               valueFrom:
                 secretKeyRef:
