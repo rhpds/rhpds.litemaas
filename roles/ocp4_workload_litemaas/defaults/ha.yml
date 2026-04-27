@@ -21,6 +21,16 @@ ocp4_workload_litemaas_ha_postgres_user: "litellm"
 ocp4_workload_litemaas_ha_postgres_password: "{{ lookup('password', '/dev/null length=32 chars=ascii_letters,digits') }}"
 ocp4_workload_litemaas_ha_postgres_pvc_size: "10Gi"
 
+# External database configuration (e.g., AWS RDS)
+# When enabled, skips PostgreSQL StatefulSet deployment
+ocp4_workload_litemaas_external_db_enabled: false
+ocp4_workload_litemaas_external_db_host: ""
+ocp4_workload_litemaas_external_db_port: "5432"
+ocp4_workload_litemaas_external_db_name: "litellm"
+ocp4_workload_litemaas_external_db_user: "litellm"
+ocp4_workload_litemaas_external_db_password: ""
+ocp4_workload_litemaas_external_db_sslmode: "require"
+
 # Resource limits for HA deployment
 ocp4_workload_litemaas_ha_litellm_memory_request: "1Gi"
 ocp4_workload_litemaas_ha_litellm_memory_limit: "4Gi"
