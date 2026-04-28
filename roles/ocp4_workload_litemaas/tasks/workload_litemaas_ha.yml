@@ -29,7 +29,9 @@
           deployment-mode: ha
 
 - name: Deploy PostgreSQL 16 database
-  when: ocp4_workload_litemaas_ha_enable_postgres | bool
+  when:
+    - ocp4_workload_litemaas_ha_enable_postgres | bool
+    - not (ocp4_workload_litemaas_external_db_enabled | default(false) | bool)
   block:
     - name: Check if Red Hat PostgreSQL image is accessible
       kubernetes.core.k8s:
@@ -90,6 +92,29 @@
         - r_postgres_pods.resources[0].status.phase == "Running"
       retries: 30
       delay: 10
+
+- name: Configure external database connection
+  when: ocp4_workload_litemaas_external_db_enabled | default(false) | bool
+  block:
+    - name: Create database secret for external DB
+      kubernetes.core.k8s:
+        state: present
+        namespace: "{{ _litemaas_ha_namespace }}"
+        definition:
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: litemaas-db
+            labels:
+              app: litellm-postgres
+              component: database
+          type: Opaque
+          stringData:
+            username: "{{ ocp4_workload_litemaas_external_db_user }}"
+            password: "{{ ocp4_workload_litemaas_external_db_password }}"
+            database: "{{ ocp4_workload_litemaas_external_db_name }}"
+            DATABASE_URL: >-
+              postgresql://{{ ocp4_workload_litemaas_external_db_user }}:{{ ocp4_workload_litemaas_external_db_password }}@{{ ocp4_workload_litemaas_external_db_host }}:{{ ocp4_workload_litemaas_external_db_port }}/{{ ocp4_workload_litemaas_external_db_name }}?sslmode={{ ocp4_workload_litemaas_external_db_sslmode }}
 
 - name: Deploy Redis cache
   when: ocp4_workload_litemaas_ha_enable_redis | bool

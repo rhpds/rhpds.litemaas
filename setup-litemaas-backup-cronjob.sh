@@ -80,10 +80,24 @@ if ! oc get namespace "$NAMESPACE" &> /dev/null; then
     exit 1
 fi
 
-# Check if PostgreSQL exists
-if ! oc get statefulset litellm-postgres -n "$NAMESPACE" &> /dev/null; then
-    echo "ERROR: PostgreSQL StatefulSet not found in namespace '$NAMESPACE'"
+# Detect database mode (internal StatefulSet or external RDS)
+DB_HOST=$(oc get secret litemaas-db -n "$NAMESPACE" -o jsonpath='{.data.DATABASE_URL}' 2>/dev/null | base64 -d | sed -n 's|.*@\([^:]*\):.*|\1|p')
+
+if [ -z "$DB_HOST" ]; then
+    echo "ERROR: Secret 'litemaas-db' not found in namespace '$NAMESPACE'"
     exit 1
+fi
+
+if [ "$DB_HOST" = "litellm-postgres" ]; then
+    DB_MODE="internal"
+    if ! oc get statefulset litellm-postgres -n "$NAMESPACE" &> /dev/null; then
+        echo "ERROR: PostgreSQL StatefulSet not found in namespace '$NAMESPACE'"
+        exit 1
+    fi
+else
+    DB_MODE="external"
+    echo "External database detected: $DB_HOST"
+    echo "Backup will use direct pg_dump (no VolumeSnapshot)"
 fi
 
 echo "Creating backup script on bastion..."
@@ -122,32 +136,47 @@ echo ""
 mkdir -p "$BACKUP_DIR"
 
 # ============================================
-# 1. PostgreSQL Backup (pg_dump via oc exec)
+# 1. PostgreSQL Backup (pg_dump)
 # ============================================
 echo ">>> PostgreSQL backup starting..."
-
-# Get PostgreSQL pod name
-DB_POD=$(oc get pods -n "$NAMESPACE" -l app=litellm-postgres -o jsonpath='\''{.items[0].metadata.name}'\'')
-
-if [ -z "$DB_POD" ]; then
-    echo "ERROR: PostgreSQL pod not found"
-    exit 1
-fi
-
-echo "Database pod: $DB_POD"
 
 # Get database credentials from secret
 DB_USER=$(oc get secret litemaas-db -n "$NAMESPACE" -o jsonpath='\''{.data.username}'\'' | base64 -d)
 DB_PASSWORD=$(oc get secret litemaas-db -n "$NAMESPACE" -o jsonpath='\''{.data.password}'\'' | base64 -d)
 DB_NAME=$(oc get secret litemaas-db -n "$NAMESPACE" -o jsonpath='\''{.data.database}'\'' | base64 -d)
+DATABASE_URL=$(oc get secret litemaas-db -n "$NAMESPACE" -o jsonpath='\''{.data.DATABASE_URL}'\'' | base64 -d)
+
+# Detect if database is internal (container) or external (RDS)
+DB_HOST=$(echo "$DATABASE_URL" | sed -n '\''s|.*@\([^:]*\):.*|\1|p'\'')
+DB_PORT=$(echo "$DATABASE_URL" | sed -n '\''s|.*:\([0-9]*\)/.*|\1|p'\'')
 
 echo "Database: $DB_NAME"
-echo "Performing pg_dump..."
+echo "Host: $DB_HOST"
 
-# Run pg_dump inside the PostgreSQL pod and save to bastion
-oc exec "$DB_POD" -n "$NAMESPACE" -- bash -c \
-  "PGPASSWORD='\''$DB_PASSWORD'\'' pg_dump -U $DB_USER -d $DB_NAME --clean --if-exists" \
-  > "$BACKUP_DIR/database-$(date +%Y%m%d-%H%M%S).sql"
+if [ "$DB_HOST" = "litellm-postgres" ]; then
+    echo "Mode: internal (oc exec)"
+
+    DB_POD=$(oc get pods -n "$NAMESPACE" -l app=litellm-postgres -o jsonpath='\''{.items[0].metadata.name}'\'')
+
+    if [ -z "$DB_POD" ]; then
+        echo "ERROR: PostgreSQL pod not found"
+        exit 1
+    fi
+
+    echo "Database pod: $DB_POD"
+    echo "Performing pg_dump via oc exec..."
+
+    oc exec "$DB_POD" -n "$NAMESPACE" -- bash -c \
+      "PGPASSWORD='\''$DB_PASSWORD'\'' pg_dump -U $DB_USER -d $DB_NAME --clean --if-exists" \
+      > "$BACKUP_DIR/database-$(date +%Y%m%d-%H%M%S).sql"
+else
+    echo "Mode: external (direct pg_dump to $DB_HOST:$DB_PORT)"
+    echo "Performing pg_dump..."
+
+    PGPASSWORD="$DB_PASSWORD" pg_dump -h "$DB_HOST" -p "$DB_PORT" \
+      -U "$DB_USER" -d "$DB_NAME" --clean --if-exists \
+      > "$BACKUP_DIR/database-$(date +%Y%m%d-%H%M%S).sql"
+fi
 
 # Compress the SQL dump
 gzip "$BACKUP_DIR/database-"*.sql
@@ -158,21 +187,19 @@ DB_BACKUP_SIZE=$(du -h "$DB_BACKUP_FILE" | cut -f1)
 echo "✓ Database backup created: $(basename $DB_BACKUP_FILE) ($DB_BACKUP_SIZE)"
 
 # ============================================
-# 2. PVC Snapshot (using VolumeSnapshot in OpenShift)
+# 2. PVC Snapshot (only for internal PostgreSQL)
 # ============================================
-echo ""
-echo ">>> Creating PVC snapshot..."
+if [ "$DB_HOST" = "litellm-postgres" ]; then
+    echo ""
+    echo ">>> Creating PVC snapshot..."
 
-# Get PVC name
-PVC_NAME=$(oc get pvc -n "$NAMESPACE" -l app=litellm-postgres -o jsonpath='\''{.items[0].metadata.name}'\'')
+    PVC_NAME=$(oc get pvc -n "$NAMESPACE" -l app=litellm-postgres -o jsonpath='\''{.items[0].metadata.name}'\'')
 
-echo "PVC: $PVC_NAME"
+    echo "PVC: $PVC_NAME"
 
-# Generate snapshot name with timestamp
-SNAPSHOT_NAME="litemaas-snapshot-$(date +%Y%m%d-%H%M%S)"
+    SNAPSHOT_NAME="litemaas-snapshot-$(date +%Y%m%d-%H%M%S)"
 
-# Create VolumeSnapshot
-cat <<EOF | oc apply -f -
+    cat <<EOF | oc apply -f -
 apiVersion: snapshot.storage.k8s.io/v1
 kind: VolumeSnapshot
 metadata:
@@ -186,8 +213,13 @@ spec:
     persistentVolumeClaimName: $PVC_NAME
 EOF
 
-echo "✓ VolumeSnapshot created: $SNAPSHOT_NAME"
-echo "  Snapshot is stored in OpenShift storage backend"
+    echo "✓ VolumeSnapshot created: $SNAPSHOT_NAME"
+    echo "  Snapshot is stored in OpenShift storage backend"
+else
+    echo ""
+    echo ">>> Skipping PVC snapshot (external database — use RDS automated snapshots)"
+    SNAPSHOT_NAME="N/A (external DB)"
+fi
 
 # ============================================
 # 3. Upload Database Backup to S3
@@ -221,23 +253,24 @@ else
     echo "  S3 database backups: $DB_COUNT (within retention limit of $S3_RETENTION)"
 fi
 
-# Cleanup old VolumeSnapshots in OpenShift
-echo ""
-echo "Cleaning up old VolumeSnapshots..."
-SNAPSHOTS=$(oc get volumesnapshot -n "$NAMESPACE" -l app=litemaas-backup --sort-by=.metadata.creationTimestamp -o jsonpath='\''{.items[*].metadata.name}'\'')
-SNAPSHOT_COUNT=$(echo "$SNAPSHOTS" | wc -w)
+# Cleanup old VolumeSnapshots in OpenShift (only for internal PostgreSQL)
+if [ "$DB_HOST" = "litellm-postgres" ]; then
+    echo ""
+    echo "Cleaning up old VolumeSnapshots..."
+    SNAPSHOTS=$(oc get volumesnapshot -n "$NAMESPACE" -l app=litemaas-backup --sort-by=.metadata.creationTimestamp -o jsonpath='\''{.items[*].metadata.name}'\'')
+    SNAPSHOT_COUNT=$(echo "$SNAPSHOTS" | wc -w)
 
-if [ "$SNAPSHOT_COUNT" -gt "$SNAPSHOT_RETENTION" ]; then
-    # Get snapshots to delete (all except last SNAPSHOT_RETENTION)
-    SNAPSHOTS_ARRAY=($SNAPSHOTS)
-    DELETE_COUNT=$((SNAPSHOT_COUNT - SNAPSHOT_RETENTION))
+    if [ "$SNAPSHOT_COUNT" -gt "$SNAPSHOT_RETENTION" ]; then
+        SNAPSHOTS_ARRAY=($SNAPSHOTS)
+        DELETE_COUNT=$((SNAPSHOT_COUNT - SNAPSHOT_RETENTION))
 
-    for ((i=0; i<DELETE_COUNT; i++)); do
-        echo "  Deleting old snapshot: ${SNAPSHOTS_ARRAY[$i]}"
-        oc delete volumesnapshot "${SNAPSHOTS_ARRAY[$i]}" -n "$NAMESPACE"
-    done
-else
-    echo "  VolumeSnapshots: $SNAPSHOT_COUNT (within retention limit of $SNAPSHOT_RETENTION)"
+        for ((i=0; i<DELETE_COUNT; i++)); do
+            echo "  Deleting old snapshot: ${SNAPSHOTS_ARRAY[$i]}"
+            oc delete volumesnapshot "${SNAPSHOTS_ARRAY[$i]}" -n "$NAMESPACE"
+        done
+    else
+        echo "  VolumeSnapshots: $SNAPSHOT_COUNT (within retention limit of $SNAPSHOT_RETENTION)"
+    fi
 fi
 
 # ============================================
