@@ -220,7 +220,7 @@
     namespace: "{{ ocp4_workload_litemaas_benchmark_namespace }}"
   register: benchmark_job
   until:
-    - benchmark_job.resources | length > 0
+    - benchmark_job.resources | default([]) | length > 0
     - benchmark_job.resources[0].status.succeeded is defined or benchmark_job.resources[0].status.failed is defined
   retries: "{{ _benchmark_retries | int }}"
   delay: 30
