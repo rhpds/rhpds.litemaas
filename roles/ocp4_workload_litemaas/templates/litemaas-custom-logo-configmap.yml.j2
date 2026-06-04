@@ -1,0 +1,15 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: litellm-custom-logo
+  labels:
+    app: litellm-frontend
+    component: web
+data:
+  logo-light.svg: |
+{{ lookup('file', 'Logo-Red_Hat-Demo_Platform_Team-A-Black-RGB.svg') | indent(4, true) }}
+  logo-dark.svg: |
+{{ lookup('file', 'Logo-Red_Hat-Demo_Platform_Team-A-White-RGB.svg') | indent(4, true) }}
+  favicon.svg: |
+{{ lookup('file', 'favicon.svg') | indent(4, true) }}

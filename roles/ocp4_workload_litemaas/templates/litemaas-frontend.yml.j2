@@ -18,6 +18,38 @@ spec:
         component: web
     spec:
       initContainers:
+        - name: copy-custom-logos
+          image: "{{ ocp4_workload_litemaas_frontend_image }}:{{ ocp4_workload_litemaas_frontend_tag }}"
+          imagePullPolicy: Always
+          command:
+            - sh
+            - -c
+            - |
+              echo "Setting up assets with custom logos..."
+
+              cp -r /opt/app-root/src/assets/* /shared-assets/
+
+              LOGO_LIGHT=$(ls /shared-assets/logo-title-*.svg 2>/dev/null | head -1)
+              LOGO_DARK=$(ls /shared-assets/logo-title-white-*.svg 2>/dev/null | head -1)
+              FAVICON=$(ls /shared-assets/litemaas_favicon-*.svg 2>/dev/null | head -1)
+
+              [ -n "$LOGO_LIGHT" ] && cp /tmp/logos/logo-light.svg "$LOGO_LIGHT" && echo "✓ Replaced light logo"
+              [ -n "$LOGO_DARK" ]  && cp /tmp/logos/logo-dark.svg "$LOGO_DARK"   && echo "✓ Replaced dark logo"
+              [ -n "$FAVICON" ]    && cp /tmp/logos/favicon.svg "$FAVICON"        && echo "✓ Replaced favicon"
+
+              echo "Customizing welcome message and disclaimer..."
+              for jsfile in /shared-assets/*.js; do
+                sed -i 's/Welcome to LiteMaaS/Welcome to Red Hat Demo Platform MaaS service/g' "$jsfile" 2>/dev/null
+                sed -i 's/Your Model as a Service platform for accessing and managing AI models\./This service is intended for demos, workshops, and training purposes only. Do not share credentials or use for customer-facing production workloads./g' "$jsfile" 2>/dev/null
+                sed -i 's/Sign in to LiteMaaS/Sign in to Red Hat Demo Platform MaaS/g' "$jsfile" 2>/dev/null
+                sed -i 's/Log in to LiteMaaS/Log in to Red Hat Demo Platform MaaS/g' "$jsfile" 2>/dev/null
+              done
+              echo "✓ Done"
+          volumeMounts:
+            - name: custom-logo
+              mountPath: /tmp/logos
+            - name: assets-volume
+              mountPath: /shared-assets
         - name: wait-for-backend
           image: busybox:1.36
           command:
@@ -47,6 +79,9 @@ spec:
             limits:
               memory: "{{ ocp4_workload_litemaas_frontend_memory_limit }}"
               cpu: "{{ ocp4_workload_litemaas_frontend_cpu_limit }}"
+          volumeMounts:
+            - name: assets-volume
+              mountPath: /opt/app-root/src/assets
           readinessProbe:
             httpGet:
               path: /
@@ -63,6 +98,12 @@ spec:
             periodSeconds: 15
             timeoutSeconds: 5
             failureThreshold: 3
+      volumes:
+        - name: custom-logo
+          configMap:
+            name: litellm-custom-logo
+        - name: assets-volume
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
