@@ -263,6 +263,13 @@
     definition: "{{ item }}"
   loop: "{{ lookup('template', 'litemaas-key-cleanup-cronjob.yml.j2') | from_yaml_all | list }}"
 
+- name: Deploy NetworkPolicies
+  kubernetes.core.k8s:
+    state: present
+    namespace: "{{ _litemaas_ha_namespace }}"
+    definition: "{{ item }}"
+  loop: "{{ lookup('template', 'litemaas-network-policies.yml.j2') | from_yaml_all | list }}"
+
 - name: Collect deployment information
   block:
     - name: Get LiteMaaS route

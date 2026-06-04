@@ -82,7 +82,7 @@ spec:
           restartPolicy: OnFailure
           containers:
             - name: key-cleanup
-              image: python:3.11-slim
+              image: registry.access.redhat.com/ubi9/python-311:latest
               command:
                 - sh
                 - -c

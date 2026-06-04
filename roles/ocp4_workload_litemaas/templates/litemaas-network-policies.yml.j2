@@ -1,0 +1,67 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-from-openshift-ingress
+  labels:
+    app: litellm
+spec:
+  podSelector:
+    matchExpressions:
+      - {key: app, operator: In, values: [litellm, litellm-backend, litellm-frontend]}
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: openshift-ingress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-postgres-from-litellm-only
+  labels:
+    app: litellm
+spec:
+  podSelector:
+    matchLabels:
+      app: litellm-postgres
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - {key: app, operator: In, values: [litellm, litellm-backend]}
+        - podSelector:
+            matchLabels:
+              job-name: litemaas-key-cleanup
+      ports:
+        - port: 5432
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-redis-from-litellm-only
+  labels:
+    app: litellm
+spec:
+  podSelector:
+    matchLabels:
+      app: litellm-redis
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - {key: app, operator: In, values: [litellm, litellm-backend]}
+      ports:
+        - port: 6379
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-intra-namespace
+  labels:
+    app: litellm
+spec:
+  podSelector: {}
+  ingress:
+    - from:
+        - podSelector: {}
