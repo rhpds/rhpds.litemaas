@@ -1,0 +1,117 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: litemaas-key-cleanup-script
+  labels:
+    app: litellm
+    component: maintenance
+data:
+  cleanup.py: |
+    import os
+    import sys
+    import requests
+
+    DATABASE_URL = os.environ.get('DATABASE_URL')
+    LITELLM_MASTER_KEY = os.environ.get('LITELLM_MASTER_KEY')
+    LITELLM_URL = os.environ.get('LITELLM_URL', 'http://litellm:4000')
+
+    try:
+        import psycopg2
+        conn = psycopg2.connect(DATABASE_URL)
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT token FROM \"LiteLLM_VerificationToken\"
+            WHERE expires IS NOT NULL AND expires < NOW()
+        """)
+        expired_tokens = [row[0] for row in cur.fetchall()]
+        cur.close()
+        conn.close()
+    except Exception as e:
+        print(f"Error querying database: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    print(f"Found {len(expired_tokens)} expired keys to delete")
+
+    if not expired_tokens:
+        print("No expired keys found")
+        sys.exit(0)
+
+    headers = {"Authorization": f"Bearer {LITELLM_MASTER_KEY}"}
+    batch_size = 100
+    deleted = 0
+    errors = 0
+
+    for i in range(0, len(expired_tokens), batch_size):
+        batch = expired_tokens[i:i + batch_size]
+        try:
+            resp = requests.delete(
+                f"{LITELLM_URL}/key/delete",
+                headers=headers,
+                json={"keys": batch},
+                timeout=30,
+            )
+            resp.raise_for_status()
+            deleted += len(batch)
+            print(f"Deleted batch {i // batch_size + 1}: {len(batch)} keys")
+        except Exception as e:
+            print(f"Error deleting batch {i // batch_size + 1}: {e}", file=sys.stderr)
+            errors += 1
+
+    print(f"Cleanup complete: deleted={deleted}, errors={errors}")
+    if errors > 0:
+        sys.exit(1)
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: litemaas-key-cleanup
+  labels:
+    app: litellm
+    component: maintenance
+spec:
+  schedule: "0 2 * * *"
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: key-cleanup
+              image: python:3.11-slim
+              command:
+                - sh
+                - -c
+                - |
+                  pip install psycopg2-binary requests -q && python3 /scripts/cleanup.py
+              env:
+                - name: DATABASE_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: litemaas-db
+                      key: DATABASE_URL
+                - name: LITELLM_MASTER_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: litellm-secret
+                      key: LITELLM_MASTER_KEY
+                - name: LITELLM_URL
+                  value: "http://litellm:4000"
+              resources:
+                requests:
+                  memory: "128Mi"
+                  cpu: "100m"
+                limits:
+                  memory: "256Mi"
+                  cpu: "200m"
+              volumeMounts:
+                - name: cleanup-script
+                  mountPath: /scripts
+          volumes:
+            - name: cleanup-script
+              configMap:
+                name: litemaas-key-cleanup-script
