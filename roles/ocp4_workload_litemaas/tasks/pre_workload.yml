@@ -212,6 +212,7 @@
     _litemaas_oauth_redirect_uris:
       - "https://{{ ocp4_workload_litemaas_api_route_prefix }}.{{ ocp4_workload_litemaas_cluster_domain }}/api/auth/callback"
       - "https://{{ ocp4_workload_litemaas_frontend_route_prefix }}.{{ ocp4_workload_litemaas_cluster_domain }}/api/auth/callback"
+      - "https://{{ ocp4_workload_litemaas_admin_route_prefix }}.{{ ocp4_workload_litemaas_cluster_domain }}/api/auth/callback"
 
 - name: Create OpenShift OAuthClient for backend
   when:
