@@ -38,9 +38,13 @@ spec:
               [ -n "$FAVICON" ]    && cp /tmp/logos/favicon.svg "$FAVICON"        && echo "✓ Replaced favicon"
 
               echo "Customizing welcome message and disclaimer..."
+              OCTOBEAN=$(ls /shared-assets/octobean-*.svg 2>/dev/null | head -1)
+              [ -n "$OCTOBEAN" ] && cp /tmp/logos/logo-light.svg "$OCTOBEAN" && echo "✓ Replaced octobean mascot"
+
               for jsfile in /shared-assets/*.js; do
                 sed -i 's/Welcome to LiteMaaS/Welcome to Red Hat Demo Platform MaaS service/g' "$jsfile" 2>/dev/null
                 sed -i 's/Your Model as a Service platform for accessing and managing AI models\./This service is intended for demos, workshops, and training purposes only. Do not share credentials or use for customer-facing production workloads./g' "$jsfile" 2>/dev/null
+                sed -i 's/LiteMaaS manages access, keys and consumption of your AI models\./This service is intended for demos, workshops, and training purposes only. Do not share credentials or use for customer-facing production workloads./g' "$jsfile" 2>/dev/null
                 sed -i 's/Sign in to LiteMaaS/Sign in to Red Hat Demo Platform MaaS/g' "$jsfile" 2>/dev/null
                 sed -i 's/Log in to LiteMaaS/Log in to Red Hat Demo Platform MaaS/g' "$jsfile" 2>/dev/null
               done

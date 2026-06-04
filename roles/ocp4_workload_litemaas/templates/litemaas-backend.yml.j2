@@ -111,6 +111,8 @@ spec:
             - name: OAUTH_CALLBACK_URL
               value: "disabled"
 {% endif %}
+            - name: NODE_TLS_REJECT_UNAUTHORIZED
+              value: "0"
             - name: LITELLM_API_URL
               value: "https://{{ ocp4_workload_litemaas_api_route_prefix }}.{{ ocp4_workload_litemaas_cluster_domain }}"
             - name: LITELLM_API_KEY
