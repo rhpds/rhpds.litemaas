@@ -31,6 +31,12 @@
 - name: Deploy PostgreSQL 16 database
   when: ocp4_workload_litemaas_ha_enable_postgres | bool
   block:
+    - name: Deploy PostgreSQL init ConfigMap
+      kubernetes.core.k8s:
+        state: present
+        namespace: "{{ _litemaas_ha_namespace }}"
+        definition: "{{ lookup('template', 'litemaas-postgres-init-configmap.yml.j2') | from_yaml }}"
+
     - name: Check if Red Hat PostgreSQL image is accessible
       kubernetes.core.k8s:
         state: present

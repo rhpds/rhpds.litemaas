@@ -83,7 +83,7 @@ spec:
             - name: STORE_MODEL_IN_DB
               value: "True"
             - name: DISABLE_SCHEMA_UPDATE
-              value: "true"
+              value: "false"
 {% if ocp4_workload_litemaas_litellm_license_key | length > 0 %}
             - name: LITELLM_LICENSE_KEY
               value: "{{ ocp4_workload_litemaas_litellm_license_key }}"

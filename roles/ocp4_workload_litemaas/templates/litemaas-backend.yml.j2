@@ -151,6 +151,15 @@ spec:
               value: "{{ ocp4_workload_litemaas_default_user_tpm_limit }}"
             - name: DEFAULT_USER_RPM_LIMIT
               value: "{{ ocp4_workload_litemaas_default_user_rpm_limit }}"
+            - name: REDIS_HOST
+              value: "litellm-redis"
+            - name: REDIS_PORT
+              value: "6379"
+            - name: LITELLM_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: litemaas-db
+                  key: DATABASE_URL
           resources:
             requests:
               memory: "256Mi"
