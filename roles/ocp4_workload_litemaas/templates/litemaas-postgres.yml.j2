@@ -47,6 +47,11 @@ spec:
         app: litellm-postgres
         component: database
     spec:
+      volumes:
+        - name: postgres-init
+          configMap:
+            name: litemaas-postgres-init
+            defaultMode: 0755
       containers:
         - name: postgres
           image: "{{ _postgres_image | default(ocp4_workload_litemaas_ha_postgres_image) }}"
@@ -75,6 +80,8 @@ spec:
           volumeMounts:
             - name: postgres-storage
               mountPath: /var/lib/postgresql/data
+            - name: postgres-init
+              mountPath: /docker-entrypoint-initdb.d
           resources:
             requests:
               memory: "{{ ocp4_workload_litemaas_ha_postgres_memory_request }}"
