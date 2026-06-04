@@ -7,7 +7,7 @@ metadata:
     app: litellm-frontend
     component: web
 spec:
-  replicas: 1
+  replicas: {{ ocp4_workload_litemaas_ha_frontend_replicas | default(3) | int }}
   selector:
     matchLabels:
       app: litellm-frontend
