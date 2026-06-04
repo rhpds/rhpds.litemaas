@@ -138,7 +138,7 @@ spec:
                   name: litellm-secret
                   key: LITELLM_MASTER_KEY
             - name: CORS_ORIGIN
-              value: "https://{{ ocp4_workload_litemaas_api_route_prefix }}.{{ ocp4_workload_litemaas_cluster_domain }}"
+              value: "https://{{ ocp4_workload_litemaas_frontend_route_prefix }}.{{ ocp4_workload_litemaas_cluster_domain }}"
             - name: RATE_LIMIT_MAX
               value: "1000"
             - name: RATE_LIMIT_TIME_WINDOW
