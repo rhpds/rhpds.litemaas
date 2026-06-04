@@ -46,3 +46,7 @@ ocp4_workload_litemaas_ha_redis_memory_limit: "1Gi"
 ocp4_workload_litemaas_ha_redis_cpu_request: "200m"
 ocp4_workload_litemaas_ha_redis_cpu_limit: "500m"
 ocp4_workload_litemaas_ha_frontend_replicas: 3
+ocp4_workload_litemaas_ha_frontend_memory_request: "256Mi"
+ocp4_workload_litemaas_ha_frontend_memory_limit: "512Mi"
+ocp4_workload_litemaas_ha_frontend_cpu_request: "200m"
+ocp4_workload_litemaas_ha_frontend_cpu_limit: "500m"
