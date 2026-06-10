@@ -2,6 +2,10 @@
 
 This guide shows you how to add AI models to your LiteMaaS deployment and share them with users.
 
+## CRITICAL: Cluster Migration Notice
+
+**The old cluster `litellm-rhpds` is being decommissioned June 21, 2026.** All new model configurations should target the production cluster `maas-rdhp`. See the [cluster migration guide](../README.md#cluster-migration-june-21-2026) for details.
+
 ## Two Ways to Add Models
 
 1. **Admin UI** (Recommended) - Easy, web-based configuration
@@ -150,7 +154,40 @@ oc rollout restart deployment/litellm -n rhpds
 
 ---
 
-## Supported Model Providers
+## Current Model Catalog (maas-rdhp Production Cluster)
+
+### Vertex AI Models (via rh-summit-ai-workshops GCP)
+
+**Restricted Access Models** (require admin approval):
+
+- `minimax-m2` — RESTRICTED (>120B parameters)
+- `qwen3-235b` — RESTRICTED (>120B parameters)
+
+**Self-Service Models:**
+
+- `gpt-oss-120b` — Open access
+- `gpt-oss-20b` — Open access
+
+### Locally Hosted Models (llm-hosting namespace)
+
+All self-service access unless otherwise noted:
+
+- `granite-3-2-8b-instruct` — Granite 3 8B
+- `granite-4-0-h-tiny` — Granite 4.0 Tiny
+- `granite-2b-cpu` — Granite 2B
+- `llama-scout-17b` — Llama Scout 17B
+- `llama-31-70b-cpu` — Llama 3.1 70B
+- `Llama-Guard-3-1B` — Llama Guard 3 1B
+- `codellama-7b-instruct` — Code Llama 7B
+- `deepseek-r1-distill-qwen-14b` — DeepSeek R1 14B
+- `qwen3-14b` — Qwen 3 14B
+- `qwen25-3b-cpu` — Qwen 2.5 3B
+- `microsoft-phi-4` — Microsoft Phi 4
+- `phi3-mini-cpu` — Phi 3 Mini
+- `nomic-embed-text-v1-5` — Nomic Embed Text
+- `Docling` — Document conversion model
+
+### Supported Model Providers
 
 LiteLLM supports 100+ providers. Here are the most common:
 

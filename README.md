@@ -4,6 +4,8 @@ Deploy an AI model gateway on OpenShift with High Availability. Give users contr
 
 **Version:** 0.3.0
 
+**CRITICAL MIGRATION NOTICE:** The old cluster `litellm-rhpds` is being shut down on **June 21, 2026**. All deployments must migrate to the new production cluster `maas-rhdp` before that date. See [Migration Guide](#cluster-migration-june-21-2026) below.
+
 ## Documentation
 
 - **[Infrastructure Team Guide](docs/INFRA_TEAM_GUIDE.md)** - Managing models after deployment
@@ -75,22 +77,22 @@ The `deploy-litemaas.sh` script automatically:
 
 ```bash
 # Standard HA deployment
-./deploy-litemaas.sh litellm-rhpds
+./deploy-litemaas.sh maas-rhdp
 
 # HA with RHDP branding
-./deploy-litemaas.sh litellm-rhpds --rhdp
+./deploy-litemaas.sh maas-rhdp --rhdp
 
 # Custom replicas
-./deploy-litemaas.sh litellm-rhpds --replicas 5
+./deploy-litemaas.sh maas-rhdp --replicas 5
 
 # With OAuth and custom routes
-./deploy-litemaas.sh litellm-rhpds --oauth --route-prefix litellm-prod
+./deploy-litemaas.sh maas-rhdp --oauth --route-prefix litellm-prod
 
 # Full RHDP production (OAuth + branding + custom routes)
-./deploy-litemaas.sh litellm-rhpds --oauth --rhdp --route-prefix litellm-prod
+./deploy-litemaas.sh maas-rhdp --oauth --rhdp --route-prefix litellm-prod
 
 # Remove deployment
-./deploy-litemaas.sh litellm-rhpds --remove
+./deploy-litemaas.sh maas-rdhp --remove
 ```
 
 ### Script Options
@@ -289,6 +291,91 @@ ocp4_workload_litemaas_deploy_frontend: true
 # Optional: RHDP branding
 ocp4_workload_litemaas_branding_enabled: true
 ```
+
+---
+
+## Cluster Migration (June 21, 2026)
+
+**CRITICAL: Old cluster `litellm-rhpds` is being decommissioned June 21, 2026. Migrate to `maas-rdhp` before that date.**
+
+### What's Changing
+
+| Item | Old | New | Notes |
+|------|-----|-----|-------|
+| **Cluster** | `litellm-rhpds` | `maas-rdhp` | Production cluster migration |
+| **API Endpoint** | `https://litellm-rhpds.apps.cluster.com` | `https://maas-rdhp.apps.cluster.com` | All API keys need migration |
+| **Models** | Old catalog | New catalog | See [New Model Catalog](#new-model-catalog) |
+| **Large Models (>120B)** | Self-service | Admin approval required | All >120B models now require approval |
+
+### New Model Catalog
+
+All models are available on `maas-rdhp`. Models are categorized by access level:
+
+#### Vertex AI (via rh-summit-ai-workshops GCP)
+
+Restricted models (>120B parameters require admin approval):
+
+- `minimax-m2` — RESTRICTED (>120B, admin approval required)
+- `qwen3-235b` — RESTRICTED (>120B, admin approval required)
+
+Self-service models:
+
+- `gpt-oss-120b` — Open access
+- `gpt-oss-20b` — Open access
+
+#### Locally Hosted (llm-hosting namespace)
+
+All self-service unless noted:
+
+- `granite-3-2-8b-instruct`
+- `granite-4-0-h-tiny`
+- `granite-2b-cpu`
+- `llama-scout-17b`
+- `llama-31-70b-cpu` — Self-service (70B is within tier)
+- `Llama-Guard-3-1B`
+- `codellama-7b-instruct`
+- `deepseek-r1-distill-qwen-14b`
+- `qwen3-14b`
+- `qwen25-3b-cpu`
+- `microsoft-phi-4`
+- `phi3-mini-cpu`
+- `nomic-embed-text-v1-5`
+- `Docling`
+
+### Migration Steps
+
+1. **Update your API endpoints** from `https://litellm-rhpds.apps.cluster.com` to `https://maas-rdhp.apps.cluster.com`
+
+2. **Generate new API keys** on the new cluster:
+   ```bash
+   # Old way (deprecated after June 21)
+   curl https://litellm-rhpds.apps.cluster.com/key/generate ...
+   
+   # New way
+   curl https://maas-rdhp.apps.cluster.com/key/generate ...
+   ```
+
+3. **Update your applications** to use new API endpoint and keys
+
+4. **Request approval for large models** (if using models >120B):
+   - Models like `minimax-m2` and `qwen3-235b` now require admin approval
+   - Submit access request via LiteMaaS UI or contact admin
+
+5. **Test your integration** on the new cluster before June 21
+
+### FAQ
+
+**Q: Will my old API keys still work after June 21?**
+A: No. Old cluster `litellm-rhpds` will be decommissioned. You must migrate to `maas-rdhp` and generate new keys.
+
+**Q: What about models >120B that I'm currently using?**
+A: They are still available on `maas-rdhp`, but now require admin approval. Submit an access request immediately.
+
+**Q: Do I need to change my code?**
+A: Yes. Update your `api_base` URL and regenerate API keys on the new cluster.
+
+**Q: What's the deadline?**
+A: June 21, 2026. Plan your migration now.
 
 ---
 
