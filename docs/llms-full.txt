@@ -1,11 +1,11 @@
-RHDP LiteMaaS — Full Documentation (Plain Text for AI Ingestion)
+LiteMaaS — Full Documentation (Plain Text for AI Ingestion)
 ================================================================
 Source: https://rhpds.github.io/rhpds.litemaas/docs/
 GitHub: https://github.com/rhpds/rhpds.litemaas
 Last updated: 2026-03-25
 
 ================================================================
-WHAT IS RHDP LiteMaaS?
+WHAT IS LiteMaaS?
 ================================================================
 
 LiteMaaS (Model as a Service) is the AI model access platform for the Red Hat Demo Platform (RHDP).
