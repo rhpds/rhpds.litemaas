@@ -224,7 +224,7 @@
     </div>
     <div class="arch-layer layer-2">
       <h4>Layer 2 — LiteLLM Proxy</h4>
-      <p>The open-source LiteLLM proxy (<code>quay.io/rh-aiservices-bu/litellm-non-root:main-v1.81.0-stable-custom</code>) running as 3 HA replicas. Handles all actual model routing, virtual key enforcement (TPM/RPM/budget), request rate limiting, caching via Redis, and spend tracking. Stores its state in PostgreSQL. Exposes the OpenAI-compatible API on the <code>litellm-prod</code> route.</p>
+      <p>The open-source LiteLLM proxy (<code>quay.io/rh-aiservices-bu/litellm-non-root:main-v1.81.0-stable-custom</code>) running as 3 HA replicas. Handles all actual model routing, virtual key enforcement (TPM/RPM/budget), request rate limiting, caching via Redis, and spend tracking. Stores its state in PostgreSQL. Exposes the OpenAI-compatible API on the <code>maas-rhdp</code> route.</p>
     </div>
     <div class="arch-layer layer-3">
       <h4>Layer 3 — Model Serving (OpenShift AI / KServe)</h4>
@@ -233,8 +233,8 @@
 
     <div class="mermaid">
 graph TD
-    U[User / Workshop Participant] -->|HTTPS| FE[litellm-prod-frontend<br/>LiteMaaS Frontend]
-    U -->|API calls with virtual key| PROXY[litellm-prod<br/>LiteLLM Proxy x3]
+    U[User / Workshop Participant] -->|HTTPS| FE[maas-rhdp-frontend<br/>LiteMaaS Frontend]
+    U -->|API calls with virtual key| PROXY[maas-rhdp<br/>LiteLLM Proxy x3]
     FE -->|REST API| BE[litellm-backend<br/>LiteMaaS Backend x3]
     BE -->|virtual key management| PROXY
     PROXY -->|model routing| M1[granite-3-2-8b-instruct]
@@ -410,19 +410,19 @@ sequenceDiagram
       </thead>
       <tbody>
         <tr>
-          <td><code>litellm-prod</code></td>
+          <td><code>maas-rhdp</code></td>
           <td><code>https://maas-rhdp.apps.maas.redhatworkshops.io</code></td>
           <td>OpenAI-compatible API endpoint (LiteLLM proxy)</td>
           <td>All API users, SDK clients</td>
         </tr>
         <tr>
-          <td><code>litellm-prod-frontend</code></td>
+          <td><code>maas-rhdp-frontend</code></td>
           <td><code>https://maas-rhdp-frontend.apps.maas.redhatworkshops.io</code></td>
           <td>LiteMaaS user portal (React UI)</td>
           <td>Workshop participants, end users</td>
         </tr>
         <tr>
-          <td><code>litellm-prod-admin</code></td>
+          <td><code>maas-rhdp-admin</code></td>
           <td><code>https://maas-rhdp-admin.apps.maas.redhatworkshops.io/api</code></td>
           <td>LiteMaaS admin API (backend)</td>
           <td>Admin scripts, automation</td>

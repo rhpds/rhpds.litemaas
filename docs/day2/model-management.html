@@ -364,7 +364,7 @@ diff /tmp/litellm-models.txt /tmp/litemaas-models.txt</pre>
     <pre data-lang="bash"><span class="comment"># Backend exposes a sync endpoint (admin auth required)</span>
 ADMIN_KEY=$(oc get secret backend-secret -n maas-rhdp \
   -o jsonpath='{.data.ADMIN_API_KEY}' | base64 -d)
-BACKEND_URL=$(oc get route litellm-prod-admin -n maas-rhdp \
+BACKEND_URL=$(oc get route maas-rhdp-admin -n maas-rhdp \
   -o jsonpath='https://{.spec.host}')
 
 curl -X POST "${BACKEND_URL}/api/admin/sync-models" \

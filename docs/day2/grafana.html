@@ -477,7 +477,7 @@ oc get secret rhoai-grafana-admin-credentials -n llm-hosting \
 <span class="comment"># Or query directly via API</span>
 LITELLM_KEY=$(oc get secret litellm-secret -n maas-rhdp \
   -o jsonpath='{.data.LITELLM_MASTER_KEY}' | base64 -d)
-ROUTE=$(oc get route litellm-prod -n maas-rhdp -o jsonpath='{.spec.host}')
+ROUTE=$(oc get route maas-rhdp -n maas-rhdp -o jsonpath='{.spec.host}')
 
 <span class="comment"># Get spend per key</span>
 curl "https://$ROUTE/spend/keys" \
