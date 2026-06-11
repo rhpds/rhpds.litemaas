@@ -400,7 +400,7 @@ oc logs -n $NS deployment/litellm-backend -f --tail=100
 oc logs -n $NS deployment/litellm-frontend -f --tail=100
 
 <span class="comment"># Health check</span>
-ROUTE=$(oc get route litellm-prod -n $NS -o jsonpath='{.spec.host}')
+ROUTE=$(oc get route maas-rhdp -n $NS -o jsonpath='{.spec.host}')
 curl -sk https://$ROUTE/health/livenessz
 
 <span class="comment"># List all virtual keys (paginated)</span>

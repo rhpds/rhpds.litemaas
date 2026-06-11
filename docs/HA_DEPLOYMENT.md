@@ -37,7 +37,7 @@ ansible-playbook playbooks/deploy_litemaas_ha.yml \
 
 # Custom replicas and namespace
 ansible-playbook playbooks/deploy_litemaas_ha.yml \
-  -e ocp4_workload_litemaas_namespace=litellm-production \
+  -e ocp4_workload_litemaas_namespace=maas-rhdpuction \
   -e ocp4_workload_litemaas_ha_litellm_replicas=5
 ```
 

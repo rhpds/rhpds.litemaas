@@ -423,7 +423,7 @@ oc get pods -n maas-rhdp -l app=litellm-redis
 
 --- Adding Models ---
 # After adding a model in LiteLLM admin UI, sync to LiteMaaS backend DB:
-LITELLM_URL=$(oc get route litellm-prod -n maas-rhdp -o jsonpath='https://{.spec.host}')
+LITELLM_URL=$(oc get route maas-rhdp -n maas-rhdp -o jsonpath='https://{.spec.host}')
 LITELLM_KEY=$(oc get secret litellm-secret -n maas-rhdp \
   -o jsonpath='{.data.LITELLM_MASTER_KEY}' | base64 -d)
 
