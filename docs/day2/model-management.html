@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LiteMaaS — Model Management</title>
-  <meta name="description" content="LiteMaaS model management — adding models, LITELLM_AUTO_SYNC, and DB synchronization between LiteMaaS and LiteLLM.">
+  <title>RHDP MaaS — Model Management</title>
+  <meta name="description" content="RHDP MaaS model management — adding models, LITELLM_AUTO_SYNC, and DB synchronization between LiteMaaS and LiteLLM.">
   <link rel="canonical" href="https://rhpds.github.io/rhpds.litemaas/docs/day2/model-management.html">
   <link rel="stylesheet" href="../assets/style.css">
   <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
@@ -102,7 +102,7 @@
     <path d="M16 8l7 4v8l-7 4-7-4V12z" fill="rgba(255,255,255,0.18)"/>
   </svg>
   <div>
-    <h1>LiteMaaS</h1>
+    <h1>RHDP MaaS</h1>
     <p>Model as a Service for Red Hat Demo Platform</p>
   </div>
 </header>
@@ -419,7 +419,7 @@ curl -X POST "${BACKEND_URL}/api/admin/sync-models" \
     </ol>
 
     <h3>Adding a Service Account key to LiteLLM</h3>
-    <p>Vertex AI models authenticate via a GCP Service Account JSON key. The key is stored as an OCP secret and volume-mounted into the LiteLLM pod — LiteMaaS backend has no knowledge of it.</p>
+    <p>Vertex AI models authenticate via a GCP Service Account JSON key. The key is stored as an OCP secret and volume-mounted into the LiteLLM pod — RHDP MaaS backend has no knowledge of it.</p>
 
     <h4>Step 1 — Store the key as an OCP secret</h4>
     <pre data-lang="bash">oc create secret generic vertex-ai-sa-key \
@@ -550,7 +550,7 @@ curl https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions \
 </div>
 
 <footer>
-  <p>LiteMaaS Documentation &mdash; Red Hat Demo Platform &mdash; maas.redhatworkshops.io</p>
+  <p>RHDP MaaS Documentation &mdash; Red Hat Demo Platform &mdash; maas.redhatworkshops.io</p>
   <span class="footer-updated">Last updated: 2026-03-25</span>
 </footer>
 

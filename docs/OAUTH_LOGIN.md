@@ -1,4 +1,4 @@
-# OpenShift OAuth Login for LiteMaaS
+# OpenShift OAuth Login for RHDP MaaS
 
 Authentication is handled by the LiteMaaS backend using OpenShift OAuth (OAuthClient). Users log in with their OpenShift credentials through the frontend UI.
 

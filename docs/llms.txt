@@ -1,6 +1,6 @@
 # RHDP MaaS Documentation
 
-> RHDP MaaS is the Red Hat Demo Platform's Model-as-a-Service implementation, built on LiteMaaS — an open-source platform developed by the Red Hat AI Services BU. It provides users with managed access to AI/LLM models through virtual API keys, with usage tracking, rate limiting, and budget controls.
+> RHDP MaaS is the Red Hat Demo Platform's Model-as-a-Service implementation, built on RHDP MaaS — an open-source platform developed by the Red Hat AI Services BU. It provides users with managed access to AI/LLM models through virtual API keys, with usage tracking, rate limiting, and budget controls.
 
 ## What is RHDP MaaS
 
@@ -11,12 +11,12 @@ Users never interact with model servers directly. RHDP MaaS sits in between — 
 ## Documentation
 
 - [Architecture](https://rhpds.github.io/rhpds.litemaas/docs/architecture.html): System design — 5 diagrams covering the platform overview, production deployment, GitOps for models, platform installation via Ansible, and per-workshop key creation.
-- [Product Overview](https://rhpds.github.io/rhpds.litemaas/docs/product/overview.html): What LiteMaaS does, key features, role hierarchy, and user flow.
+- [Product Overview](https://rhpds.github.io/rhpds.litemaas/docs/product/overview.html): What RHDP MaaS does, key features, role hierarchy, and user flow.
 - [Models Reference](https://rhpds.github.io/rhpds.litemaas/docs/product/models.html): Model capability types (Chat, Embeddings, Document Conversion), API endpoints, curl and SDK examples.
 - [Deployment Guide](https://rhpds.github.io/rhpds.litemaas/docs/install/deployment.html): Prerequisites, Ansible collection variables, step-by-step deployment, post-install checklist.
 - [Day-2 Operations](https://rhpds.github.io/rhpds.litemaas/docs/day2/operations.html): Upgrading, scaling, key cleanup, admin management. Split across sub-pages: operations.html (core ops), model-routing.html (adding models, load balancing, AUTO_SYNC, DB sync), analytics.html (backup, restore, usage analytics), guardrails.html (content filtering, PII blocking, harmful content).
 - [Guardrails](https://rhpds.github.io/rhpds.litemaas/docs/day2/guardrails.html): Content filtering guardrails — block PII (SSN, credit cards), credentials (AWS keys, GitHub tokens), and harmful content (terrorism, violence, hate speech, self-harm) using LiteLLM's built-in content filter. Zero latency, no external service. Deployed via configure_guardrails.yml playbook.
-- [Claude Code MCP](https://rhpds.github.io/rhpds.litemaas/docs/day2/mcp.html): Connect Claude Code to LiteMaaS via MCP — setup, available tools, example queries, admin deployment guide.
+- [Claude Code MCP](https://rhpds.github.io/rhpds.litemaas/docs/day2/mcp.html): Connect Claude Code to RHDP MaaS via MCP — setup, available tools, example queries, admin deployment guide.
 - [Grafana & Metrics](https://rhpds.github.io/rhpds.litemaas/docs/day2/grafana.html): Grafana dashboards for RHOAI, vLLM metrics, ServiceMonitors, GPU monitoring.
 - [Monitoring](https://rhpds.github.io/rhpds.litemaas/docs/monitoring.html): Grafana dashboards (vLLM, GPU, OpenVino), ServiceMonitors, benchmark tool, key cleanup cronjob.
 - [Troubleshooting](https://rhpds.github.io/rhpds.litemaas/docs/troubleshooting/common.html): 10 common issues with exact fix commands.

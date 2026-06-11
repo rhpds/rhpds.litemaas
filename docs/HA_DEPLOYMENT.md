@@ -1,4 +1,4 @@
-# LiteMaaS High Availability Deployment
+# RHDP MaaS High Availability Deployment
 
 LiteMaaS deploys exclusively in High Availability (HA) mode with multiple replicas, Redis caching, and PostgreSQL 16.
 

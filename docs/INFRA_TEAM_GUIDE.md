@@ -1,4 +1,4 @@
-# Infrastructure Team Guide - Managing Models in LiteMaaS
+# Infrastructure Team Guide - Managing Models in RHDP MaaS
 
 Quick reference guide for infrastructure teams to manage AI models after LiteMaaS deployment.
 

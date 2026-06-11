@@ -1,4 +1,4 @@
-# Admin User Setup for LiteMaaS
+# Admin User Setup for RHDP MaaS
 
 ## How Admin Access Works
 

@@ -1,4 +1,4 @@
-# Adding AI Models to LiteMaaS
+# Adding AI Models to RHDP MaaS
 
 This guide shows you how to add AI models to your LiteMaaS deployment and share them with users.
 

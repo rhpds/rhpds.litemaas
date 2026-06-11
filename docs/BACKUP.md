@@ -1,4 +1,4 @@
-# LiteMaaS Backup and Disaster Recovery
+# RHDP MaaS Backup and Disaster Recovery
 
 This document describes the automated backup solution for LiteMaaS deployments.
 
