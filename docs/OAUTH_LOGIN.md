@@ -12,7 +12,7 @@ ansible-playbook playbooks/deploy_litemaas_ha.yml \
 Or with the deploy script:
 
 ```bash
-./deploy-litemaas.sh litellm-rhpds --oauth
+./deploy-litemaas.sh maas-rhdp --oauth
 ```
 
 ## Configuration

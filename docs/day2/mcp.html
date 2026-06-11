@@ -166,7 +166,7 @@
     <h2>What Is the MCP Server?</h2>
     <p>The LiteMaaS MCP (Model Context Protocol) server lets Claude Code query and manage your LiteMaaS deployment in plain English. Instead of running <code>oc exec</code> commands or writing SQL, you just ask Claude Code a question and it calls the right tool automatically.</p>
 
-    <p>The server runs as a pod in the <code>litellm-rhpds</code> namespace on the MaaS cluster, with direct in-cluster access to PostgreSQL and the LiteLLM API. It exposes an HTTP endpoint that Claude Code connects to.</p>
+    <p>The server runs as a pod in the <code>maas-rhdp</code> namespace on the MaaS cluster, with direct in-cluster access to PostgreSQL and the LiteLLM API. It exposes an HTTP endpoint that Claude Code connects to.</p>
 
     <div class="info-box"><p><strong>No local installation needed.</strong> The MCP server is already deployed and running. You only need to add one configuration entry to your Claude Code setup.</p></div>
   </div>
@@ -245,7 +245,7 @@
         </tr>
         <tr>
           <td><code>get_pod_status</code></td>
-          <td>Pod status in the <code>litellm-rhpds</code> namespace — phase, readiness, restart count, age in hours</td>
+          <td>Pod status in the <code>maas-rhdp</code> namespace — phase, readiness, restart count, age in hours</td>
           <td>none</td>
         </tr>
         <tr>
@@ -305,7 +305,7 @@
     <h2>For Admins</h2>
 
     <h3>Deployment</h3>
-    <p>The MCP server is deployed in the <code>litellm-rhpds</code> namespace alongside the main LiteMaaS stack. It is <strong>off by default</strong> in the Ansible collection and must be enabled explicitly:</p>
+    <p>The MCP server is deployed in the <code>maas-rhdp</code> namespace alongside the main LiteMaaS stack. It is <strong>off by default</strong> in the Ansible collection and must be enabled explicitly:</p>
     <pre data-lang="bash"><span class="comment"># Enable MCP server during deployment</span>
 ansible-playbook playbooks/deploy_litemaas_ha.yml \
   -e ocp4_workload_litemaas_namespace=litemaas \
@@ -343,7 +343,7 @@ curl -X POST https://litemaas-mcp.apps.maas.example.com/mcp
 curl -X POST "https://litemaas-mcp.apps.maas.example.com/mcp?token=abc123xyz456def789"</pre>
 
     <h3>Logs</h3>
-    <pre data-lang="bash">oc logs -n litellm-rhpds -l app=litemaas-mcp --tail=50</pre>
+    <pre data-lang="bash">oc logs -n maas-rhdp -l app=litemaas-mcp --tail=50</pre>
   </div>
 
   <div class="page-nav">

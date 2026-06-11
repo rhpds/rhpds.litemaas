@@ -38,7 +38,7 @@ Users never interact with model servers directly. RHDP MaaS sits in between — 
 
 ## ⚠️ Migration Notice (June 21, 2026)
 
-The old cluster (litellm-rhpds namespace) is being decommissioned on June 21, 2026.
+The old cluster (maas-rhdp namespace) is being decommissioned on June 21, 2026.
 - Labs provisioned via demo.redhat.com automatically use the new cluster — no action needed.
 - Self-service API key holders must create new keys on the new cluster before June 21.
 - New portal: https://maas-rhdp-frontend.apps.maas.redhatworkshops.io

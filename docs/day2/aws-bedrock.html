@@ -177,7 +177,7 @@
       </thead>
       <tbody>
         <tr><td>Cluster</td><td><code>maas.redhatworkshops.io</code></td></tr>
-        <tr><td>Namespace</td><td><code>litellm-rhpds</code></td></tr>
+        <tr><td>Namespace</td><td><code>maas-rhdp</code></td></tr>
         <tr><td>AWS Region</td><td><code>us-west-2</code></td></tr>
         <tr><td>IAM User</td><td><code>litemaas-bedrock-user</code></td></tr>
         <tr><td>IAM Policy</td><td><code>litemaas-bedrock-policy</code></td></tr>
@@ -355,11 +355,11 @@ flowchart LR
   <!-- OCP Credentials -->
   <div class="section" id="ocp-credentials">
     <h2>OCP Credentials</h2>
-    <p>AWS credentials are stored as an OpenShift Secret in the <code>litellm-rhpds</code> namespace and mounted as environment variables on the <code>litellm</code> Deployment. This approach keeps credentials out of the ConfigMap and out of the LiteLLM database entirely.</p>
+    <p>AWS credentials are stored as an OpenShift Secret in the <code>maas-rhdp</code> namespace and mounted as environment variables on the <code>litellm</code> Deployment. This approach keeps credentials out of the ConfigMap and out of the LiteLLM database entirely.</p>
 
     <div class="mermaid">
 flowchart TD
-    IAM["AWS IAM\nlitemaas-bedrock-user\nAccess Key + Secret"] -->|stored in| Secret["OCP Secret\nlitellm-aws-bedrock\n(litellm-rhpds namespace)"]
+    IAM["AWS IAM\nlitemaas-bedrock-user\nAccess Key + Secret"] -->|stored in| Secret["OCP Secret\nlitellm-aws-bedrock\n(maas-rhdp namespace)"]
     Secret -->|oc set env --from| Deployment["litellm Deployment\nenv: AWS_ACCESS_KEY_ID\nenv: AWS_SECRET_ACCESS_KEY\nenv: AWS_REGION"]
     Deployment -->|boto3 picks up env vars| LiteLLM["LiteLLM Proxy\nbedrock/openai.gpt-oss-120b-1:0"]
     LiteLLM -->|SigV4 signed request| Bedrock["AWS Bedrock\nus-west-2"]
@@ -371,15 +371,15 @@ oc create secret generic litellm-aws-bedrock \
   --from-literal=AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE \
   --from-literal=AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY \
   --from-literal=AWS_REGION=us-west-2 \
-  -n litellm-rhpds
+  -n maas-rhdp
 
 <span class="comment"># Mount all keys from the secret as environment variables</span>
 oc set env deployment/litellm \
   --from=secret/litellm-aws-bedrock \
-  -n litellm-rhpds
+  -n maas-rhdp
 
 <span class="comment"># Verify the env vars are present on the new pod</span>
-oc exec -n litellm-rhpds deployment/litellm -- env | grep AWS</pre>
+oc exec -n maas-rhdp deployment/litellm -- env | grep AWS</pre>
 
     <div class="info-box"><p>LiteLLM's Bedrock provider uses the standard boto3 credential chain. When <code>AWS_ACCESS_KEY_ID</code> and <code>AWS_SECRET_ACCESS_KEY</code> are set as environment variables, boto3 picks them up automatically — no additional LiteLLM configuration is needed for authentication.</p></div>
 
@@ -434,7 +434,7 @@ oc exec -n litellm-rhpds deployment/litellm -- env | grep AWS</pre>
     <h3>Register gpt-oss-120b on Bedrock</h3>
     <pre data-lang="bash"><span class="comment"># Register the Bedrock backend for gpt-oss-120b</span>
 <span class="comment"># Note: model_name matches the existing Vertex AI deployment exactly</span>
-curl -X POST <span class="string">"https://litellm-prod.apps.maas.redhatworkshops.io/model/new"</span> \
+curl -X POST <span class="string">"https://maas-rhdp.apps.maas.redhatworkshops.io/model/new"</span> \
   -H <span class="string">"Authorization: Bearer $MASTER_KEY"</span> \
   -H <span class="string">"Content-Type: application/json"</span> \
   -d <span class="string">'{
@@ -450,7 +450,7 @@ curl -X POST <span class="string">"https://litellm-prod.apps.maas.redhatworkshop
   }'</span></pre>
 
     <h3>Register gpt-oss-20b on Bedrock</h3>
-    <pre data-lang="bash">curl -X POST <span class="string">"https://litellm-prod.apps.maas.redhatworkshops.io/model/new"</span> \
+    <pre data-lang="bash">curl -X POST <span class="string">"https://maas-rhdp.apps.maas.redhatworkshops.io/model/new"</span> \
   -H <span class="string">"Authorization: Bearer $MASTER_KEY"</span> \
   -H <span class="string">"Content-Type: application/json"</span> \
   -d <span class="string">'{
@@ -466,7 +466,7 @@ curl -X POST <span class="string">"https://litellm-prod.apps.maas.redhatworkshop
   }'</span></pre>
 
     <h3>Register minimax-m2 on Bedrock</h3>
-    <pre data-lang="bash">curl -X POST <span class="string">"https://litellm-prod.apps.maas.redhatworkshops.io/model/new"</span> \
+    <pre data-lang="bash">curl -X POST <span class="string">"https://maas-rhdp.apps.maas.redhatworkshops.io/model/new"</span> \
   -H <span class="string">"Authorization: Bearer $MASTER_KEY"</span> \
   -H <span class="string">"Content-Type: application/json"</span> \
   -d <span class="string">'{
@@ -482,7 +482,7 @@ curl -X POST <span class="string">"https://litellm-prod.apps.maas.redhatworkshop
   }'</span></pre>
 
     <h3>Register qwen3-235b on Bedrock</h3>
-    <pre data-lang="bash">curl -X POST <span class="string">"https://litellm-prod.apps.maas.redhatworkshops.io/model/new"</span> \
+    <pre data-lang="bash">curl -X POST <span class="string">"https://maas-rhdp.apps.maas.redhatworkshops.io/model/new"</span> \
   -H <span class="string">"Authorization: Bearer $MASTER_KEY"</span> \
   -H <span class="string">"Content-Type: application/json"</span> \
   -d <span class="string">'{
@@ -500,7 +500,7 @@ curl -X POST <span class="string">"https://litellm-prod.apps.maas.redhatworkshop
     <h3>Verify Registration</h3>
     <pre data-lang="bash"><span class="comment"># List all registered model deployments — both Vertex and Bedrock should appear</span>
 <span class="comment"># under the same model_name entries</span>
-curl -s <span class="string">"https://litellm-prod.apps.maas.redhatworkshops.io/model/info"</span> \
+curl -s <span class="string">"https://maas-rhdp.apps.maas.redhatworkshops.io/model/info"</span> \
   -H <span class="string">"Authorization: Bearer $MASTER_KEY"</span> | jq <span class="string">'.data[] | {model_name, provider: .litellm_params.model}'</span></pre>
 
     <div class="info-box"><p>Cost values in the <code>model_info</code> block use per-token pricing (not per-1M). To convert: $0.15 per 1M tokens = <code>1.5e-07</code> per token. LiteLLM uses these values at runtime to compute the expected cost of each request before dispatching it.</p></div>
@@ -518,7 +518,7 @@ curl -s <span class="string">"https://litellm-prod.apps.maas.redhatworkshops.io/
       <li><strong>Export all model configurations</strong> before changing the key while the old key is still active:</li>
     </ol>
     <pre data-lang="bash"><span class="comment"># Export all model configs to a local file while old key is active</span>
-curl -s <span class="string">"https://litellm-prod.apps.maas.redhatworkshops.io/model/info"</span> \
+curl -s <span class="string">"https://maas-rhdp.apps.maas.redhatworkshops.io/model/info"</span> \
   -H <span class="string">"Authorization: Bearer $OLD_MASTER_KEY"</span> \
   | jq <span class="string">'.data'</span> > model-backup.json</pre>
 
@@ -531,7 +531,7 @@ curl -s <span class="string">"https://litellm-prod.apps.maas.redhatworkshops.io/
     <pre data-lang="bash"><span class="comment"># After rotating the key, re-register models from backup</span>
 <span class="comment"># (loop over the exported JSON and POST each entry)</span>
 jq -c <span class="string">'.[]'</span> model-backup.json | while read model; do
-  curl -X POST <span class="string">"https://litellm-prod.apps.maas.redhatworkshops.io/model/new"</span> \
+  curl -X POST <span class="string">"https://maas-rhdp.apps.maas.redhatworkshops.io/model/new"</span> \
     -H <span class="string">"Authorization: Bearer $NEW_MASTER_KEY"</span> \
     -H <span class="string">"Content-Type: application/json"</span> \
     -d <span class="string">"$model"</span>

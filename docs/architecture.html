@@ -140,7 +140,7 @@ graph TB
         R3["litellm-prod · AI Proxy"]
     end
 
-    subgraph APP["litellm-rhpds namespace — ×3 replicas each"]
+    subgraph APP["maas-rhdp namespace — ×3 replicas each"]
         direction LR
         FE["🖥 Frontend\nReact + nginx · v0.4.0"]
         BE["⚙️ Backend\nFastify · v0.4.0"]
@@ -209,7 +209,7 @@ graph LR
         R3["ocp4_workload_rhoai_metrics\n— Grafana Operator v5\n— ServiceMonitors per model\n— GPU + vLLM dashboards"]
     end
 
-    OCP["☁️ OpenShift\nnamespace: litellm-rhpds"]
+    OCP["☁️ OpenShift\nnamespace: maas-rhdp"]
 
     INFRA --> R1 & R2 & R3
     R1 & R2 & R3 --> OCP

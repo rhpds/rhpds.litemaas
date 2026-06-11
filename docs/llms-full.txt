@@ -18,11 +18,11 @@ LiteMaaS wraps the open-source LiteLLM proxy with a custom subscription and key 
 approval workflows, usage analytics, and branding — all deployed natively on OpenShift.
 
 Production deployment: The RHDP production instance runs at:
-  - litellm-prod.apps.maas.redhatworkshops.io (AI Proxy — OpenAI-compatible)
-  - litellm-prod-frontend.apps.maas.redhatworkshops.io (User Portal)
-  - litellm-prod-admin.apps.maas.redhatworkshops.io/api (Admin API)
+  - maas-rhdp.apps.maas.redhatworkshops.io (AI Proxy — OpenAI-compatible)
+  - maas-rhdp-frontend.apps.maas.redhatworkshops.io (User Portal)
+  - maas-rhdp-admin.apps.maas.redhatworkshops.io/api (Admin API)
 
-Namespace: litellm-rhpds
+Namespace: maas-rhdp
 Cluster: maas.redhatworkshops.io
 
 ================================================================
@@ -263,14 +263,14 @@ gemini-2.5-pro
 API ENDPOINTS
 ================================================================
 
-Base URL: https://litellm-prod.apps.maas.redhatworkshops.io
+Base URL: https://maas-rhdp.apps.maas.redhatworkshops.io
 
 Replace YOUR_API_KEY with your virtual key from the LiteMaaS portal.
 
 --- Chat Completions ---
 POST /v1/chat/completions
 
-curl -X POST https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions \
+curl -X POST https://maas-rhdp.apps.maas.redhatworkshops.io/v1/chat/completions \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -d '{
@@ -289,7 +289,7 @@ Add "stream": true to the request body.
 --- Embeddings ---
 POST /v1/embeddings
 
-curl -X POST https://litellm-prod.apps.maas.redhatworkshops.io/v1/embeddings \
+curl -X POST https://maas-rhdp.apps.maas.redhatworkshops.io/v1/embeddings \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -d '{
@@ -300,7 +300,7 @@ curl -X POST https://litellm-prod.apps.maas.redhatworkshops.io/v1/embeddings \
 --- Document Conversion (Docling) ---
 POST /docling/v1/convert/source
 
-curl -X POST https://litellm-prod.apps.maas.redhatworkshops.io/docling/v1/convert/source \
+curl -X POST https://maas-rhdp.apps.maas.redhatworkshops.io/docling/v1/convert/source \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -d '{
@@ -311,7 +311,7 @@ curl -X POST https://litellm-prod.apps.maas.redhatworkshops.io/docling/v1/conver
 --- File Upload for Conversion ---
 POST /docling/v1/convert/file
 
-curl -X POST https://litellm-prod.apps.maas.redhatworkshops.io/docling/v1/convert/file \
+curl -X POST https://maas-rhdp.apps.maas.redhatworkshops.io/docling/v1/convert/file \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -F "file=@/path/to/document.pdf" \
   -F 'options={"output_format": "markdown"}'
@@ -319,7 +319,7 @@ curl -X POST https://litellm-prod.apps.maas.redhatworkshops.io/docling/v1/conver
 --- Tokenize ---
 POST /v1/tokenize
 
-curl -X POST https://litellm-prod.apps.maas.redhatworkshops.io/v1/tokenize \
+curl -X POST https://maas-rhdp.apps.maas.redhatworkshops.io/v1/tokenize \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -d '{
@@ -328,7 +328,7 @@ curl -X POST https://litellm-prod.apps.maas.redhatworkshops.io/v1/tokenize \
   }'
 
 --- List Available Models ---
-curl https://litellm-prod.apps.maas.redhatworkshops.io/v1/models \
+curl https://maas-rhdp.apps.maas.redhatworkshops.io/v1/models \
   -H "Authorization: Bearer YOUR_API_KEY"
 
 ================================================================
@@ -339,7 +339,7 @@ from openai import OpenAI
 
 client = OpenAI(
     api_key="YOUR_API_KEY",
-    base_url="https://litellm-prod.apps.maas.redhatworkshops.io/v1"
+    base_url="https://maas-rhdp.apps.maas.redhatworkshops.io/v1"
 )
 
 response = client.chat.completions.create(
@@ -396,7 +396,7 @@ DAY-2 OPERATIONS
 ================================================================
 
 --- Upgrading Images ---
-NS=litellm-rhpds
+NS=maas-rhdp
 NEW_VERSION=0.5.0
 
 # Update backend
@@ -416,30 +416,30 @@ oc rollout status deployment/litellm-frontend -n ${NS}
 
 --- Scaling ---
 # Scale LiteLLM to 5 replicas
-oc scale deployment/litellm --replicas=5 -n litellm-rhpds
+oc scale deployment/litellm --replicas=5 -n maas-rhdp
 
 # Redis MUST be running for multi-replica LiteLLM
-oc get pods -n litellm-rhpds -l app=litellm-redis
+oc get pods -n maas-rhdp -l app=litellm-redis
 
 --- Adding Models ---
 # After adding a model in LiteLLM admin UI, sync to LiteMaaS backend DB:
-LITELLM_URL=$(oc get route litellm-prod -n litellm-rhpds -o jsonpath='https://{.spec.host}')
-LITELLM_KEY=$(oc get secret litellm-secret -n litellm-rhpds \
+LITELLM_URL=$(oc get route litellm-prod -n maas-rhdp -o jsonpath='https://{.spec.host}')
+LITELLM_KEY=$(oc get secret litellm-secret -n maas-rhdp \
   -o jsonpath='{.data.LITELLM_MASTER_KEY}' | base64 -d)
 
 ansible-playbook playbooks/manage_models.yml \
   -e litellm_url="${LITELLM_URL}" \
   -e litellm_master_key="${LITELLM_KEY}" \
-  -e ocp4_workload_litemaas_models_namespace=litellm-rhpds \
+  -e ocp4_workload_litemaas_models_namespace=maas-rhdp \
   -e ocp4_workload_litemaas_models_sync_from_litellm=true \
   -e '{"ocp4_workload_litemaas_models_list": []}'
 
 --- Key Cleanup Cronjob ---
 # Setup (run from rhpds.litemaas repo root)
-./setup-key-cleanup-cronjob.sh litellm-rhpds
+./setup-key-cleanup-cronjob.sh maas-rhdp
 
 # Manual run
-sudo /usr/local/bin/cleanup-litemaas-keys-litellm-rhpds.sh
+sudo /usr/local/bin/cleanup-litemaas-keys-maas-rhdp.sh
 
 # View logs
 sudo tail -100 /var/log/litemaas-key-cleanup.log
@@ -486,7 +486,7 @@ Benchmark Tool:
   Pass/Fail criteria calculated from attendee count automatically.
 
 LiteMaaS Built-in Analytics:
-  Portal: litellm-prod-frontend.apps.maas.redhatworkshops.io -> Admin -> Analytics
+  Portal: maas-rhdp-frontend.apps.maas.redhatworkshops.io -> Admin -> Analytics
   Views: system overview, per-user, per-model, per-provider, per-API-key, export (CSV/JSON)
 
 ================================================================
@@ -515,8 +515,8 @@ Issue 5: Key sync broken between LiteMaaS and LiteLLM
   Fix: Run sync playbook or trigger POST /api/admin/sync-keys endpoint.
 
 Issue 6: Redis cache issues — stale model data
-  Fix: oc rollout restart deployment/litellm -n litellm-rhpds
-       oc exec -n litellm-rhpds deployment/litellm -- redis-cli FLUSHALL
+  Fix: oc rollout restart deployment/litellm -n maas-rhdp
+       oc exec -n maas-rhdp deployment/litellm -- redis-cli FLUSHALL
 
 Issue 7: OAuth callback fails
   Root cause: OAuthClient redirect URI mismatch or token expiry.
@@ -528,12 +528,12 @@ Issue 8: Model requests timing out
 
 Issue 9: LiteLLM returning 401 / invalid API key
   Root cause: Key was deleted or Redis cache stale.
-  Fix: oc rollout restart deployment/litellm -n litellm-rhpds
+  Fix: oc rollout restart deployment/litellm -n maas-rhdp
        Verify key exists: curl /key/info -H "Authorization: Bearer $LITELLM_MASTER_KEY"
 
 Issue 10: Pods getting OOMKilled
   Root cause: Memory limits too low for workload.
-  Fix: oc set resources deployment/litellm --limits=memory=4Gi -n litellm-rhpds
+  Fix: oc set resources deployment/litellm --limits=memory=4Gi -n maas-rhdp
 
 ================================================================
 GitOps MODEL MANAGEMENT
@@ -557,8 +557,8 @@ Collection: rhpds.litellm_virtual_keys v0.2.0
 The ocp4_workload_litellm_virtual_keys role creates per-user API keys automatically
 for every workshop participant. Key configuration is defined in AgnosticV common.yaml:
 
-litellm_virtual_keys_api_url: "https://litellm-prod.apps.maas.redhatworkshops.io"
-litellm_virtual_keys_admin_api_url: "https://litellm-prod-admin.apps.maas.redhatworkshops.io/api"
+litellm_virtual_keys_api_url: "https://maas-rhdp.apps.maas.redhatworkshops.io"
+litellm_virtual_keys_admin_api_url: "https://maas-rhdp-admin.apps.maas.redhatworkshops.io/api"
 litellm_virtual_keys_models:
   - granite-3-2-8b-instruct
 litellm_virtual_keys_max_budget: 5.0
@@ -577,12 +577,12 @@ Monthly automated pg_dump to S3 with VolumeSnapshot fallback.
 Retention: 12 months for SQL dumps.
 
 Setup backup cronjob:
-  ./setup-litemaas-backup-cronjob.sh litellm-rhpds <s3-bucket>
+  ./setup-litemaas-backup-cronjob.sh maas-rhdp <s3-bucket>
 
 Manual backup:
-  oc exec -n litellm-rhpds litellm-postgres-0 -- \
+  oc exec -n maas-rhdp litellm-postgres-0 -- \
     pg_dump -U litellm litellm | gzip > litellm-backup-$(date +%Y%m%d).sql.gz
 
 Restore:
-  oc exec -i -n litellm-rhpds litellm-postgres-0 -- \
+  oc exec -i -n maas-rhdp litellm-postgres-0 -- \
     psql -U litellm litellm < backup.sql

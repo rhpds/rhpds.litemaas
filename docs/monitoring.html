@@ -178,7 +178,7 @@ ansible-playbook playbooks/deploy_rhoai_metrics.yml \
 
     <h3>Access</h3>
     <div class="callout">
-      Log in to <a href="https://litellm-prod-frontend.apps.maas.redhatworkshops.io" target="_blank">litellm-prod-frontend.apps.maas.redhatworkshops.io</a> as admin → <strong>Admin → Analytics</strong>
+      Log in to <a href="https://maas-rhdp-frontend.apps.maas.redhatworkshops.io" target="_blank">maas-rhdp-frontend.apps.maas.redhatworkshops.io</a> as admin → <strong>Admin → Analytics</strong>
     </div>
 
     <h3>Available Views</h3>
@@ -274,7 +274,7 @@ oc get route benchmark-report -n &lt;guid&gt; -o jsonpath='{.spec.host}'</pre>
 
     <h3>Setup</h3>
     <pre><span class="c"># Run from workstation — installs script on bastion and creates crontab entry</span>
-./setup-key-cleanup-cronjob.sh litellm-rhpds</pre>
+./setup-key-cleanup-cronjob.sh maas-rhdp</pre>
 
     <h3>Operations</h3>
     <pre><span class="c"># Check the cronjob is scheduled</span>
@@ -284,7 +284,7 @@ ssh bastion 'sudo crontab -l | grep cleanup'
 ssh bastion 'sudo tail -100 /var/log/litemaas-key-cleanup.log'
 
 <span class="c"># Run manually</span>
-ssh bastion 'sudo /usr/local/bin/cleanup-litemaas-keys-litellm-rhpds.sh'</pre>
+ssh bastion 'sudo /usr/local/bin/cleanup-litemaas-keys-maas-rhdp.sh'</pre>
 
     <div class="callout warn">
       The script auto-discovers the LiteMaaS URL and master key from OpenShift secrets — it requires <code>oc</code> to be installed and logged in on the bastion host.

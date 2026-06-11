@@ -334,7 +334,7 @@
     <p>These limits are enforced by LiteLLM at the virtual key level, not at the Vertex API level. Vertex-side quotas are provisioned separately per GCP project and are generally higher than the LiteMaaS-enforced limits.</p>
 
     <div class="warn-box">
-      <p><strong>If users report 429 errors</strong>, check whether the issue is a LiteLLM-enforced per-key limit or an actual Vertex quota. Run <code>oc logs -n litellm-rhpds -l app=litellm</code> and look for <code>RateLimitError</code> vs <code>QuotaExceeded</code> to distinguish the source.</p>
+      <p><strong>If users report 429 errors</strong>, check whether the issue is a LiteLLM-enforced per-key limit or an actual Vertex quota. Run <code>oc logs -n maas-rhdp -l app=litellm</code> and look for <code>RateLimitError</code> vs <code>QuotaExceeded</code> to distinguish the source.</p>
     </div>
   </div>
 
@@ -344,17 +344,17 @@
     <p>GCP service account JSON key files are stored as OpenShift secrets and mounted as read-only volumes into the <code>litellm</code> deployment. LiteLLM reads the file path at inference time when the model's <code>vertex_credentials</code> parameter is set.</p>
 
     <h3 id="ocp-secrets">OCP Secrets</h3>
-    <p>Create (or update) the secrets in the <code>litellm-rhpds</code> namespace. Each secret contains a single key named <code>key.json</code> holding the full GCP SA JSON key file content.</p>
+    <p>Create (or update) the secrets in the <code>maas-rhdp</code> namespace. Each secret contains a single key named <code>key.json</code> holding the full GCP SA JSON key file content.</p>
 
     <pre data-lang="bash"><span class="comment"># Create the OSS model SA secret (rhdp-infra project)</span>
 oc create secret generic vertex-ai-sa-key \
   --from-file=key.json=/path/to/litemaas-vertex-sa-key.json \
-  -n litellm-rhpds
+  -n maas-rhdp
 
 <span class="comment"># Create the Claude / Gemini SA secret (itpc-gcp-product-all-claude project)</span>
 oc create secret generic vertex-claude-sa-key \
   --from-file=key.json=/path/to/rhdp-vertex-app-sa-key.json \
-  -n litellm-rhpds</pre>
+  -n maas-rhdp</pre>
 
     <div class="warn-box">
       <p><strong>Never commit SA key files to git.</strong> Treat them as passwords. Use <code>oc create secret generic</code> directly from the downloaded JSON file, then delete the local copy.</p>
@@ -384,8 +384,8 @@ volumeMounts:
     <p>After patching the deployment, verify that both files are visible inside the running pod:</p>
 
     <pre data-lang="bash"><span class="comment"># Verify credential files are present in the pod</span>
-oc exec -n litellm-rhpds deploy/litellm -- ls -la /etc/vertex-credentials/
-oc exec -n litellm-rhpds deploy/litellm -- ls -la /etc/vertex-claude-credentials/
+oc exec -n maas-rhdp deploy/litellm -- ls -la /etc/vertex-credentials/
+oc exec -n maas-rhdp deploy/litellm -- ls -la /etc/vertex-claude-credentials/
 
 <span class="comment"># Expected output for each directory</span>
 total 8
@@ -525,7 +525,7 @@ curl -X POST "$LITELLM_URL/model/new" \
 
     <div class="mermaid">
 flowchart TD
-    LiteLLM["LiteLLM Proxy\nlitellm-rhpds"] --> SA1["SA: litemaas-vertex-sa\nrhdp-infra project"]
+    LiteLLM["LiteLLM Proxy\nmaas-rhdp"] --> SA1["SA: litemaas-vertex-sa\nrhdp-infra project"]
     LiteLLM --> SA2["SA: rhdp-vertex-app-sa\nitpc-gcp-product-all-claude"]
 
     SA1 -->|"Model Garden OSS"| GPT120["GPT-OSS 120B"]
@@ -611,7 +611,7 @@ curl -s "$LITEMAAS_URL/v1/models" \
     <pre data-lang="bash"><span class="comment"># Add as env var on the litellm deployment</span>
 oc set env deploy/litellm \
   GOOGLE_APPLICATION_CREDENTIALS=/etc/vertex-claude-credentials/key.json \
-  -n litellm-rhpds</pre>
+  -n maas-rhdp</pre>
 
     <h3>Model appears in LiteLLM but not in LiteMaaS UI</h3>
     <p>This is expected when <code>LITELLM_AUTO_SYNC=false</code>. Register the model through the LiteMaaS admin interface or API to make it visible to users. See <a href="model-management.html">Model Management</a> for the full workflow.</p>
@@ -635,13 +635,13 @@ gcloud projects get-iam-policy itpc-gcp-product-all-claude \
 
     <h3>Checking Vertex connectivity from the pod</h3>
     <pre data-lang="bash"><span class="comment"># Test that the OSS SA can reach Vertex</span>
-oc exec -n litellm-rhpds deploy/litellm -- \
+oc exec -n maas-rhdp deploy/litellm -- \
   curl -s -o /dev/null -w "%{http_code}" \
   -H "Authorization: Bearer $(cat /etc/vertex-credentials/key.json | python3 -c 'import sys,json; print(json.load(sys.stdin)[\"private_key\"][:20])')" \
   "https://us-central1-aiplatform.googleapis.com/v1/projects/rhdp-infra/locations/us-central1/publishers/openai/models"
 
 <span class="comment"># View recent Vertex-related errors in the LiteLLM log</span>
-oc logs -n litellm-rhpds -l app=litellm --tail=100 | grep -i "vertex\|403\|quota\|rate"</pre>
+oc logs -n maas-rhdp -l app=litellm --tail=100 | grep -i "vertex\|403\|quota\|rate"</pre>
 
     <div class="info-box">
       <p><strong>When in doubt, check the pod logs first.</strong> LiteLLM logs the full upstream error message from Vertex including status code, error type, and GCP project ID. This is the fastest way to distinguish between an IAM issue, a quota issue, and a model path typo.</p>

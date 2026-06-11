@@ -454,7 +454,7 @@ oc get secret rhoai-grafana-admin-credentials -n llm-hosting \
 
     <h3>Access Admin Analytics</h3>
     <ol>
-      <li>Log in to the LiteMaaS frontend: <code>https://litellm-prod-frontend.apps.maas.redhatworkshops.io</code></li>
+      <li>Log in to the LiteMaaS frontend: <code>https://maas-rhdp-frontend.apps.maas.redhatworkshops.io</code></li>
       <li>Navigate to <strong>Admin → Analytics</strong></li>
       <li>Filter by: date range, user, model, provider, or API key</li>
       <li>Export to CSV or JSON using the export button</li>
@@ -471,13 +471,13 @@ oc get secret rhoai-grafana-admin-credentials -n llm-hosting \
     <h3>LiteLLM Admin Portal Spend Tracking</h3>
     <p>The LiteLLM admin UI also provides spend tracking directly against the <code>LiteLLM_SpendLogs</code> table:</p>
     <pre data-lang="bash"><span class="comment"># Access LiteLLM admin portal</span>
-<span class="comment"># URL: https://litellm-prod.apps.maas.redhatworkshops.io</span>
+<span class="comment"># URL: https://maas-rhdp.apps.maas.redhatworkshops.io</span>
 <span class="comment"># Navigate to: Usage tab → Spend Logs</span>
 
 <span class="comment"># Or query directly via API</span>
-LITELLM_KEY=$(oc get secret litellm-secret -n litellm-rhpds \
+LITELLM_KEY=$(oc get secret litellm-secret -n maas-rhdp \
   -o jsonpath='{.data.LITELLM_MASTER_KEY}' | base64 -d)
-ROUTE=$(oc get route litellm-prod -n litellm-rhpds -o jsonpath='{.spec.host}')
+ROUTE=$(oc get route litellm-prod -n maas-rhdp -o jsonpath='{.spec.host}')
 
 <span class="comment"># Get spend per key</span>
 curl "https://$ROUTE/spend/keys" \

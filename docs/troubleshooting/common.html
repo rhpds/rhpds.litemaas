@@ -128,7 +128,7 @@
 
     <h3 class="fix-label">Fix — Trigger sync via Admin UI or API</h3>
     <p>Go to <strong>LiteMaaS Frontend → Admin → Models</strong> and verify the model appears. If missing, add it via the UI or use the API:</p>
-    <pre>export ADMIN_KEY=sk-1234567890abcdef1234 && export LITELLM_URL=https://litellm-prod.apps.maas.redhatworkshops.io</pre>
+    <pre>export ADMIN_KEY=sk-1234567890abcdef1234 && export LITELLM_URL=https://maas-rhdp.apps.maas.redhatworkshops.io</pre>
     <pre>curl -sk -X POST "$LITELLM_URL/model/new" -H "Authorization: Bearer $ADMIN_KEY" -H "Content-Type: application/json" -d '{"model_name":"my-model","litellm_params":{"model":"openai/my-model","api_base":"http://my-model-predictor.llm-hosting.svc.cluster.local/v1","custom_llm_provider":"openai"}}'</pre>
 
     <h3 class="fix-label">Fix — Via Admin API Sync Endpoint</h3>
@@ -175,7 +175,7 @@ oc exec -n $NS litellm-postgres-0 -- \
 
     <h3 class="fix-label">Diagnose</h3>
     <pre><span class="comment"># Check if model exists in LiteMaaS models table</span>
-NS=litellm-rhpds
+NS=maas-rhdp
 MODEL_ID=your-model-name
 
 oc exec -n $NS litellm-postgres-0 -- \
@@ -226,7 +226,7 @@ oc exec -n $NS litellm-postgres-0 -- \
 
     <h3 class="fix-label">Diagnose</h3>
     <pre><span class="comment"># Check both the main container and init container image tags</span>
-NS=litellm-rhpds
+NS=maas-rhdp
 
 oc get deployment/litellm-frontend -n $NS \
   -o jsonpath='{.spec.template.spec.containers[*].image}'
@@ -238,7 +238,7 @@ echo ""
 <span class="comment"># They must match for the correct version to be served</span></pre>
 
     <h3 class="fix-label">Fix — Update Both Container Images Together</h3>
-    <pre>NS=litellm-rhpds
+    <pre>NS=maas-rhdp
 NEW_TAG=0.5.0
 IMAGE=quay.io/rh-aiservices-bu/litemaas-frontend
 
@@ -288,7 +288,7 @@ oc get pods -n $NS -l app=litellm-frontend \
 
     <h3 class="fix-label">Diagnose</h3>
     <pre><span class="comment"># Check LiteLLM startup logs for migration output</span>
-NS=litellm-rhpds
+NS=maas-rhdp
 LITELLM_POD=$(oc get pods -n $NS -l app=litellm \
   -o jsonpath='{.items[0].metadata.name}')
 
@@ -362,7 +362,7 @@ oc rollout restart deployment/litellm -n $NS</pre>
     </div>
 
     <h3 class="fix-label">Diagnose — Find Keys with Sync Errors</h3>
-    <pre>NS=litellm-rhpds
+    <pre>NS=maas-rhdp
 
 <span class="comment"># List all keys with sync errors</span>
 oc exec -n $NS litellm-postgres-0 -- \
@@ -420,7 +420,7 @@ curl -X POST "https://$ROUTE/key/delete" \
     <h3 class="fix-label">Fix — Run the Key Cleanup Cronjob Immediately</h3>
     <pre><span class="comment"># The cleanup cron handles orphaned keys automatically</span>
 <span class="comment"># Run it manually for immediate effect</span>
-sudo /usr/local/bin/cleanup-litemaas-keys-litellm-rhpds.sh
+sudo /usr/local/bin/cleanup-litemaas-keys-maas-rhdp.sh
 sudo tail -50 /var/log/litemaas-key-cleanup.log</pre>
   </div>
 
@@ -446,7 +446,7 @@ sudo tail -50 /var/log/litemaas-key-cleanup.log</pre>
     </div>
 
     <h3 class="fix-label">Diagnose</h3>
-    <pre>NS=litellm-rhpds
+    <pre>NS=maas-rhdp
 
 <span class="comment"># Check Redis is running</span>
 oc get pods -n $NS -l app=litellm-redis
@@ -509,7 +509,7 @@ oc logs -n $NS deployment/litellm-redis --tail=50</pre>
     </div>
 
     <h3 class="fix-label">Diagnose — Check OAuthClient Redirect URIs</h3>
-    <pre>NS=litellm-rhpds
+    <pre>NS=maas-rhdp
 
 <span class="comment"># Get the OAuthClient configuration</span>
 oc get oauthclient $NS -o yaml | grep -A 20 redirectURIs
@@ -522,7 +522,7 @@ oc get routes -n $NS -o jsonpath='{range .items[*]}{.spec.host}{"\n"}{end}'
 <span class="comment"># https://&lt;frontend-route&gt;/api/auth/callback</span></pre>
 
     <h3 class="fix-label">Fix — Update OAuthClient Redirect URIs</h3>
-    <pre>NS=litellm-rhpds
+    <pre>NS=maas-rhdp
 API_ROUTE=$(oc get route litellm-prod -n $NS -o jsonpath='{.spec.host}')
 FRONTEND_ROUTE=$(oc get route litellm-prod-frontend -n $NS -o jsonpath='{.spec.host}')
 
@@ -572,7 +572,7 @@ oc exec -n $NS litellm-postgres-0 -- \
     </div>
 
     <h3 class="fix-label">Fix — Set HAProxy Timeout on Routes</h3>
-    <pre>NS=litellm-rhpds
+    <pre>NS=maas-rhdp
 
 <span class="comment"># Add 600-second timeout annotation to the LiteLLM API route</span>
 oc annotate route litellm-prod -n $NS \
@@ -611,7 +611,7 @@ oc get route litellm-prod -n $NS \
     </div>
 
     <h3 class="fix-label">Diagnose</h3>
-    <pre>NS=litellm-rhpds
+    <pre>NS=maas-rhdp
 LITELLM_KEY=$(oc get secret litellm-secret -n $NS \
   -o jsonpath='{.data.LITELLM_MASTER_KEY}' | base64 -d)
 ROUTE=$(oc get route litellm-prod -n $NS -o jsonpath='{.spec.host}')
@@ -659,7 +659,7 @@ oc exec -n $NS $REDIS_POD -- redis-cli FLUSHALL</pre>
     </div>
 
     <h3 class="fix-label">Diagnose</h3>
-    <pre>NS=litellm-rhpds
+    <pre>NS=maas-rhdp
 
 <span class="comment"># Check OOM history</span>
 oc describe pods -n $NS -l app=litellm | grep -A 5 "Last State\|OOMKilled"
@@ -720,20 +720,20 @@ oc rollout status deployment/litellm -n $NS</pre>
 
     <h3 class="fix-label">Diagnose</h3>
     <pre><span class="comment"># Check if DATABASE_URL is set on the LiteLLM pod</span>
-oc exec -n litellm-rhpds deployment/litellm -- sh -c "echo \$DATABASE_URL"
+oc exec -n maas-rhdp deployment/litellm -- sh -c "echo \$DATABASE_URL"
 
 <span class="comment"># If empty or not set — this is the cause</span>
 <span class="comment"># Models and keys are stored in memory only and lost on restart</span></pre>
 
     <h3 class="fix-label">Fix — Set DATABASE_URL</h3>
     <pre><span class="comment"># Get the PostgreSQL connection string from the DB secret</span>
-DB_URL=$(oc get secret litemaas-db -n litellm-rhpds \
+DB_URL=$(oc get secret litemaas-db -n maas-rhdp \
   -o jsonpath='{.data.DATABASE_URL}' | base64 -d)
 
 <span class="comment"># Set it on the LiteLLM deployment</span>
-oc set env deployment/litellm -n litellm-rhpds DATABASE_URL="$DB_URL"
+oc set env deployment/litellm -n maas-rhdp DATABASE_URL="$DB_URL"
 
-oc rollout status deployment/litellm -n litellm-rhpds</pre>
+oc rollout status deployment/litellm -n maas-rhdp</pre>
 
     <div class="info-box">
       <p>
@@ -747,7 +747,7 @@ oc rollout status deployment/litellm -n litellm-rhpds</pre>
 
     <h3 class="fix-label">After fixing — re-register models</h3>
     <p>The model-serving ArgoCD app will re-create InferenceServices, but LiteLLM model registrations must be re-added via the <strong>Admin UI → Models → Add Model</strong> or the API. Then restart the backend to trigger sync:</p>
-    <pre>oc rollout restart deployment/litellm-backend -n litellm-rhpds</pre>
+    <pre>oc rollout restart deployment/litellm-backend -n maas-rhdp</pre>
   </div>
 
   <!-- Issue 12: GPU resource exhaustion -->
@@ -806,11 +806,11 @@ oc patch inferenceservice &lt;other-model&gt; -n llm-hosting \
     </div>
 
     <h3 class="fix-label">Diagnose</h3>
-    <pre>MASTER_KEY=$(oc get secret litellm-secret -n litellm-rhpds \
+    <pre>MASTER_KEY=$(oc get secret litellm-secret -n maas-rhdp \
   -o jsonpath='{.data.LITELLM_MASTER_KEY}' | base64 -d)
 
 <span class="comment"># List all models and spot duplicates</span>
-curl -s https://litellm-prod.apps.maas.redhatworkshops.io/model/info \
+curl -s https://maas-rhdp.apps.maas.redhatworkshops.io/model/info \
   -H "Authorization: Bearer $MASTER_KEY" | \
   python3 -c "
 import sys,json
@@ -825,13 +825,13 @@ for m in d.get('data',[]):
 
     <h3 class="fix-label">Fix</h3>
     <pre><span class="comment"># Delete the duplicate by its model_info.id</span>
-curl -X DELETE https://litellm-prod.apps.maas.redhatworkshops.io/model/delete \
+curl -X DELETE https://maas-rhdp.apps.maas.redhatworkshops.io/model/delete \
   -H "Authorization: Bearer $MASTER_KEY" \
   -H "Content-Type: application/json" \
   -d '{"id": "&lt;model-info-id-to-remove&gt;"}'
 
 <span class="comment"># Verify it is removed</span>
-curl -s https://litellm-prod.apps.maas.redhatworkshops.io/model/info \
+curl -s https://maas-rhdp.apps.maas.redhatworkshops.io/model/info \
   -H "Authorization: Bearer $MASTER_KEY" | \
   python3 -c "import sys,json; [print(m['model_name']) for m in json.load(sys.stdin).get('data',[])]"</pre>
   </div>
@@ -839,7 +839,7 @@ curl -s https://litellm-prod.apps.maas.redhatworkshops.io/model/info \
   <!-- General Diagnostic Commands -->
   <div class="section">
     <h2>General Diagnostic Commands</h2>
-    <pre>NS=litellm-rhpds
+    <pre>NS=maas-rhdp
 
 <span class="comment"># Full cluster state</span>
 oc get all -n $NS

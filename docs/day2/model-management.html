@@ -205,7 +205,7 @@ graph TD
 
     <h3>Option 1: Admin UI (recommended)</h3>
     <ol>
-      <li>Go to <a href="https://litellm-prod-frontend.apps.maas.redhatworkshops.io" target="_blank">LiteMaaS Frontend</a> &rarr; <strong>Admin &rarr; Models &rarr; Add Model</strong></li>
+      <li>Go to <a href="https://maas-rhdp-frontend.apps.maas.redhatworkshops.io" target="_blank">LiteMaaS Frontend</a> &rarr; <strong>Admin &rarr; Models &rarr; Add Model</strong></li>
       <li>Fill in:
         <ul>
           <li><strong>Provider:</strong> OpenAI-Compatible</li>
@@ -252,17 +252,17 @@ sequenceDiagram
     </div>
 
     <h3>Check Current Setting</h3>
-    <pre data-lang="bash">oc exec -n litellm-rhpds deployment/litellm-backend -- \
+    <pre data-lang="bash">oc exec -n maas-rhdp deployment/litellm-backend -- \
   sh -c 'echo LITELLM_AUTO_SYNC=$LITELLM_AUTO_SYNC'</pre>
 
     <h3>Enable Auto-Sync</h3>
     <pre data-lang="bash"><span class="comment"># Set env var on the backend deployment</span>
 oc set env deployment/litellm-backend \
   LITELLM_AUTO_SYNC=true \
-  -n litellm-rhpds
+  -n maas-rhdp
 
 <span class="comment"># Restart to apply</span>
-oc rollout restart deployment/litellm-backend -n litellm-rhpds</pre>
+oc rollout restart deployment/litellm-backend -n maas-rhdp</pre>
 
     <h3>When to Use Auto-Sync</h3>
     <table>
@@ -318,7 +318,7 @@ oc rollout restart deployment/litellm-backend -n litellm-rhpds</pre>
     </table>
 
     <h3>Check for Orphaned Keys (LiteMaaS keys with no LiteLLM record)</h3>
-    <pre data-lang="bash">oc exec -n litellm-rhpds litellm-postgres-0 -- \
+    <pre data-lang="bash">oc exec -n maas-rhdp litellm-postgres-0 -- \
   psql -U litellm -d litellm -c "
 SELECT ak.id, ak.litellm_key_alias, ak.is_active, ak.created_at
 FROM api_keys ak
@@ -332,7 +332,7 @@ LIMIT 20;"</pre>
 
     <h3>Fix Orphaned Keys</h3>
     <pre data-lang="bash"><span class="comment"># Mark orphaned LiteMaaS keys as inactive</span>
-oc exec -n litellm-rhpds litellm-postgres-0 -- \
+oc exec -n maas-rhdp litellm-postgres-0 -- \
   psql -U litellm -d litellm -c "
 UPDATE api_keys
 SET is_active = false,
@@ -353,7 +353,7 @@ curl -X GET "${LITELLM_URL}/model/info" \
   -H "Authorization: Bearer ${LITELLM_KEY}" | \
   jq '.data[].model_name' | sort > /tmp/litellm-models.txt
 
-oc exec -n litellm-rhpds litellm-postgres-0 -- \
+oc exec -n maas-rhdp litellm-postgres-0 -- \
   psql -U litellm -d litellm -t -c "SELECT id FROM models;" | \
   sort > /tmp/litemaas-models.txt
 
@@ -362,9 +362,9 @@ diff /tmp/litellm-models.txt /tmp/litemaas-models.txt</pre>
 
     <h3>Trigger Manual Sync</h3>
     <pre data-lang="bash"><span class="comment"># Backend exposes a sync endpoint (admin auth required)</span>
-ADMIN_KEY=$(oc get secret backend-secret -n litellm-rhpds \
+ADMIN_KEY=$(oc get secret backend-secret -n maas-rhdp \
   -o jsonpath='{.data.ADMIN_API_KEY}' | base64 -d)
-BACKEND_URL=$(oc get route litellm-prod-admin -n litellm-rhpds \
+BACKEND_URL=$(oc get route litellm-prod-admin -n maas-rhdp \
   -o jsonpath='https://{.spec.host}')
 
 curl -X POST "${BACKEND_URL}/api/admin/sync-models" \
@@ -402,7 +402,7 @@ curl -X POST "${BACKEND_URL}/api/admin/sync-models" \
       </li>
       <li>
         <strong>Stored the SA key as an OCP secret</strong> — the JSON key was stored as a Kubernetes
-        secret (<code>vertex-ai-sa-key</code>) in the <code>litellm-rhpds</code> namespace.
+        secret (<code>vertex-ai-sa-key</code>) in the <code>maas-rhdp</code> namespace.
         No credentials are stored in code or config files.
       </li>
       <li>
@@ -424,10 +424,10 @@ curl -X POST "${BACKEND_URL}/api/admin/sync-models" \
     <h4>Step 1 — Store the key as an OCP secret</h4>
     <pre data-lang="bash">oc create secret generic vertex-ai-sa-key \
   --from-file=key.json=/path/to/service-account.json \
-  -n litellm-rhpds</pre>
+  -n maas-rhdp</pre>
 
     <h4>Step 2 — Mount the secret into the LiteLLM pod</h4>
-    <pre data-lang="bash">oc set volume deployment/litellm -n litellm-rhpds \
+    <pre data-lang="bash">oc set volume deployment/litellm -n maas-rhdp \
   --add --name=vertex-sa-key \
   --type=secret \
   --secret-name=vertex-ai-sa-key \
@@ -525,7 +525,7 @@ curl -X POST "${BACKEND_URL}/api/admin/sync-models" \
     <h3>Calling an external model</h3>
     <p>No change in how you call the API — use the same endpoint and your virtual key:</p>
     <pre data-lang="bash"><span class="comment"># Works exactly the same as on-cluster models</span>
-curl https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions \
+curl https://maas-rhdp.apps.maas.redhatworkshops.io/v1/chat/completions \
   -H "Authorization: Bearer $YOUR_VIRTUAL_KEY" \
   -H "Content-Type: application/json" \
   -d '{"model": "minimax-m2", "messages": [{"role": "user", "content": "your prompt"}]}'</pre>

@@ -156,11 +156,11 @@
 
     <h3>Setup Automated Monthly Backup</h3>
     <pre data-lang="bash"><span class="comment"># Requires S3 bucket with IAM role attached to bastion EC2 instance</span>
-./setup-litemaas-backup-cronjob.sh litellm-rhpds maas-db-backup</pre>
+./setup-litemaas-backup-cronjob.sh maas-rhdp maas-db-backup</pre>
 
     <h3>Manual Database Backup</h3>
     <pre data-lang="bash"><span class="comment"># Backup LiteMaaS + LiteLLM shared database</span>
-oc exec -n litellm-rhpds litellm-postgres-0 -- \
+oc exec -n maas-rhdp litellm-postgres-0 -- \
   pg_dump -U litellm litellm | gzip > litellm-backup-$(date +%Y%m%d).sql.gz
 
 <span class="comment"># Upload to S3</span>
@@ -192,7 +192,7 @@ aws s3 cp litellm-backup-$(date +%Y%m%d).sql.gz \
 
     <h3>Taking a Backup — via UI</h3>
     <ol style="padding-left:1.5rem; font-size:0.9rem; color:#444; margin:0.5rem 0 1rem;">
-      <li>Log in to the LiteMaaS portal as admin: <a href="https://litellm-prod-frontend.apps.maas.redhatworkshops.io" target="_blank">litellm-prod-frontend.apps.maas.redhatworkshops.io</a></li>
+      <li>Log in to the LiteMaaS portal as admin: <a href="https://maas-rhdp-frontend.apps.maas.redhatworkshops.io" target="_blank">maas-rhdp-frontend.apps.maas.redhatworkshops.io</a></li>
       <li>Navigate to <strong>Admin &rarr; Tools &rarr; Backup</strong></li>
       <li>Click <strong>Create Backup</strong> — a <code>.sql.gz</code> file is generated</li>
       <li>Click <strong>Download</strong> to save it locally</li>
@@ -200,15 +200,15 @@ aws s3 cp litellm-backup-$(date +%Y%m%d).sql.gz \
 
     <h3>Taking a Backup — via API</h3>
     <pre data-lang="bash"><span class="comment"># Create a backup</span>
-curl -X POST https://litellm-prod-admin.apps.maas.redhatworkshops.io/api/v1/admin/backup/create \
+curl -X POST https://maas-rhdp-admin.apps.maas.redhatworkshops.io/api/v1/admin/backup/create \
   -H "Authorization: Bearer &lt;admin-jwt&gt;"
 
 <span class="comment"># List available backups</span>
-curl https://litellm-prod-admin.apps.maas.redhatworkshops.io/api/v1/admin/backup/list \
+curl https://maas-rhdp-admin.apps.maas.redhatworkshops.io/api/v1/admin/backup/list \
   -H "Authorization: Bearer &lt;admin-jwt&gt;"
 
 <span class="comment"># Download a backup file</span>
-curl https://litellm-prod-admin.apps.maas.redhatworkshops.io/api/v1/admin/backup/download/&lt;filename&gt; \
+curl https://maas-rhdp-admin.apps.maas.redhatworkshops.io/api/v1/admin/backup/download/&lt;filename&gt; \
   -H "Authorization: Bearer &lt;admin-jwt&gt;" \
   -o backup.sql.gz</pre>
 
@@ -225,13 +225,13 @@ curl https://litellm-prod-admin.apps.maas.redhatworkshops.io/api/v1/admin/backup
     <h3>Automated Backup — Bastion Cronjob (S3)</h3>
     <p>For scheduled backups to S3, the <code>rhpds.litemaas</code> collection includes a setup script. This runs monthly on the bastion host and uploads compressed PostgreSQL dumps to an S3 bucket, keeping the last 12 (1 year of monthly backups).</p>
     <pre data-lang="bash"><span class="comment"># Run on bastion — installs monthly backup cronjob to S3</span>
-./setup-litemaas-backup-cronjob.sh litellm-rhpds my-s3-bucket
+./setup-litemaas-backup-cronjob.sh maas-rhdp my-s3-bucket
 
 <span class="comment"># Prerequisites: AWS CLI + IAM instance profile on bastion with S3 write access</span></pre>
 
     <h3>Manual Database Backup</h3>
     <pre data-lang="bash"><span class="comment"># Dump the full database (litemaas_db + litellm_db share one PostgreSQL instance)</span>
-oc exec -n litellm-rhpds litellm-postgres-0 -- \
+oc exec -n maas-rhdp litellm-postgres-0 -- \
   pg_dump -U litellm litellm | gzip > litemaas-backup-$(date +%Y%m%d).sql.gz
 
 <span class="comment"># Upload to S3</span>
@@ -251,7 +251,7 @@ aws s3 cp litemaas-backup-$(date +%Y%m%d).sql.gz s3://my-bucket/backups/</pre>
     <h3>Unique users &amp; spend — last 30 days (API)</h3>
     <p>Use this when you need a quick user count or want to see who is spending the most. No cluster access required.</p>
     <pre data-lang="bash"><span class="comment"># Set your master key first</span>
-export LITELLM_URL=https://litellm-prod.apps.maas.redhatworkshops.io
+export LITELLM_URL=https://maas-rhdp.apps.maas.redhatworkshops.io
 export MASTER_KEY=sk-...
 
 curl -sk "$LITELLM_URL/spend/users?start_date=$(date -v-30d '+%Y-%m-%d')&amp;end_date=$(date '+%Y-%m-%d')" \
@@ -280,7 +280,7 @@ for m in sorted(json.load(sys.stdin), key=lambda x: x.get('total_spend',0), reve
     <h3>Unique users &amp; tokens — monthly breakdown (DB)</h3>
     <p>Use this when you need <strong>token counts</strong>. The LiteLLM API does not expose tokens without an Enterprise licence — query the database directly instead.</p>
     <pre data-lang="bash"><span class="comment"># Requires oc exec access to the postgres pod</span>
-oc exec -n litellm-rhpds litellm-postgres-0 -- \
+oc exec -n maas-rhdp litellm-postgres-0 -- \
   psql -U litellm -d litellm -t -c "
 SELECT
   TO_CHAR(DATE_TRUNC('month', \"startTime\"), 'YYYY-MM') as month,
@@ -293,7 +293,7 @@ GROUP BY 1
 ORDER BY 1 DESC;"</pre>
 
     <h3>Top models by token consumption (DB)</h3>
-    <pre data-lang="bash">oc exec -n litellm-rhpds litellm-postgres-0 -- \
+    <pre data-lang="bash">oc exec -n maas-rhdp litellm-postgres-0 -- \
   psql -U litellm -d litellm -t -c "
 SELECT
   model,
@@ -308,7 +308,7 @@ ORDER BY total_tokens DESC
 LIMIT 10;"</pre>
 
     <h3>Daily active users — last 7 days (DB)</h3>
-    <pre data-lang="bash">oc exec -n litellm-rhpds litellm-postgres-0 -- \
+    <pre data-lang="bash">oc exec -n maas-rhdp litellm-postgres-0 -- \
   psql -U litellm -d litellm -t -c "
 SELECT
   TO_CHAR(DATE_TRUNC('day', \"startTime\"), 'YYYY-MM-DD') as day,

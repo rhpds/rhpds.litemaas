@@ -96,7 +96,7 @@ curl ${MODEL_URL}/v1/chat/completions \
 ### Via LiteLLM Admin UI
 
 1. **Login to LiteLLM Admin Portal**
-   - URL: `https://litellm-rhpds.apps.your-cluster.com`
+   - URL: `https://maas-rhdp.apps.your-cluster.com`
    - Use admin credentials from deployment output
 
 2. **Click "Add Model"**
@@ -212,7 +212,7 @@ Share the virtual key with users. They can now access locally hosted models:
 ### Using curl
 
 ```bash
-curl https://litellm-rhpds.apps.your-cluster.com/chat/completions \
+curl https://maas-rhdp.apps.your-cluster.com/chat/completions \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer sk-user-virtual-key" \
   -d '{
@@ -231,7 +231,7 @@ import openai
 
 client = openai.OpenAI(
     api_key="sk-user-virtual-key",
-    base_url="https://litellm-rhpds.apps.your-cluster.com"
+    base_url="https://maas-rhdp.apps.your-cluster.com"
 )
 
 response = client.chat.completions.create(

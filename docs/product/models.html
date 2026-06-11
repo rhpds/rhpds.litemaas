@@ -97,7 +97,7 @@
 
   <div class="info-box">
     <p>
-      <strong>API base URL:</strong> <code>https://litellm-prod.apps.maas.redhatworkshops.io</code> &mdash;
+      <strong>API base URL:</strong> <code>https://maas-rhdp.apps.maas.redhatworkshops.io</code> &mdash;
       Replace <code>YOUR_API_KEY</code> with your virtual key from the LiteMaaS portal.
       Replace <code>your-model-name</code> in examples with the actual model ID from the <strong>Models</strong> page in the portal.
       <strong>Available models change over time as new models are added or retired.</strong>
@@ -289,7 +289,7 @@
         <div class="model-meta-item"><strong>Internal SVC</strong>granite-3-2-8b-instruct-predictor</div>
       </div>
       <pre><span class="comment"># Basic chat completion</span>
-curl -X POST https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions \
+curl -X POST https://maas-rhdp.apps.maas.redhatworkshops.io/v1/chat/completions \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -d '{
@@ -302,7 +302,7 @@ curl -X POST https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completio
     <span class="string">"temperature"</span>: 0.7
   }'</pre>
       <pre><span class="comment"># Streaming response</span>
-curl -X POST https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions \
+curl -X POST https://maas-rhdp.apps.maas.redhatworkshops.io/v1/chat/completions \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -d '{
@@ -328,7 +328,7 @@ curl -X POST https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completio
         <div class="model-meta-item"><strong>Replicas</strong>2 (HA)</div>
       </div>
       <pre><span class="comment"># Long-context document analysis</span>
-curl -X POST https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions \
+curl -X POST https://maas-rhdp.apps.maas.redhatworkshops.io/v1/chat/completions \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -d '{
@@ -355,7 +355,7 @@ curl -X POST https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completio
         <div class="model-meta-item"><strong>Parameters</strong>Tiny (sub-3B)</div>
         <div class="model-meta-item"><strong>Runtime</strong>vLLM on KServe</div>
       </div>
-      <pre>curl -X POST https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions \
+      <pre>curl -X POST https://maas-rhdp.apps.maas.redhatworkshops.io/v1/chat/completions \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -d '{
@@ -380,7 +380,7 @@ curl -X POST https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completio
         <div class="model-meta-item"><strong>Runtime</strong>vLLM on KServe</div>
       </div>
       <pre><span class="comment"># Code generation</span>
-curl -X POST https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions \
+curl -X POST https://maas-rhdp.apps.maas.redhatworkshops.io/v1/chat/completions \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -d '{
@@ -412,7 +412,7 @@ curl -X POST https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completio
         <div class="model-meta-item"><strong>Runtime</strong>OpenVino on KServe</div>
       </div>
       <pre><span class="comment"># Single string embedding</span>
-curl -X POST https://litellm-prod.apps.maas.redhatworkshops.io/v1/embeddings \
+curl -X POST https://maas-rhdp.apps.maas.redhatworkshops.io/v1/embeddings \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -d '{
@@ -420,7 +420,7 @@ curl -X POST https://litellm-prod.apps.maas.redhatworkshops.io/v1/embeddings \
     <span class="string">"input"</span>: <span class="string">"Red Hat OpenShift is an enterprise Kubernetes platform."</span>
   }'</pre>
       <pre><span class="comment"># Batch embeddings (multiple strings)</span>
-curl -X POST https://litellm-prod.apps.maas.redhatworkshops.io/v1/embeddings \
+curl -X POST https://maas-rhdp.apps.maas.redhatworkshops.io/v1/embeddings \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -d '{
@@ -436,7 +436,7 @@ curl -X POST https://litellm-prod.apps.maas.redhatworkshops.io/v1/embeddings \
 
 client = OpenAI(
     api_key=<span class="string">"YOUR_API_KEY"</span>,
-    base_url=<span class="string">"https://litellm-prod.apps.maas.redhatworkshops.io/v1"</span>
+    base_url=<span class="string">"https://maas-rhdp.apps.maas.redhatworkshops.io/v1"</span>
 )
 
 response = client.embeddings.create(
@@ -454,7 +454,7 @@ print(f<span class="string">"Embedding dimensions: {len(vectors[0])}"</span>)  <
     <p>The tokenize endpoint allows you to count tokens before sending a request, useful for cost estimation and context window management.</p>
 
     <pre><span class="comment"># Count tokens for a message (works with chat-capable models)</span>
-curl -X POST https://litellm-prod.apps.maas.redhatworkshops.io/v1/tokenize \
+curl -X POST https://maas-rhdp.apps.maas.redhatworkshops.io/v1/tokenize \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -d '{
@@ -489,7 +489,7 @@ curl -X POST https://litellm-prod.apps.maas.redhatworkshops.io/v1/tokenize \
         <div class="model-meta-item"><strong>Age</strong>17d (recently deployed)</div>
       </div>
       <pre><span class="comment"># Convert a PDF URL to Markdown</span>
-curl -X POST https://litellm-prod.apps.maas.redhatworkshops.io/docling/v1/convert/source \
+curl -X POST https://maas-rhdp.apps.maas.redhatworkshops.io/docling/v1/convert/source \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -d '{
@@ -501,7 +501,7 @@ curl -X POST https://litellm-prod.apps.maas.redhatworkshops.io/docling/v1/conver
     }
   }'</pre>
       <pre><span class="comment"># Upload a local file for conversion</span>
-curl -X POST https://litellm-prod.apps.maas.redhatworkshops.io/docling/v1/convert/file \
+curl -X POST https://maas-rhdp.apps.maas.redhatworkshops.io/docling/v1/convert/file \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -F <span class="string">"file=@/path/to/document.pdf"</span> \
   -F <span class="string">"options={\"output_format\": \"markdown\"}"</span></pre>
@@ -528,7 +528,7 @@ curl -X POST https://litellm-prod.apps.maas.redhatworkshops.io/docling/v1/conver
         <div class="model-meta-item"><strong>Containers</strong>2/2 (sidecar proxy)</div>
       </div>
       <pre><span class="comment"># Content safety classification</span>
-curl -X POST https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions \
+curl -X POST https://maas-rhdp.apps.maas.redhatworkshops.io/v1/chat/completions \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -d '{
@@ -553,7 +553,7 @@ curl -X POST https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completio
 
 client = OpenAI(
     api_key=<span class="string">"YOUR_API_KEY"</span>,
-    base_url=<span class="string">"https://litellm-prod.apps.maas.redhatworkshops.io/v1"</span>
+    base_url=<span class="string">"https://maas-rhdp.apps.maas.redhatworkshops.io/v1"</span>
 )
 
 <span class="comment"># Chat completion</span>
@@ -579,7 +579,7 @@ print(response.choices[0].message.content)
 
 <span class="keyword">const</span> client = <span class="keyword">new</span> OpenAI({
   apiKey: <span class="string">'YOUR_API_KEY'</span>,
-  baseURL: <span class="string">'https://litellm-prod.apps.maas.redhatworkshops.io/v1'</span>
+  baseURL: <span class="string">'https://maas-rhdp.apps.maas.redhatworkshops.io/v1'</span>
 });
 
 <span class="keyword">const</span> response = <span class="keyword">await</span> client.chat.completions.create({
@@ -594,13 +594,13 @@ console.log(response.choices[0].message.content);</pre>
 llm = ChatOpenAI(
     model=<span class="string">"your-chat-model"</span>,
     openai_api_key=<span class="string">"YOUR_API_KEY"</span>,
-    openai_api_base=<span class="string">"https://litellm-prod.apps.maas.redhatworkshops.io/v1"</span>
+    openai_api_base=<span class="string">"https://maas-rhdp.apps.maas.redhatworkshops.io/v1"</span>
 )
 
 embeddings = OpenAIEmbeddings(
     model=<span class="string">"your-embedding-model"</span>,
     openai_api_key=<span class="string">"YOUR_API_KEY"</span>,
-    openai_api_base=<span class="string">"https://litellm-prod.apps.maas.redhatworkshops.io/v1"</span>
+    openai_api_base=<span class="string">"https://maas-rhdp.apps.maas.redhatworkshops.io/v1"</span>
 )</pre>
   </div>
 
@@ -629,7 +629,7 @@ embeddings = OpenAIEmbeddings(
         <div class="model-meta-item"><strong>Backend</strong>deepseek-r1-distill-qwen-14b-llm-hosting.apps.maas00.rs-dfw3.infra.demo.redhat.com</div>
       </div>
       <pre><span class="comment"># Chat completion via KServe direct endpoint</span>
-curl https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions \
+curl https://maas-rhdp.apps.maas.redhatworkshops.io/v1/chat/completions \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -654,7 +654,7 @@ curl https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions \
         <div class="model-meta-item"><strong>Backend</strong>qwen3-14b-llm-hosting.apps.maas00.rs-dfw3.infra.demo.redhat.com</div>
       </div>
       <pre><span class="comment"># Chat completion via KServe direct endpoint</span>
-curl https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions \
+curl https://maas-rhdp.apps.maas.redhatworkshops.io/v1/chat/completions \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -676,7 +676,7 @@ curl https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions \
         <div class="model-meta-item"><strong>Context</strong>16K</div>
       </div>
       <pre><span class="comment"># Chat completion</span>
-curl https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions \
+curl https://maas-rhdp.apps.maas.redhatworkshops.io/v1/chat/completions \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"model": "microsoft-phi-4", "messages": [{"role": "user", "content": "Write a Python function to sort a list."}]}'</pre>
@@ -715,7 +715,7 @@ curl https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions \
         <div class="model-meta-item"><strong>Hosted on</strong>Google Vertex AI</div>
       </div>
       <pre><span class="comment"># Agentic / tool-use example</span>
-curl https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions \
+curl https://maas-rhdp.apps.maas.redhatworkshops.io/v1/chat/completions \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -743,7 +743,7 @@ curl https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions \
         <div class="model-meta-item"><strong>Hosted on</strong>Google Vertex AI</div>
       </div>
       <pre><span class="comment"># Multilingual reasoning</span>
-curl https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions \
+curl https://maas-rhdp.apps.maas.redhatworkshops.io/v1/chat/completions \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -771,7 +771,7 @@ curl https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions \
         <div class="model-meta-item"><strong>Hosted on</strong>Google Vertex AI</div>
       </div>
       <pre><span class="comment"># Function calling / complex generation</span>
-curl https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions \
+curl https://maas-rhdp.apps.maas.redhatworkshops.io/v1/chat/completions \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -799,7 +799,7 @@ curl https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions \
         <div class="model-meta-item"><strong>Hosted on</strong>Google Vertex AI</div>
       </div>
       <pre><span class="comment"># General chat — cost-effective default</span>
-curl https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions \
+curl https://maas-rhdp.apps.maas.redhatworkshops.io/v1/chat/completions \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -824,7 +824,7 @@ curl https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions \
         <div class="model-meta-item"><strong>Hosted on</strong>Google Vertex AI</div>
       </div>
       <pre><span class="comment"># General reasoning and coding</span>
-curl https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions \
+curl https://maas-rhdp.apps.maas.redhatworkshops.io/v1/chat/completions \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -849,7 +849,7 @@ curl https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions \
         <div class="model-meta-item"><strong>Hosted on</strong>Google Vertex AI</div>
       </div>
       <pre><span class="comment"># Complex analysis and long-form generation</span>
-curl https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions \
+curl https://maas-rhdp.apps.maas.redhatworkshops.io/v1/chat/completions \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -874,7 +874,7 @@ curl https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions \
         <div class="model-meta-item"><strong>Hosted on</strong>Google Vertex AI</div>
       </div>
       <pre><span class="comment"># Coding and structured output</span>
-curl https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions \
+curl https://maas-rhdp.apps.maas.redhatworkshops.io/v1/chat/completions \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -899,7 +899,7 @@ curl https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions \
         <div class="model-meta-item"><strong>Hosted on</strong>Google Vertex AI</div>
       </div>
       <pre><span class="comment"># Fast, cost-efficient tasks</span>
-curl https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions \
+curl https://maas-rhdp.apps.maas.redhatworkshops.io/v1/chat/completions \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -925,7 +925,7 @@ curl https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions \
         <div class="model-meta-item"><strong>Hosted on</strong>Google Vertex AI</div>
       </div>
       <pre><span class="comment"># Long-document analysis</span>
-curl https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions \
+curl https://maas-rhdp.apps.maas.redhatworkshops.io/v1/chat/completions \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -940,11 +940,11 @@ curl https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions \
   <div class="section">
     <h2>Listing Available Models via API</h2>
     <pre><span class="comment"># List all models available to your key</span>
-curl https://litellm-prod.apps.maas.redhatworkshops.io/v1/models \
+curl https://maas-rhdp.apps.maas.redhatworkshops.io/v1/models \
   -H "Authorization: Bearer YOUR_API_KEY"
 
 <span class="comment"># Full model info including capabilities (admin key required)</span>
-curl https://litellm-prod.apps.maas.redhatworkshops.io/model/info \
+curl https://maas-rhdp.apps.maas.redhatworkshops.io/model/info \
   -H "Authorization: Bearer LITELLM_MASTER_KEY"</pre>
   </div>
 

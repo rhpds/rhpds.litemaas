@@ -189,7 +189,7 @@
       </tr>
     </table>
     <div class="success-box">
-      <p><strong>Production status:</strong> Both guardrails are active on <code>maas.redhatworkshops.io</code> (namespace: <code>litellm-rhpds</code>) as of 2026-04-01.</p>
+      <p><strong>Production status:</strong> Both guardrails are active on <code>maas.redhatworkshops.io</code> (namespace: <code>maas-rhdp</code>) as of 2026-04-01.</p>
     </div>
   </div>
 
@@ -244,7 +244,7 @@ Response returned to user</pre>
 
     <h3>Apply to production</h3>
     <pre data-lang="bash"><button class="copy-btn">copy</button>ansible-playbook playbooks/configure_guardrails.yml \
-  -e litemaas_namespace=litellm-rhpds</pre>
+  -e litemaas_namespace=maas-rhdp</pre>
 
     <h3>Apply to dev or staging</h3>
     <pre data-lang="bash"><button class="copy-btn">copy</button>ansible-playbook playbooks/configure_guardrails.yml \
@@ -255,7 +255,7 @@ ansible-playbook playbooks/configure_guardrails.yml \
 
     <h3>Check current guardrails without applying</h3>
     <pre data-lang="bash"><button class="copy-btn">copy</button>ansible-playbook playbooks/configure_guardrails.yml \
-  -e litemaas_namespace=litellm-rhpds \
+  -e litemaas_namespace=maas-rhdp \
   -e litemaas_guardrails_check_only=true</pre>
 
     <h3>What the playbook does</h3>
@@ -372,7 +372,7 @@ ansible-playbook playbooks/configure_guardrails.yml \
     <p>Run these against the production LiteLLM endpoint to verify guardrails are active. Use the team test key.</p>
 
     <h3>Quick smoke test</h3>
-    <pre data-lang="bash"><button class="copy-btn">copy</button>LITELLM_URL="https://litellm-prod.apps.maas.redhatworkshops.io"
+    <pre data-lang="bash"><button class="copy-btn">copy</button>LITELLM_URL="https://maas-rhdp.apps.maas.redhatworkshops.io"
 TEST_KEY="sk-REDACTED"
 
 # SSN — expect 403
@@ -396,7 +396,7 @@ curl -s -o /dev/null -w "%{http_code}" -X POST "$LITELLM_URL/v1/chat/completions
   -d '{"model":"granite-3-2-8b-instruct","messages":[{"role":"user","content":"What is the capital of France?"}],"max_tokens":10}'</pre>
 
     <h3>View active guardrails (admin)</h3>
-    <pre data-lang="bash"><button class="copy-btn">copy</button>MASTER_KEY=$(oc get secret litellm-secret -n litellm-rhpds \
+    <pre data-lang="bash"><button class="copy-btn">copy</button>MASTER_KEY=$(oc get secret litellm-secret -n maas-rhdp \
   -o jsonpath='{.data.LITELLM_MASTER_KEY}' | base64 -d)
 
 curl -s "$LITELLM_URL/guardrails/list" \
@@ -444,8 +444,8 @@ curl -s "$LITELLM_URL/guardrails/list" \
 
     <h3>Update ConfigMap without full playbook run</h3>
     <pre data-lang="bash"><button class="copy-btn">copy</button><span class="comment"># Edit the ConfigMap directly, then restart to pick up changes</span>
-oc edit configmap litellm-guardrails-config -n litellm-rhpds
-oc rollout restart deployment/litellm -n litellm-rhpds</pre>
+oc edit configmap litellm-guardrails-config -n maas-rhdp
+oc rollout restart deployment/litellm -n maas-rhdp</pre>
   </div>
 
   <!-- Removing -->
@@ -453,7 +453,7 @@ oc rollout restart deployment/litellm -n litellm-rhpds</pre>
     <h2>Removing Guardrails <a class="anchor-link" href="#removing">#</a></h2>
     <p>To disable guardrails entirely:</p>
     <pre data-lang="bash"><button class="copy-btn">copy</button>ansible-playbook playbooks/configure_guardrails.yml \
-  -e litemaas_namespace=litellm-rhpds \
+  -e litemaas_namespace=maas-rhdp \
   -e litemaas_guardrails_state=absent</pre>
     <p>This removes the ConfigMap and restores the LiteLLM deployment to its original startup command (no <code>--config</code> flag).</p>
     <div class="danger-box">

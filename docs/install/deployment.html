@@ -224,10 +224,10 @@ graph LR
     <h3>Step 4: Post-Deploy Output</h3>
     <p>After successful deployment, the playbook prints connection details via <code>agnosticd_user_info</code>:</p>
     <pre><span class="comment"># Example output</span>
-LiteLLM Admin Portal: https://litellm-prod.apps.cluster.example.com
+LiteLLM Admin Portal: https://maas-rhdp.apps.cluster.example.com
 LiteLLM Admin Login: admin / &lt;auto-generated-password&gt;
 LiteLLM Master API Key: sk-&lt;auto-generated-key&gt;
-LiteMaaS User Interface: https://litellm-prod-frontend.apps.cluster.example.com</pre>
+LiteMaaS User Interface: https://maas-rhdp-frontend.apps.cluster.example.com</pre>
   </div>
 
   <!-- Key Variables -->
@@ -382,27 +382,27 @@ LiteMaaS User Interface: https://litellm-prod-frontend.apps.cluster.example.com<
 
     <h3>Check Migration Status</h3>
     <pre><span class="comment"># Check LiteLLM logs for migration output</span>
-oc logs -n litellm-rhpds deployment/litellm --tail=100 | grep -i migrat
+oc logs -n maas-rhdp deployment/litellm --tail=100 | grep -i migrat
 
 <span class="comment"># Check if database tables exist</span>
-oc exec -n litellm-rhpds litellm-postgres-0 -- \
+oc exec -n maas-rhdp litellm-postgres-0 -- \
   psql -U litellm -d litellm -c "\dt"</pre>
 
     <h3>Run Migration Manually</h3>
     <pre><span class="comment"># Get the DATABASE_URL from the running LiteLLM deployment</span>
-DB_URL=$(oc exec -n litellm-rhpds deployment/litellm -- \
+DB_URL=$(oc exec -n maas-rhdp deployment/litellm -- \
   sh -c 'echo $DATABASE_URL')
 
 <span class="comment"># Exec into a LiteLLM pod and run migration</span>
-LITELLM_POD=$(oc get pods -n litellm-rhpds -l app=litellm \
+LITELLM_POD=$(oc get pods -n maas-rhdp -l app=litellm \
   -o jsonpath='{.items[0].metadata.name}')
 
-oc exec -n litellm-rhpds $LITELLM_POD -- \
+oc exec -n maas-rhdp $LITELLM_POD -- \
   python -c "from litellm.proxy.proxy_server import prisma_client; prisma_client.db.migrate.deploy()"
 
 <span class="comment"># Alternative: restart the deployment (migration runs on startup)</span>
-oc rollout restart deployment/litellm -n litellm-rhpds
-oc rollout status deployment/litellm -n litellm-rhpds</pre>
+oc rollout restart deployment/litellm -n maas-rhdp
+oc rollout status deployment/litellm -n maas-rhdp</pre>
 
     <div class="warn-box"><p><strong>Caution:</strong> Always take a database backup before running migrations between major LiteLLM versions. See the <a href="../day2/operations.html">Operations</a> page for upgrade procedures.</p></div>
   </div>

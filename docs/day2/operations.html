@@ -170,7 +170,7 @@
       pods are replaced one at a time, so the service remains available during upgrades.
     </p>
 
-    <h3>Current Production Images (from oc get deployment -n litellm-rhpds -o wide)</h3>
+    <h3>Current Production Images (from oc get deployment -n maas-rhdp -o wide)</h3>
     <table>
       <thead><tr><th>Deployment</th><th>Current Image</th><th>Version</th></tr></thead>
       <tbody>
@@ -183,7 +183,7 @@
 
     <h3>Upgrade LiteMaaS Backend/Frontend</h3>
     <pre data-lang="bash"><span class="comment"># Set namespace variable</span>
-NS=litellm-rhpds
+NS=maas-rhdp
 NEW_VERSION=0.5.0
 
 <span class="comment"># Update backend image</span>
@@ -229,7 +229,7 @@ oc logs -n ${NS} deployment/litellm --tail=50 | grep -i migrat</pre>
     <h3>Upgrade via Ansible (Re-deploy)</h3>
     <pre data-lang="bash"><span class="comment"># Override image tags in your vars file, then re-run the playbook</span>
 ansible-playbook playbooks/deploy_litemaas_ha.yml \
-  -e ocp4_workload_litemaas_namespace=litellm-rhpds \
+  -e ocp4_workload_litemaas_namespace=maas-rhdp \
   -e ocp4_workload_litemaas_litellm_tag=main-v1.85.0-stable-custom \
   -e ocp4_workload_litemaas_version=0.5.0</pre>
   </div>
@@ -242,28 +242,28 @@ ansible-playbook playbooks/deploy_litemaas_ha.yml \
 
     <h3>Scale LiteLLM (the most common scale target)</h3>
     <pre data-lang="bash"><span class="comment"># Scale LiteLLM to 5 replicas</span>
-oc scale deployment/litellm --replicas=5 -n litellm-rhpds
+oc scale deployment/litellm --replicas=5 -n maas-rhdp
 
 <span class="comment"># Or via patch</span>
-oc patch deployment/litellm -n litellm-rhpds \
+oc patch deployment/litellm -n maas-rhdp \
   --type=json -p='[{"op":"replace","path":"/spec/replicas","value":5}]'
 
 <span class="comment"># Verify</span>
-oc get deployment/litellm -n litellm-rhpds</pre>
+oc get deployment/litellm -n maas-rhdp</pre>
 
     <h3>Scale Backend and Frontend</h3>
-    <pre data-lang="bash">oc scale deployment/litellm-backend --replicas=3 -n litellm-rhpds
-oc scale deployment/litellm-frontend --replicas=3 -n litellm-rhpds</pre>
+    <pre data-lang="bash">oc scale deployment/litellm-backend --replicas=3 -n maas-rhdp
+oc scale deployment/litellm-frontend --replicas=3 -n maas-rhdp</pre>
 
     <h3>Check Current Scale</h3>
-    <pre data-lang="bash">oc get deployments -n litellm-rhpds -o wide</pre>
+    <pre data-lang="bash">oc get deployments -n maas-rhdp -o wide</pre>
 
     <div class="info-box">
       <p>
         <strong>Redis is required for multi-replica LiteLLM.</strong> Without Redis, each LiteLLM pod has its own
         in-memory session cache. Key validation will be inconsistent across replicas if Redis is not running.
         Verify Redis is healthy before scaling LiteLLM beyond 1 replica:
-        <code>oc get pods -n litellm-rhpds -l app=litellm-redis</code>
+        <code>oc get pods -n maas-rhdp -l app=litellm-redis</code>
       </p>
     </div>
   </div>
@@ -318,18 +318,18 @@ graph LR
     <h3>Setup</h3>
     <pre data-lang="bash"><span class="comment"># Run from the rhpds.litemaas repository root</span>
 <span class="comment"># Detects whether running on bastion (direct write) or workstation (SSH)</span>
-./setup-key-cleanup-cronjob.sh litellm-rhpds</pre>
+./setup-key-cleanup-cronjob.sh maas-rhdp</pre>
 
     <p>The script creates:</p>
     <ul>
-      <li><code>/usr/local/bin/cleanup-litemaas-keys-litellm-rhpds.sh</code> — the cleanup script</li>
-      <li>A root crontab entry: <code>0 2 * * * /usr/local/bin/cleanup-litemaas-keys-litellm-rhpds.sh</code></li>
-      <li><code>/etc/logrotate.d/litemaas-key-cleanup-litellm-rhpds</code> — logrotate config</li>
+      <li><code>/usr/local/bin/cleanup-litemaas-keys-maas-rhdp.sh</code> — the cleanup script</li>
+      <li>A root crontab entry: <code>0 2 * * * /usr/local/bin/cleanup-litemaas-keys-maas-rhdp.sh</code></li>
+      <li><code>/etc/logrotate.d/litemaas-key-cleanup-maas-rhdp</code> — logrotate config</li>
     </ul>
 
     <h3>Manual Test Run</h3>
     <pre data-lang="bash"><span class="comment"># Run manually (dry-run not supported — this will actually delete keys)</span>
-sudo /usr/local/bin/cleanup-litemaas-keys-litellm-rhpds.sh
+sudo /usr/local/bin/cleanup-litemaas-keys-maas-rhdp.sh
 
 <span class="comment"># Tail the log</span>
 sudo tail -f /var/log/litemaas-key-cleanup.log
@@ -338,8 +338,8 @@ sudo tail -f /var/log/litemaas-key-cleanup.log
 sudo crontab -l | grep cleanup-litemaas</pre>
 
     <h3>Remove the Cronjob</h3>
-    <pre data-lang="bash">sudo crontab -l | grep -v cleanup-litemaas-keys-litellm-rhpds.sh | sudo crontab -
-sudo rm /usr/local/bin/cleanup-litemaas-keys-litellm-rhpds.sh</pre>
+    <pre data-lang="bash">sudo crontab -l | grep -v cleanup-litemaas-keys-maas-rhdp.sh | sudo crontab -
+sudo rm /usr/local/bin/cleanup-litemaas-keys-maas-rhdp.sh</pre>
   </div>
 
   <!-- Admin Management -->
@@ -350,30 +350,30 @@ sudo rm /usr/local/bin/cleanup-litemaas-keys-litellm-rhpds.sh</pre>
     <h3>Promote a User to Admin</h3>
     <p>The user must have logged in via OAuth at least once before being promoted.</p>
     <pre data-lang="bash"><span class="comment"># Using the helper script (recommended)</span>
-./promote-admin.sh litellm-rhpds user@redhat.com
+./promote-admin.sh maas-rhdp user@redhat.com
 
 <span class="comment"># Or directly via psql</span>
-oc exec -n litellm-rhpds \
-  $(oc get pods -n litellm-rhpds -l app=litellm-postgres -o name | head -1) -- \
+oc exec -n maas-rhdp \
+  $(oc get pods -n maas-rhdp -l app=litellm-postgres -o name | head -1) -- \
   psql -U litellm -d litellm -c \
   "UPDATE users SET roles = ARRAY['admin', 'user'] WHERE email = 'user@redhat.com';"
 
 <span class="comment"># Verify</span>
-oc exec -n litellm-rhpds litellm-postgres-0 -- \
+oc exec -n maas-rhdp litellm-postgres-0 -- \
   psql -U litellm -d litellm -c \
   "SELECT username, email, roles FROM users WHERE 'admin' = ANY(roles);"</pre>
 
     <h3>Retrieve Credentials</h3>
     <pre data-lang="bash"><span class="comment"># LiteMaaS admin API key</span>
-oc get secret backend-secret -n litellm-rhpds \
+oc get secret backend-secret -n maas-rhdp \
   -o jsonpath='{.data.ADMIN_API_KEY}' | base64 -d
 
 <span class="comment"># LiteLLM master key</span>
-oc get secret litellm-secret -n litellm-rhpds \
+oc get secret litellm-secret -n maas-rhdp \
   -o jsonpath='{.data.LITELLM_MASTER_KEY}' | base64 -d
 
 <span class="comment"># JWT secret (for session debugging)</span>
-oc get secret backend-secret -n litellm-rhpds \
+oc get secret backend-secret -n maas-rhdp \
   -o jsonpath='{.data.JWT_SECRET}' | base64 -d</pre>
   </div>
 
@@ -382,7 +382,7 @@ oc get secret backend-secret -n litellm-rhpds \
   <div class="section" id="quick-ref">
     <h2>Quick Reference Commands</h2>
     <pre data-lang="bash"><span class="comment"># Namespace shortcut</span>
-NS=litellm-rhpds
+NS=maas-rhdp
 
 <span class="comment"># Get all pod status</span>
 oc get pods -n $NS

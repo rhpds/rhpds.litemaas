@@ -2,7 +2,7 @@
 
 Quick reference guide for infrastructure teams to manage AI models after LiteMaaS deployment.
 
-**CRITICAL MIGRATION NOTICE:** The old cluster `litellm-rhpds` is being decommissioned **June 21, 2026**. All new model configurations should target the production cluster `maas-rdhp`. See the [Cluster Migration Guide](../README.md#cluster-migration-june-21-2026) for full details.
+**CRITICAL MIGRATION NOTICE:** The old cluster `maas-rhdp` is being decommissioned **June 21, 2026**. All new model configurations should target the production cluster `maas-rdhp`. See the [Cluster Migration Guide](../README.md#cluster-migration-june-21-2026) for full details.
 
 ## Prerequisites
 

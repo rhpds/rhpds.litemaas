@@ -106,9 +106,9 @@
     <div class="info-box">
       <p>
         <strong>Production deployment:</strong> The RHDP production instance runs at
-        <code>litellm-prod.apps.maas.redhatworkshops.io</code> (API),
-        <code>litellm-prod-frontend.apps.maas.redhatworkshops.io</code> (user portal), and
-        <code>litellm-prod-admin.apps.maas.redhatworkshops.io/api</code> (admin API).
+        <code>maas-rhdp.apps.maas.redhatworkshops.io</code> (API),
+        <code>maas-rhdp-frontend.apps.maas.redhatworkshops.io</code> (user portal), and
+        <code>maas-rhdp-admin.apps.maas.redhatworkshops.io/api</code> (admin API).
         It currently serves 8 running model predictors across chat, embedding, safety, and document conversion workloads.
       </p>
     </div>
@@ -411,19 +411,19 @@ sequenceDiagram
       <tbody>
         <tr>
           <td><code>litellm-prod</code></td>
-          <td><code>https://litellm-prod.apps.maas.redhatworkshops.io</code></td>
+          <td><code>https://maas-rhdp.apps.maas.redhatworkshops.io</code></td>
           <td>OpenAI-compatible API endpoint (LiteLLM proxy)</td>
           <td>All API users, SDK clients</td>
         </tr>
         <tr>
           <td><code>litellm-prod-frontend</code></td>
-          <td><code>https://litellm-prod-frontend.apps.maas.redhatworkshops.io</code></td>
+          <td><code>https://maas-rhdp-frontend.apps.maas.redhatworkshops.io</code></td>
           <td>LiteMaaS user portal (React UI)</td>
           <td>Workshop participants, end users</td>
         </tr>
         <tr>
           <td><code>litellm-prod-admin</code></td>
-          <td><code>https://litellm-prod-admin.apps.maas.redhatworkshops.io/api</code></td>
+          <td><code>https://maas-rhdp-admin.apps.maas.redhatworkshops.io/api</code></td>
           <td>LiteMaaS admin API (backend)</td>
           <td>Admin scripts, automation</td>
         </tr>

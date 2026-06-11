@@ -96,7 +96,7 @@ cd ~/work/code/rhpds.litemaas
 ./setup-litemaas-backup-cronjob.sh <namespace> <s3-bucket>
 
 # Example
-./setup-litemaas-backup-cronjob.sh litellm-rhpds maas-db-backup
+./setup-litemaas-backup-cronjob.sh maas-rhdp maas-db-backup
 ```
 
 The script will:
@@ -113,7 +113,7 @@ The script will:
 crontab -l
 
 # Should show:
-# 0 2 1 * * /usr/local/bin/backup-litemaas-litellm-rhpds.sh
+# 0 2 1 * * /usr/local/bin/backup-litemaas-maas-rhdp.sh
 ```
 
 ### Manual Backup Test
@@ -143,7 +143,7 @@ aws s3 ls s3://maas-db-backup/litemaas-backups/
 
 ```bash
 # List VolumeSnapshots
-oc get volumesnapshot -n litellm-rhpds
+oc get volumesnapshot -n maas-rhdp
 
 # Example output:
 # NAME                                READYTOUSE   RESTORESIZE   AGE
@@ -164,18 +164,18 @@ aws s3 cp s3://maas-db-backup/litemaas-backups/database-20251216-053856.sql.gz /
 gunzip /tmp/database-20251216-053856.sql.gz
 
 # 3. Get PostgreSQL pod name
-DB_POD=$(oc get pods -n litellm-rhpds -l app=litellm-postgres -o jsonpath='{.items[0].metadata.name}')
+DB_POD=$(oc get pods -n maas-rhdp -l app=litellm-postgres -o jsonpath='{.items[0].metadata.name}')
 
 # 4. Copy SQL file to pod
-oc cp /tmp/database-20251216-053856.sql litellm-rhpds/${DB_POD}:/tmp/restore.sql
+oc cp /tmp/database-20251216-053856.sql maas-rhdp/${DB_POD}:/tmp/restore.sql
 
 # 5. Get database credentials
-DB_USER=$(oc get secret litemaas-db -n litellm-rhpds -o jsonpath='{.data.username}' | base64 -d)
-DB_PASSWORD=$(oc get secret litemaas-db -n litellm-rhpds -o jsonpath='{.data.password}' | base64 -d)
-DB_NAME=$(oc get secret litemaas-db -n litellm-rhpds -o jsonpath='{.data.database}' | base64 -d)
+DB_USER=$(oc get secret litemaas-db -n maas-rhdp -o jsonpath='{.data.username}' | base64 -d)
+DB_PASSWORD=$(oc get secret litemaas-db -n maas-rhdp -o jsonpath='{.data.password}' | base64 -d)
+DB_NAME=$(oc get secret litemaas-db -n maas-rhdp -o jsonpath='{.data.database}' | base64 -d)
 
 # 6. Restore database
-oc exec -n litellm-rhpds ${DB_POD} -- \
+oc exec -n maas-rhdp ${DB_POD} -- \
   bash -c "PGPASSWORD='${DB_PASSWORD}' psql -U ${DB_USER} -d ${DB_NAME} -f /tmp/restore.sql"
 ```
 
@@ -183,7 +183,7 @@ oc exec -n litellm-rhpds ${DB_POD} -- \
 
 ```bash
 # 1. Scale down PostgreSQL
-oc scale statefulset litellm-postgres -n litellm-rhpds --replicas=0
+oc scale statefulset litellm-postgres -n maas-rhdp --replicas=0
 
 # 2. Create PVC from snapshot
 cat <<EOF | oc apply -f -
@@ -191,7 +191,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: postgres-storage-restored
-  namespace: litellm-rhpds
+  namespace: maas-rhdp
 spec:
   accessModes:
     - ReadWriteOnce
@@ -208,7 +208,7 @@ EOF
 # (or delete old PVC and rename restored one)
 
 # 4. Scale up PostgreSQL
-oc scale statefulset litellm-postgres -n litellm-rhpds --replicas=1
+oc scale statefulset litellm-postgres -n maas-rhdp --replicas=1
 ```
 
 ## Troubleshooting
@@ -235,7 +235,7 @@ aws ec2 describe-instances --region us-east-2 --instance-ids <instance-id> \
 **PostgreSQL Pod Not Found**
 ```
 Solution: Check if PostgreSQL is running
-oc get pods -n litellm-rhpds -l app=litellm-postgres
+oc get pods -n maas-rhdp -l app=litellm-postgres
 ```
 
 **VolumeSnapshot Fails**
@@ -253,9 +253,9 @@ aws s3 ls s3://maas-db-backup/litemaas-backups/ | \
   awk '{print $4}' | xargs -I {} aws s3 rm s3://maas-db-backup/litemaas-backups/{}
 
 # Delete old VolumeSnapshots (keep last 3)
-oc get volumesnapshot -n litellm-rhpds -l app=litemaas-backup \
+oc get volumesnapshot -n maas-rhdp -l app=litemaas-backup \
   --sort-by=.metadata.creationTimestamp -o name | head -n -3 | \
-  xargs oc delete -n litellm-rhpds
+  xargs oc delete -n maas-rhdp
 ```
 
 ## HAProxy Timeout Configuration
