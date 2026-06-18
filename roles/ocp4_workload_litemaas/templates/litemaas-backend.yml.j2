@@ -160,7 +160,7 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: litemaas-db
-                  key: DATABASE_URL
+                  key: LITELLM_DATABASE_URL
           resources:
             requests:
               memory: "{{ ocp4_workload_litemaas_ha_backend_memory_request | default('256Mi') }}"

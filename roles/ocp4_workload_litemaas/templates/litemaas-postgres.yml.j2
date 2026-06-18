@@ -12,6 +12,7 @@ stringData:
   password: "{{ ocp4_workload_litemaas_ha_postgres_password }}"
   database: "{{ ocp4_workload_litemaas_ha_postgres_db }}"
   DATABASE_URL: "postgresql://{{ ocp4_workload_litemaas_ha_postgres_user }}:{{ ocp4_workload_litemaas_ha_postgres_password }}@litellm-postgres:5432/{{ ocp4_workload_litemaas_ha_postgres_db }}?sslmode=disable"
+  LITELLM_DATABASE_URL: "postgresql://{{ ocp4_workload_litemaas_ha_postgres_user }}:{{ ocp4_workload_litemaas_ha_postgres_password }}@litellm-postgres:5432/{{ ocp4_workload_litemaas_ha_litellm_postgres_db }}?sslmode=disable"
 ---
 apiVersion: v1
 kind: Service
