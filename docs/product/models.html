@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>RHDP MaaS — Models Reference</title>
-  <meta name="description" content="RHDP MaaS models reference — Chat, Embeddings, Tokenize, Document Conversion, and Safety models. API endpoints, curl examples, Python and Node.js SDK integration.">
+  <meta name="description" content="RHDP MaaS models reference — Chat, Embeddings, Tokenize, Document Conversion, Audio, and Safety models. API endpoints, curl examples, Python and Node.js SDK integration.">
   <link rel="canonical" href="https://rhpds.github.io/rhpds.litemaas/docs/product/models.html">
   <link rel="stylesheet" href="../assets/style.css">
   <style>
@@ -33,6 +33,7 @@
     .badge-red { background: #f8d7da; color: #721c24; }
     .badge-purple { background: #e2d9f3; color: #4a235a; }
     .badge-gray { background: #e8e8e8; color: #444; }
+    .badge-teal { background: #d1f2eb; color: #0e6655; }
     table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.86rem; }
     th { background: #151515; color: white; padding: 0.6rem 0.8rem; text-align: left; font-weight: 600; }
     td { padding: 0.6rem 0.8rem; border-bottom: 1px solid #e8e8e8; vertical-align: top; }
@@ -50,6 +51,7 @@
     .model-meta-item strong { display: block; font-size: 0.72rem; color: #666; text-transform: uppercase; letter-spacing: 0.03em; }
     .status-running { color: #3e8635; font-weight: 600; }
     .status-pending { color: #856404; font-weight: 600; }
+    .status-down { color: #a00; font-weight: 600; }
     .info-box { background: #e8f4fd; border-left: 4px solid #0066cc; padding: 1rem 1.5rem; border-radius: 0 6px 6px 0; margin: 1rem 0; }
     .info-box p { margin: 0; font-size: 0.88rem; color: #004080; }
     .warn-box { background: #fff8e1; border-left: 4px solid #f0a500; padding: 1rem 1.5rem; border-radius: 0 6px 6px 0; margin: 1rem 0; }
@@ -104,173 +106,253 @@
     </p>
   </div>
 
-  <!-- Model Types -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- Model Inventory Table                                      -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
   <div class="section">
-    <h2>Model Capability Types</h2>
-    <p>LiteMaaS labels each model with its capability type. Look for these badges on model cards in the portal.</p>
+    <h2>Model Inventory</h2>
+    <p>All models registered in LiteMaaS, grouped by infrastructure. Use the model name in the first column as the <code>model</code> parameter in API requests.</p>
 
     <table>
       <thead>
         <tr>
-          <th>Model Name (LiteMaaS)</th>
-          <th>KServe Predictor</th>
+          <th>Model Name</th>
+          <th>Infrastructure</th>
           <th>Capability</th>
           <th>Status</th>
-          <th>Replicas</th>
+          <th>Notes</th>
         </tr>
       </thead>
       <tbody>
+        <!-- AWS MaaS Cluster — KServe on NVIDIA GPU -->
+        <tr style="border-top:2px solid #ccc;">
+          <td colspan="5" style="font-weight:600;background:#f5f5f5;padding:8px 12px;">AWS MaaS Cluster &mdash; KServe on NVIDIA GPU</td>
+        </tr>
         <tr>
           <td><code>granite-3-2-8b-instruct</code></td>
-          <td><code>granite-3-2-8b-instruct-predictor</code></td>
+          <td>KServe / vLLM</td>
           <td><span class="badge badge-blue">Chat</span></td>
           <td class="status-running">Running</td>
-          <td>1 (2/2 containers)</td>
+          <td>128K context, 1 replica</td>
         </tr>
         <tr>
           <td><code>llama-scout-17b</code></td>
-          <td><code>llama-scout-17b-predictor</code></td>
+          <td>KServe / vLLM</td>
           <td><span class="badge badge-blue">Chat</span></td>
           <td class="status-running">Running</td>
-          <td>2 (scaled for load)</td>
+          <td>400K context, 2 replicas (HA)</td>
         </tr>
         <tr>
           <td><code>granite-4-0-h-tiny</code></td>
-          <td><code>granite-4-0-h-tiny-predictor</code></td>
+          <td>KServe / vLLM</td>
           <td><span class="badge badge-blue">Chat</span></td>
           <td class="status-running">Running</td>
-          <td>1</td>
+          <td>Sub-3B params, low-latency</td>
         </tr>
         <tr>
           <td><code>codellama-7b-instruct</code></td>
-          <td><code>codellama-7b-instruct-predictor</code></td>
+          <td>KServe / vLLM</td>
           <td><span class="badge badge-blue">Chat</span></td>
           <td class="status-running">Running</td>
-          <td>1</td>
+          <td>16K context, code-specialized</td>
         </tr>
         <tr>
           <td><code>llama-guard-3-1b</code></td>
-          <td><code>llama-guard-3-1b-predictor</code></td>
+          <td>KServe / vLLM</td>
           <td><span class="badge badge-purple">Safety</span></td>
           <td class="status-running">Running</td>
-          <td>1 (2/2 containers)</td>
+          <td>Content safety classifier</td>
         </tr>
         <tr>
           <td><code>nomic-embed-text-v1-5</code></td>
-          <td><code>nomic-embed-text-v1-5-predictor</code></td>
+          <td>KServe / OpenVINO</td>
           <td><span class="badge badge-green">Embeddings</span></td>
           <td class="status-running">Running</td>
-          <td>1</td>
+          <td>768-dim, 8192 token context</td>
         </tr>
         <tr>
           <td><code>granite-docling-258m</code></td>
-          <td><code>granite-docling-258m-predictor</code></td>
+          <td>KServe (CPU)</td>
           <td><span class="badge badge-orange">Docling</span></td>
           <td class="status-running">Running</td>
-          <td>1</td>
+          <td>PDF/document conversion</td>
+        </tr>
+
+        <!-- Intel Gaudi 3 Cluster — DFW3 GPU -->
+        <tr style="border-top:2px solid #ccc;">
+          <td colspan="5" style="font-weight:600;background:#e6f2ff;padding:8px 12px;">Intel Gaudi 3 Cluster (DFW3) &mdash; GPU accelerated</td>
         </tr>
         <tr>
           <td><code>deepseek-r1-distill-qwen-14b</code></td>
-          <td><code>deepseek-r1-distill-qwen-14b-predictor</code></td>
+          <td>vLLM / Gaudi 3</td>
           <td><span class="badge badge-blue">Chat</span></td>
           <td class="status-running">Running</td>
-          <td>1</td>
-        </tr>
-        <tr>
-          <td><code>gpt-oss-120b</code></td>
-          <td><code>gpt-oss-120b-predictor</code></td>
-          <td><span class="badge badge-blue">Chat</span></td>
-          <td class="status-running">Running</td>
-          <td>1</td>
-        </tr>
-        <tr>
-          <td><code>microsoft-phi-4</code></td>
-          <td><code>microsoft-phi-4-predictor</code></td>
-          <td><span class="badge badge-blue">Chat</span></td>
-          <td class="status-running">Running</td>
-          <td>1</td>
+          <td>14B, reasoning-focused</td>
         </tr>
         <tr>
           <td><code>qwen3-14b</code></td>
-          <td><code>qwen3-14b-predictor</code></td>
+          <td>vLLM / Gaudi 3</td>
           <td><span class="badge badge-blue">Chat</span></td>
           <td class="status-running">Running</td>
-          <td>2 (load balanced: maas00 + smc00)</td>
+          <td>14B, multilingual</td>
         </tr>
+        <tr>
+          <td><code>microsoft-phi-4</code></td>
+          <td>vLLM / Gaudi 3</td>
+          <td><span class="badge badge-blue">Chat</span></td>
+          <td class="status-running">Running</td>
+          <td>16K context, compact</td>
+        </tr>
+
+        <!-- Intel DFW3 Cluster — CPU-based -->
         <tr style="border-top:2px solid #ccc;">
-          <td colspan="5" style="font-weight:600;background:#f5f5f5;padding:8px 12px;">Google Vertex AI — pay-per-token, programmatic access only</td>
+          <td colspan="5" style="font-weight:600;background:#f0f9f0;padding:8px 12px;">Intel DFW3 Cluster &mdash; CPU inference</td>
+        </tr>
+        <tr>
+          <td><code>llama-31-70b-cpu</code></td>
+          <td>llama.cpp (CPU)</td>
+          <td><span class="badge badge-blue">Chat</span></td>
+          <td class="status-running">Running</td>
+          <td>70B Q4_K_M quantized</td>
+        </tr>
+        <tr>
+          <td><code>qwen36-35b-a3b</code></td>
+          <td>vLLM (CPU)</td>
+          <td><span class="badge badge-blue">Chat</span></td>
+          <td class="status-running">Running</td>
+          <td>36B MoE (3B active), 64K context</td>
+        </tr>
+        <tr>
+          <td><code>granite-3-2-8b-instruct-cpu</code></td>
+          <td>vLLM (CPU)</td>
+          <td><span class="badge badge-blue">Chat</span></td>
+          <td class="status-running">Running</td>
+          <td>CPU variant of granite-3-2-8b</td>
+        </tr>
+        <tr>
+          <td><code>granite-4-0-h-tiny-cpu</code></td>
+          <td>vLLM (CPU)</td>
+          <td><span class="badge badge-blue">Chat</span></td>
+          <td class="status-running">Running</td>
+          <td>CPU variant of granite-4-0-h-tiny</td>
+        </tr>
+        <tr>
+          <td><code>granite-2b-cpu</code></td>
+          <td>vLLM (CPU)</td>
+          <td><span class="badge badge-blue">Chat</span></td>
+          <td class="status-running">Running</td>
+          <td>2B params</td>
+        </tr>
+        <tr>
+          <td><code>qwen25-3b-cpu</code></td>
+          <td>vLLM (CPU)</td>
+          <td><span class="badge badge-blue">Chat</span></td>
+          <td class="status-running">Running</td>
+          <td>3B params</td>
+        </tr>
+        <tr>
+          <td><code>phi3-mini-cpu</code></td>
+          <td>vLLM (CPU)</td>
+          <td><span class="badge badge-blue">Chat</span></td>
+          <td class="status-running">Running</td>
+          <td>3.8B params</td>
+        </tr>
+
+        <!-- Intel DFW3 — Audio -->
+        <tr style="border-top:2px solid #ccc;">
+          <td colspan="5" style="font-weight:600;background:#fdf0f5;padding:8px 12px;">Intel DFW3 Cluster &mdash; Audio</td>
+        </tr>
+        <tr>
+          <td><code>whisper-small</code></td>
+          <td>Whisper (CPU)</td>
+          <td><span class="badge badge-teal">Audio/STT</span></td>
+          <td class="status-down">Unhealthy</td>
+          <td>Speech-to-text transcription</td>
+        </tr>
+
+        <!-- Google Vertex AI — pay-per-token -->
+        <tr style="border-top:2px solid #ccc;">
+          <td colspan="5" style="font-weight:600;background:#f5f5f5;padding:8px 12px;">Google Vertex AI &mdash; pay-per-token, external</td>
         </tr>
         <tr>
           <td><code>minimax-m2</code></td>
-          <td>Google Vertex AI</td>
+          <td>Vertex AI (MiniMax)</td>
           <td><span class="badge badge-blue">Chat</span></td>
           <td class="status-running">Available</td>
-          <td>—</td>
+          <td>197K context, $0.30/$1.20 per 1M</td>
         </tr>
         <tr>
           <td><code>qwen3-235b</code></td>
-          <td>Google Vertex AI</td>
+          <td>Vertex AI (Alibaba)</td>
           <td><span class="badge badge-blue">Chat</span></td>
           <td class="status-running">Available</td>
-          <td>—</td>
+          <td>262K input, $0.22/$0.88 per 1M</td>
+        </tr>
+        <tr>
+          <td><code>gpt-oss-120b</code></td>
+          <td>Vertex AI (OpenAI)</td>
+          <td><span class="badge badge-blue">Chat</span></td>
+          <td class="status-running">Available</td>
+          <td>131K context, $0.09/$0.36 per 1M</td>
         </tr>
         <tr>
           <td><code>gpt-oss-20b</code></td>
-          <td>Google Vertex AI</td>
+          <td>Vertex AI (OpenAI)</td>
           <td><span class="badge badge-blue">Chat</span></td>
           <td class="status-running">Available</td>
-          <td>—</td>
-        </tr>
-        <tr>
-          <td><code>claude-sonnet-4-6</code></td>
-          <td>Google Vertex AI (Anthropic)</td>
-          <td><span class="badge badge-blue">Chat</span></td>
-          <td class="status-running">Available</td>
-          <td>—</td>
+          <td>131K context, $0.07/$0.30 per 1M</td>
         </tr>
         <tr>
           <td><code>claude-opus-4-6</code></td>
-          <td>Google Vertex AI (Anthropic)</td>
+          <td>Vertex AI (Anthropic)</td>
           <td><span class="badge badge-blue">Chat</span></td>
           <td class="status-running">Available</td>
-          <td>—</td>
+          <td>1M input, $5.00/$25.00 per 1M</td>
+        </tr>
+        <tr>
+          <td><code>claude-sonnet-4-6</code></td>
+          <td>Vertex AI (Anthropic)</td>
+          <td><span class="badge badge-blue">Chat</span></td>
+          <td class="status-running">Available</td>
+          <td>1M input, $3.00/$15.00 per 1M</td>
         </tr>
         <tr>
           <td><code>claude-sonnet-4-5</code></td>
-          <td>Google Vertex AI (Anthropic)</td>
+          <td>Vertex AI (Anthropic)</td>
           <td><span class="badge badge-blue">Chat</span></td>
           <td class="status-running">Available</td>
-          <td>—</td>
+          <td>200K input, $3.00/$15.00 per 1M</td>
+        </tr>
+        <tr>
+          <td><code>claude-haiku-4-5</code></td>
+          <td>Vertex AI (Anthropic)</td>
+          <td><span class="badge badge-blue">Chat</span></td>
+          <td class="status-running">Available</td>
+          <td>200K input, $1.00/$5.00 per 1M</td>
         </tr>
         <tr>
           <td><code>claude-3-5-haiku</code></td>
-          <td>Google Vertex AI (Anthropic)</td>
+          <td>Vertex AI (Anthropic)</td>
           <td><span class="badge badge-blue">Chat</span></td>
           <td class="status-running">Available</td>
-          <td>—</td>
+          <td>Alias for claude-haiku-4-5</td>
         </tr>
         <tr>
           <td><code>gemini-2.5-pro</code></td>
-          <td>Google Vertex AI (Google)</td>
+          <td>Vertex AI (Google)</td>
           <td><span class="badge badge-blue">Chat</span></td>
           <td class="status-running">Available</td>
-          <td>—</td>
+          <td>1M context, $1.25/$10.00 per 1M</td>
         </tr>
       </tbody>
     </table>
-
-    <div class="warn-box">
-      <p>
-        <strong>granite-8b-code-instruct-128k</strong> is registered in LiteLLM via the
-        <code>granite-8b-code-instruct-128k-predictor-lb</code> ClusterIP service (LoadBalancer on port 8080).
-        It may be available depending on current GPU allocation. Check the LiteMaaS portal for live model availability.
-      </p>
-    </div>
   </div>
 
-  <!-- Chat Models -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- Chat Models — AWS KServe                                   -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
   <div class="section">
-    <h2>Chat Models — <code>/v1/chat/completions</code></h2>
+    <h2>Chat Models — AWS MaaS Cluster — <code>/v1/chat/completions</code></h2>
     <p>Chat models follow the OpenAI Chat Completions API exactly. All support streaming via <code>"stream": true</code>.</p>
 
     <!-- Granite 3.2 8B -->
@@ -293,7 +375,7 @@ curl -X POST https://maas-rhdp.apps.maas.redhatworkshops.io/v1/chat/completions 
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -d '{
-    <span class="string">"model"</span>: <span class="string">"your-chat-model"</span>,
+    <span class="string">"model"</span>: <span class="string">"granite-3-2-8b-instruct"</span>,
     <span class="string">"messages"</span>: [
       {<span class="string">"role"</span>: <span class="string">"system"</span>, <span class="string">"content"</span>: <span class="string">"You are a helpful AI assistant."</span>},
       {<span class="string">"role"</span>: <span class="string">"user"</span>, <span class="string">"content"</span>: <span class="string">"Explain Kubernetes in three sentences."</span>}
@@ -306,7 +388,7 @@ curl -X POST https://maas-rhdp.apps.maas.redhatworkshops.io/v1/chat/completions 
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -d '{
-    <span class="string">"model"</span>: <span class="string">"your-chat-model"</span>,
+    <span class="string">"model"</span>: <span class="string">"granite-3-2-8b-instruct"</span>,
     <span class="string">"messages"</span>: [{<span class="string">"role"</span>: <span class="string">"user"</span>, <span class="string">"content"</span>: <span class="string">"Write a Python function to reverse a string"</span>}],
     <span class="string">"stream"</span>: true
   }'</pre>
@@ -332,7 +414,7 @@ curl -X POST https://maas-rhdp.apps.maas.redhatworkshops.io/v1/chat/completions 
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -d '{
-    <span class="string">"model"</span>: <span class="string">"your-chat-model"</span>,
+    <span class="string">"model"</span>: <span class="string">"llama-scout-17b"</span>,
     <span class="string">"messages"</span>: [
       {<span class="string">"role"</span>: <span class="string">"system"</span>, <span class="string">"content"</span>: <span class="string">"Analyze the provided document and summarize key points."</span>},
       {<span class="string">"role"</span>: <span class="string">"user"</span>, <span class="string">"content"</span>: <span class="string">"[Your long document text here...]"</span>}
@@ -393,225 +475,12 @@ curl -X POST https://maas-rhdp.apps.maas.redhatworkshops.io/v1/chat/completions 
     </div>
   </div>
 
-  <!-- Embedding Models -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- Intel Gaudi 3 Cluster — GPU Models                         -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
   <div class="section">
-    <h2>Embedding Models — <code>/v1/embeddings</code></h2>
-    <p>Embedding models convert text into dense vector representations. Use these for semantic search, RAG pipelines, clustering, and similarity scoring.</p>
-
-    <div class="model-card">
-      <div class="model-card-header">
-        <div>
-          <h3>Nomic Embed Text v1.5 <span class="badge badge-green">Embeddings</span></h3>
-          <p style="color:#555; font-size:0.85rem; margin-top:0.3rem;">High-quality open-source text embedding model. 768-dimensional embeddings. Supports Matryoshka representation learning — embeddings can be truncated for smaller storage. Strong on retrieval benchmarks.</p>
-        </div>
-      </div>
-      <div class="model-meta">
-        <div class="model-meta-item"><strong>Model ID</strong>nomic-embed-text-v1-5</div>
-        <div class="model-meta-item"><strong>Dimensions</strong>768</div>
-        <div class="model-meta-item"><strong>Context</strong>8192 tokens</div>
-        <div class="model-meta-item"><strong>Runtime</strong>OpenVino on KServe</div>
-      </div>
-      <pre><span class="comment"># Single string embedding</span>
-curl -X POST https://maas-rhdp.apps.maas.redhatworkshops.io/v1/embeddings \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_API_KEY" \
-  -d '{
-    <span class="string">"model"</span>: <span class="string">"your-embedding-model"</span>,
-    <span class="string">"input"</span>: <span class="string">"Red Hat OpenShift is an enterprise Kubernetes platform."</span>
-  }'</pre>
-      <pre><span class="comment"># Batch embeddings (multiple strings)</span>
-curl -X POST https://maas-rhdp.apps.maas.redhatworkshops.io/v1/embeddings \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_API_KEY" \
-  -d '{
-    <span class="string">"model"</span>: <span class="string">"your-embedding-model"</span>,
-    <span class="string">"input"</span>: [
-      <span class="string">"What is Kubernetes?"</span>,
-      <span class="string">"How does OpenShift differ from vanilla Kubernetes?"</span>,
-      <span class="string">"Explain container orchestration."</span>
-    ]
-  }'</pre>
-      <pre><span class="comment"># Python SDK example</span>
-<span class="keyword">from</span> openai <span class="keyword">import</span> OpenAI
-
-client = OpenAI(
-    api_key=<span class="string">"YOUR_API_KEY"</span>,
-    base_url=<span class="string">"https://maas-rhdp.apps.maas.redhatworkshops.io/v1"</span>
-)
-
-response = client.embeddings.create(
-    model=<span class="string">"your-embedding-model"</span>,
-    input=[<span class="string">"OpenShift"</span>, <span class="string">"Kubernetes"</span>]
-)
-vectors = [e.embedding <span class="keyword">for</span> e <span class="keyword">in</span> response.data]
-print(f<span class="string">"Embedding dimensions: {len(vectors[0])}"</span>)  <span class="comment"># 768</span></pre>
-    </div>
-  </div>
-
-  <!-- Tokenize -->
-  <div class="section">
-    <h2>Tokenization — <code>/v1/tokenize</code></h2>
-    <p>The tokenize endpoint allows you to count tokens before sending a request, useful for cost estimation and context window management.</p>
-
-    <pre><span class="comment"># Count tokens for a message (works with chat-capable models)</span>
-curl -X POST https://maas-rhdp.apps.maas.redhatworkshops.io/v1/tokenize \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_API_KEY" \
-  -d '{
-    <span class="string">"model"</span>: <span class="string">"your-chat-model"</span>,
-    <span class="string">"messages"</span>: [
-      {<span class="string">"role"</span>: <span class="string">"user"</span>, <span class="string">"content"</span>: <span class="string">"How many tokens is this message?"</span>}
-    ]
-  }'</pre>
-    <p style="margin-top:0.5rem; font-size:0.85rem; color:#555;">The response includes <code>count</code> (total token count) and <code>tokens</code> (list of token IDs). Not all models expose this endpoint — check the model's capability badge in the LiteMaaS portal.</p>
-  </div>
-
-  <!-- Document Conversion -->
-  <div class="section">
-    <h2>Document Conversion — Granite Docling 258M</h2>
-    <p>
-      Granite Docling is a specialized model for document parsing and conversion. It converts PDFs, Word documents,
-      and other document formats into clean structured text (Markdown or JSON) suitable for downstream LLM processing.
-      It uses a different endpoint format from the OpenAI-compatible API.
-    </p>
-
-    <div class="model-card">
-      <div class="model-card-header">
-        <div>
-          <h3>IBM Granite Docling 258M <span class="badge badge-orange">Docling</span></h3>
-          <p style="color:#555; font-size:0.85rem; margin-top:0.3rem;">Compact document understanding model from IBM. Handles PDF layout analysis, table extraction, figure detection, and OCR. Output is clean Markdown ready for RAG ingestion.</p>
-        </div>
-      </div>
-      <div class="model-meta">
-        <div class="model-meta-item"><strong>Model ID</strong>granite-docling-258m</div>
-        <div class="model-meta-item"><strong>Parameters</strong>258M</div>
-        <div class="model-meta-item"><strong>Runtime</strong>KServe (CPU)</div>
-        <div class="model-meta-item"><strong>Age</strong>17d (recently deployed)</div>
-      </div>
-      <pre><span class="comment"># Convert a PDF URL to Markdown</span>
-curl -X POST https://maas-rhdp.apps.maas.redhatworkshops.io/docling/v1/convert/source \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_API_KEY" \
-  -d '{
-    <span class="string">"http_sources"</span>: [{
-      <span class="string">"url"</span>: <span class="string">"https://arxiv.org/pdf/2408.09869"</span>
-    }],
-    <span class="string">"options"</span>: {
-      <span class="string">"output_format"</span>: <span class="string">"markdown"</span>
-    }
-  }'</pre>
-      <pre><span class="comment"># Upload a local file for conversion</span>
-curl -X POST https://maas-rhdp.apps.maas.redhatworkshops.io/docling/v1/convert/file \
-  -H "Authorization: Bearer YOUR_API_KEY" \
-  -F <span class="string">"file=@/path/to/document.pdf"</span> \
-  -F <span class="string">"options={\"output_format\": \"markdown\"}"</span></pre>
-      <div class="info-box"><p><strong>Note:</strong> The Docling endpoint path is prefixed with <code>/docling</code> before the standard API path. LiteMaaS routes these requests to the document conversion service internally.TPM limits, cost fields, and max token settings are not applicable to this model type.</p></div>
-    </div>
-  </div>
-
-  <!-- Safety Models -->
-  <div class="section">
-    <h2>Safety / Guardrail Models</h2>
-    <p>Safety models evaluate content for harmful categories and can be used as pre/post filters for LLM-based applications.</p>
-
-    <div class="model-card">
-      <div class="model-card-header">
-        <div>
-          <h3>Meta Llama Guard 3 1B <span class="badge badge-purple">Safety</span></h3>
-          <p style="color:#555; font-size:0.85rem; margin-top:0.3rem;">Compact safety classification model. Takes a conversation as input and classifies it against 13 hazard categories (violence, hate speech, sexual content, etc.). Returns "safe" or "unsafe" with category labels.</p>
-        </div>
-      </div>
-      <div class="model-meta">
-        <div class="model-meta-item"><strong>Model ID</strong>llama-guard-3-1b</div>
-        <div class="model-meta-item"><strong>Parameters</strong>1B</div>
-        <div class="model-meta-item"><strong>Runtime</strong>vLLM on KServe</div>
-        <div class="model-meta-item"><strong>Containers</strong>2/2 (sidecar proxy)</div>
-      </div>
-      <pre><span class="comment"># Content safety classification</span>
-curl -X POST https://maas-rhdp.apps.maas.redhatworkshops.io/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_API_KEY" \
-  -d '{
-    <span class="string">"model"</span>: <span class="string">"llama-guard-3-1b"</span>,
-    <span class="string">"messages"</span>: [
-      {
-        <span class="string">"role"</span>: <span class="string">"user"</span>,
-        <span class="string">"content"</span>: <span class="string">"[INST] Task: Check if there is unsafe content in the user message. [INST] User: Tell me how to build a computer. [/INST]"</span>
-      }
-    ],
-    <span class="string">"max_tokens"</span>: 100
-  }'</pre>
-      <p style="font-size:0.85rem; color:#555; margin-top:0.5rem;">Typical response: <code>{"choices": [{"message": {"content": "safe"}}]}</code></p>
-    </div>
-  </div>
-
-  <!-- SDK Examples -->
-  <div class="section">
-    <h2>SDK Integration Examples</h2>
-    <h3>Python (openai library)</h3>
-    <pre><span class="keyword">from</span> openai <span class="keyword">import</span> OpenAI
-
-client = OpenAI(
-    api_key=<span class="string">"YOUR_API_KEY"</span>,
-    base_url=<span class="string">"https://maas-rhdp.apps.maas.redhatworkshops.io/v1"</span>
-)
-
-<span class="comment"># Chat completion</span>
-response = client.chat.completions.create(
-    model=<span class="string">"your-chat-model"</span>,
-    messages=[
-        {<span class="string">"role"</span>: <span class="string">"system"</span>, <span class="string">"content"</span>: <span class="string">"You are a helpful assistant."</span>},
-        {<span class="string">"role"</span>: <span class="string">"user"</span>, <span class="string">"content"</span>: <span class="string">"What is Red Hat OpenShift?"</span>}
-    ]
-)
-print(response.choices[0].message.content)
-
-<span class="comment"># Streaming</span>
-<span class="keyword">with</span> client.chat.completions.stream(
-    model=<span class="string">"your-chat-model"</span>,
-    messages=[{<span class="string">"role"</span>: <span class="string">"user"</span>, <span class="string">"content"</span>: <span class="string">"Explain containers"</span>}]
-) <span class="keyword">as</span> stream:
-    <span class="keyword">for</span> chunk <span class="keyword">in</span> stream:
-        print(chunk.choices[0].delta.content, end=<span class="string">""</span>, flush=True)</pre>
-
-    <h3>Node.js / TypeScript</h3>
-    <pre><span class="keyword">import</span> OpenAI <span class="keyword">from</span> <span class="string">'openai'</span>;
-
-<span class="keyword">const</span> client = <span class="keyword">new</span> OpenAI({
-  apiKey: <span class="string">'YOUR_API_KEY'</span>,
-  baseURL: <span class="string">'https://maas-rhdp.apps.maas.redhatworkshops.io/v1'</span>
-});
-
-<span class="keyword">const</span> response = <span class="keyword">await</span> client.chat.completions.create({
-  model: <span class="string">'your-chat-model'</span>,
-  messages: [{ role: <span class="string">'user'</span>, content: <span class="string">'Hello!'</span> }]
-});
-console.log(response.choices[0].message.content);</pre>
-
-    <h3>Langchain (Python)</h3>
-    <pre><span class="keyword">from</span> langchain_openai <span class="keyword">import</span> ChatOpenAI, OpenAIEmbeddings
-
-llm = ChatOpenAI(
-    model=<span class="string">"your-chat-model"</span>,
-    openai_api_key=<span class="string">"YOUR_API_KEY"</span>,
-    openai_api_base=<span class="string">"https://maas-rhdp.apps.maas.redhatworkshops.io/v1"</span>
-)
-
-embeddings = OpenAIEmbeddings(
-    model=<span class="string">"your-embedding-model"</span>,
-    openai_api_key=<span class="string">"YOUR_API_KEY"</span>,
-    openai_api_base=<span class="string">"https://maas-rhdp.apps.maas.redhatworkshops.io/v1"</span>
-)</pre>
-  </div>
-
-  <!-- Intel Gaudi Cluster Models -->
-  <div class="section">
-    <h2>Intel Gaudi 3 Cluster — Via LiteMaaS Proxy</h2>
-    <p>The Rackspace DFW3 cluster (<code>maas00.rs-dfw3.infra.demo.redhat.com</code>) runs models on 8× Intel Gaudi 3 accelerators via KServe directly — no LiteMaaS proxy. Endpoints are OpenAI-compatible. For access credentials, contact Ashok.</p>
-
-    <div class="callout" style="border-color: #0071c5; background: #e6f2ff; color: #003d80;">
-      <strong>Access:</strong> These models are registered in LiteMaaS and accessed via the same portal and <code>sk-...</code> virtual key as all other models. The LiteLLM proxy routes requests to the Gaudi cluster backend.
-    </div>
+    <h2>Intel Gaudi 3 Cluster — GPU Models</h2>
+    <p>The Rackspace DFW3 cluster runs models on Intel Gaudi 3 accelerators via vLLM. These models are registered in LiteMaaS and accessed via the same portal and <code>sk-...</code> virtual key as all other models.</p>
 
     <!-- DeepSeek R1 Distill Qwen 14B -->
     <div class="model-card">
@@ -625,10 +494,9 @@ embeddings = OpenAIEmbeddings(
         <div class="model-meta-item"><strong>Model ID</strong>deepseek-r1-distill-qwen-14b</div>
         <div class="model-meta-item"><strong>Parameters</strong>14B</div>
         <div class="model-meta-item"><strong>Runtime</strong>vLLM on Gaudi 3</div>
-        <div class="model-meta-item"><strong>Cluster</strong>maas00.rs-dfw3</div>
-        <div class="model-meta-item"><strong>Backend</strong>deepseek-r1-distill-qwen-14b-llm-hosting.apps.maas00.rs-dfw3.infra.demo.redhat.com</div>
+        <div class="model-meta-item"><strong>Cluster</strong>ocp-rac-maas.rs-dfw3</div>
       </div>
-      <pre><span class="comment"># Chat completion via KServe direct endpoint</span>
+      <pre><span class="comment"># Reasoning and chain-of-thought</span>
 curl https://maas-rhdp.apps.maas.redhatworkshops.io/v1/chat/completions \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
@@ -650,10 +518,9 @@ curl https://maas-rhdp.apps.maas.redhatworkshops.io/v1/chat/completions \
         <div class="model-meta-item"><strong>Model ID</strong>qwen3-14b</div>
         <div class="model-meta-item"><strong>Parameters</strong>14B</div>
         <div class="model-meta-item"><strong>Runtime</strong>vLLM on Gaudi 3</div>
-        <div class="model-meta-item"><strong>Cluster</strong>maas00.rs-dfw3</div>
-        <div class="model-meta-item"><strong>Backend</strong>qwen3-14b-llm-hosting.apps.maas00.rs-dfw3.infra.demo.redhat.com</div>
+        <div class="model-meta-item"><strong>Cluster</strong>ocp-rac-maas.rs-dfw3</div>
       </div>
-      <pre><span class="comment"># Chat completion via KServe direct endpoint</span>
+      <pre><span class="comment"># Multilingual chat</span>
 curl https://maas-rhdp.apps.maas.redhatworkshops.io/v1/chat/completions \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
@@ -662,18 +529,20 @@ curl https://maas-rhdp.apps.maas.redhatworkshops.io/v1/chat/completions \
     "messages": [{"role": "user", "content": "Explain prefix caching in LLMs."}]
   }'</pre>
     </div>
-  </div>
 
     <!-- Microsoft Phi-4 -->
     <div class="model-card">
       <div class="model-card-header">
-          <h3>Microsoft Phi-4 <span class="badge badge-blue">Chat</span></h3>
+        <div>
+          <h3>Microsoft Phi-4 <span class="badge badge-blue">Chat</span> <span class="badge badge-purple" style="background:#e6f2ff;color:#0071c5;border:1px solid #0071c5;">Intel Gaudi 3</span></h3>
           <p style="color:#555; font-size:0.85rem; margin-top:0.3rem;">Compact but high-quality model with strong reasoning and coding capabilities. Efficient for its size.</p>
+        </div>
       </div>
       <div class="model-meta">
         <div class="model-meta-item"><strong>Model ID</strong>microsoft-phi-4</div>
-        <div class="model-meta-item"><strong>Backend</strong>microsoft-phi-4-llm-hosting.apps.smc00.rs-dfw3.infra.demo.redhat.com</div>
         <div class="model-meta-item"><strong>Context</strong>16K</div>
+        <div class="model-meta-item"><strong>Runtime</strong>vLLM on Gaudi 3</div>
+        <div class="model-meta-item"><strong>Cluster</strong>ocp-rac-maas.rs-dfw3</div>
       </div>
       <pre><span class="comment"># Chat completion</span>
 curl https://maas-rhdp.apps.maas.redhatworkshops.io/v1/chat/completions \
@@ -683,7 +552,336 @@ curl https://maas-rhdp.apps.maas.redhatworkshops.io/v1/chat/completions \
     </div>
   </div>
 
-  <!-- Vertex AI External Models -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- Intel DFW3 — CPU Models                                    -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <div class="section">
+    <h2>Intel DFW3 Cluster — CPU Inference Models</h2>
+    <p>
+      CPU-based models running on the Rackspace DFW3 Intel cluster without GPU acceleration. These models offer lower throughput
+      but run on readily available CPU hardware. Accessed via the same LiteMaaS portal and <code>sk-...</code> virtual key.
+    </p>
+    <div class="info-box">
+      <p><strong>Performance note:</strong> CPU models have lower TPM/RPM limits (typically 1,000 TPM / 100 RPM) compared to GPU-accelerated models. Best suited for low-volume testing, development, and latency-tolerant workloads.</p>
+    </div>
+
+    <!-- Llama 3.1 70B CPU -->
+    <div class="model-card">
+      <div class="model-card-header">
+        <div>
+          <h3>Meta Llama 3.1 70B Instruct (CPU) <span class="badge badge-blue">Chat</span> <span class="badge badge-gray">CPU</span></h3>
+          <p style="color:#555; font-size:0.85rem; margin-top:0.3rem;">Quantized (Q4_K_M GGUF) version of Meta's Llama 3.1 70B Instruct model. Runs on CPU via llama.cpp. Largest CPU-hosted model available.</p>
+        </div>
+      </div>
+      <div class="model-meta">
+        <div class="model-meta-item"><strong>Model ID</strong>llama-31-70b-cpu</div>
+        <div class="model-meta-item"><strong>Parameters</strong>70B (Q4_K_M quantized)</div>
+        <div class="model-meta-item"><strong>Runtime</strong>llama.cpp (CPU)</div>
+        <div class="model-meta-item"><strong>Cluster</strong>ocp-rac-maas.rs-dfw3</div>
+      </div>
+      <pre>curl https://maas-rhdp.apps.maas.redhatworkshops.io/v1/chat/completions \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "llama-31-70b-cpu",
+    "messages": [{"role": "user", "content": "Explain the difference between containers and virtual machines."}],
+    "max_tokens": 512
+  }'</pre>
+    </div>
+
+    <!-- Qwen 3.6 36B A3B -->
+    <div class="model-card">
+      <div class="model-card-header">
+        <div>
+          <h3>Qwen 3.6 36B-A3B <span class="badge badge-blue">Chat</span> <span class="badge badge-gray">CPU</span></h3>
+          <p style="color:#555; font-size:0.85rem; margin-top:0.3rem;">Alibaba's Qwen 3.6 mixture-of-experts model with 36B total parameters and 3B active parameters. Efficient MoE architecture keeps CPU inference tractable. 64K context window.</p>
+        </div>
+      </div>
+      <div class="model-meta">
+        <div class="model-meta-item"><strong>Model ID</strong>qwen36-35b-a3b</div>
+        <div class="model-meta-item"><strong>Parameters</strong>36B (3B active, MoE)</div>
+        <div class="model-meta-item"><strong>Context</strong>64K tokens</div>
+        <div class="model-meta-item"><strong>Runtime</strong>vLLM (CPU)</div>
+        <div class="model-meta-item"><strong>Cluster</strong>ocp-rac-maas.rs-dfw3</div>
+      </div>
+      <pre>curl https://maas-rhdp.apps.maas.redhatworkshops.io/v1/chat/completions \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "qwen36-35b-a3b",
+    "messages": [{"role": "user", "content": "Write a bash script to check disk usage."}],
+    "max_tokens": 512
+  }'</pre>
+    </div>
+
+    <!-- Granite 3.2 8B CPU -->
+    <div class="model-card">
+      <div class="model-card-header">
+        <div>
+          <h3>IBM Granite 3.2 8B Instruct (CPU) <span class="badge badge-blue">Chat</span> <span class="badge badge-gray">CPU</span></h3>
+          <p style="color:#555; font-size:0.85rem; margin-top:0.3rem;">CPU variant of Granite 3.2 8B Instruct. Same capabilities as the GPU version but running on CPU infrastructure with lower throughput.</p>
+        </div>
+      </div>
+      <div class="model-meta">
+        <div class="model-meta-item"><strong>Model ID</strong>granite-3-2-8b-instruct-cpu</div>
+        <div class="model-meta-item"><strong>Parameters</strong>8B</div>
+        <div class="model-meta-item"><strong>Runtime</strong>vLLM (CPU)</div>
+        <div class="model-meta-item"><strong>TPM / RPM</strong>1,000 / 100</div>
+      </div>
+    </div>
+
+    <!-- Granite 4.0 H Tiny CPU -->
+    <div class="model-card">
+      <div class="model-card-header">
+        <div>
+          <h3>IBM Granite 4.0 H Tiny (CPU) <span class="badge badge-blue">Chat</span> <span class="badge badge-gray">CPU</span></h3>
+          <p style="color:#555; font-size:0.85rem; margin-top:0.3rem;">CPU variant of Granite 4.0 H Tiny. Best suited for quick classification and low-latency tasks on CPU.</p>
+        </div>
+      </div>
+      <div class="model-meta">
+        <div class="model-meta-item"><strong>Model ID</strong>granite-4-0-h-tiny-cpu</div>
+        <div class="model-meta-item"><strong>Runtime</strong>vLLM (CPU)</div>
+        <div class="model-meta-item"><strong>TPM / RPM</strong>1,000 / 100</div>
+      </div>
+    </div>
+
+    <!-- Granite 2B CPU -->
+    <div class="model-card">
+      <div class="model-card-header">
+        <div>
+          <h3>IBM Granite 2B (CPU) <span class="badge badge-blue">Chat</span> <span class="badge badge-gray">CPU</span></h3>
+          <p style="color:#555; font-size:0.85rem; margin-top:0.3rem;">Compact 2B parameter Granite model for lightweight inference on CPU.</p>
+        </div>
+      </div>
+      <div class="model-meta">
+        <div class="model-meta-item"><strong>Model ID</strong>granite-2b-cpu</div>
+        <div class="model-meta-item"><strong>Parameters</strong>2B</div>
+        <div class="model-meta-item"><strong>Runtime</strong>vLLM (CPU)</div>
+      </div>
+    </div>
+
+    <!-- Qwen 2.5 3B CPU -->
+    <div class="model-card">
+      <div class="model-card-header">
+        <div>
+          <h3>Qwen 2.5 3B (CPU) <span class="badge badge-blue">Chat</span> <span class="badge badge-gray">CPU</span></h3>
+          <p style="color:#555; font-size:0.85rem; margin-top:0.3rem;">Alibaba's Qwen 2.5 at 3B parameters. Lightweight model for CPU-based inference.</p>
+        </div>
+      </div>
+      <div class="model-meta">
+        <div class="model-meta-item"><strong>Model ID</strong>qwen25-3b-cpu</div>
+        <div class="model-meta-item"><strong>Parameters</strong>3B</div>
+        <div class="model-meta-item"><strong>Runtime</strong>vLLM (CPU)</div>
+      </div>
+    </div>
+
+    <!-- Phi-3 Mini CPU -->
+    <div class="model-card">
+      <div class="model-card-header">
+        <div>
+          <h3>Microsoft Phi-3 Mini (CPU) <span class="badge badge-blue">Chat</span> <span class="badge badge-gray">CPU</span></h3>
+          <p style="color:#555; font-size:0.85rem; margin-top:0.3rem;">Microsoft's compact Phi-3 Mini model (3.8B parameters) running on CPU. Good reasoning performance for its size.</p>
+        </div>
+      </div>
+      <div class="model-meta">
+        <div class="model-meta-item"><strong>Model ID</strong>phi3-mini-cpu</div>
+        <div class="model-meta-item"><strong>Parameters</strong>3.8B</div>
+        <div class="model-meta-item"><strong>Runtime</strong>vLLM (CPU)</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- Audio Models                                                -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <div class="section">
+    <h2>Audio Models — <code>/v1/audio/transcriptions</code></h2>
+    <p>Speech-to-text models for audio transcription. These follow the OpenAI Audio API format.</p>
+
+    <div class="model-card">
+      <div class="model-card-header">
+        <div>
+          <h3>OpenAI Whisper Small <span class="badge badge-teal">Audio/STT</span> <span class="badge badge-gray">CPU</span></h3>
+          <p style="color:#555; font-size:0.85rem; margin-top:0.3rem;">OpenAI's Whisper Small model for speech-to-text transcription. Supports multiple languages and audio formats. Runs on CPU on the DFW3 cluster.</p>
+        </div>
+      </div>
+      <div class="model-meta">
+        <div class="model-meta-item"><strong>Model ID</strong>whisper-small</div>
+        <div class="model-meta-item"><strong>Runtime</strong>Whisper (CPU)</div>
+        <div class="model-meta-item"><strong>Cluster</strong>ocp-rac-maas.rs-dfw3</div>
+        <div class="model-meta-item"><strong>Status</strong><span class="status-down">Currently unhealthy</span></div>
+      </div>
+      <pre><span class="comment"># Audio transcription</span>
+curl https://maas-rhdp.apps.maas.redhatworkshops.io/v1/audio/transcriptions \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -F "file=@/path/to/audio.mp3" \
+  -F "model=whisper-small"</pre>
+      <div class="warn-box"><p><strong>Note:</strong> This model is currently experiencing connectivity issues (503). Check the LiteMaaS portal for live status.</p></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- Embedding Models                                            -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <div class="section">
+    <h2>Embedding Models — <code>/v1/embeddings</code></h2>
+    <p>Embedding models convert text into dense vector representations. Use these for semantic search, RAG pipelines, clustering, and similarity scoring.</p>
+
+    <div class="model-card">
+      <div class="model-card-header">
+        <div>
+          <h3>Nomic Embed Text v1.5 <span class="badge badge-green">Embeddings</span></h3>
+          <p style="color:#555; font-size:0.85rem; margin-top:0.3rem;">High-quality open-source text embedding model. 768-dimensional embeddings. Supports Matryoshka representation learning — embeddings can be truncated for smaller storage. Strong on retrieval benchmarks.</p>
+        </div>
+      </div>
+      <div class="model-meta">
+        <div class="model-meta-item"><strong>Model ID</strong>nomic-embed-text-v1-5</div>
+        <div class="model-meta-item"><strong>Dimensions</strong>768</div>
+        <div class="model-meta-item"><strong>Context</strong>8192 tokens</div>
+        <div class="model-meta-item"><strong>Runtime</strong>OpenVINO on KServe</div>
+      </div>
+      <pre><span class="comment"># Single string embedding</span>
+curl -X POST https://maas-rhdp.apps.maas.redhatworkshops.io/v1/embeddings \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -d '{
+    <span class="string">"model"</span>: <span class="string">"nomic-embed-text-v1-5"</span>,
+    <span class="string">"input"</span>: <span class="string">"Red Hat OpenShift is an enterprise Kubernetes platform."</span>
+  }'</pre>
+      <pre><span class="comment"># Batch embeddings (multiple strings)</span>
+curl -X POST https://maas-rhdp.apps.maas.redhatworkshops.io/v1/embeddings \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -d '{
+    <span class="string">"model"</span>: <span class="string">"nomic-embed-text-v1-5"</span>,
+    <span class="string">"input"</span>: [
+      <span class="string">"What is Kubernetes?"</span>,
+      <span class="string">"How does OpenShift differ from vanilla Kubernetes?"</span>,
+      <span class="string">"Explain container orchestration."</span>
+    ]
+  }'</pre>
+      <pre><span class="comment"># Python SDK example</span>
+<span class="keyword">from</span> openai <span class="keyword">import</span> OpenAI
+
+client = OpenAI(
+    api_key=<span class="string">"YOUR_API_KEY"</span>,
+    base_url=<span class="string">"https://maas-rhdp.apps.maas.redhatworkshops.io/v1"</span>
+)
+
+response = client.embeddings.create(
+    model=<span class="string">"nomic-embed-text-v1-5"</span>,
+    input=[<span class="string">"OpenShift"</span>, <span class="string">"Kubernetes"</span>]
+)
+vectors = [e.embedding <span class="keyword">for</span> e <span class="keyword">in</span> response.data]
+print(f<span class="string">"Embedding dimensions: {len(vectors[0])}"</span>)  <span class="comment"># 768</span></pre>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- Tokenize                                                    -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <div class="section">
+    <h2>Tokenization — <code>/v1/tokenize</code></h2>
+    <p>The tokenize endpoint allows you to count tokens before sending a request, useful for cost estimation and context window management.</p>
+
+    <pre><span class="comment"># Count tokens for a message (works with chat-capable models)</span>
+curl -X POST https://maas-rhdp.apps.maas.redhatworkshops.io/v1/tokenize \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -d '{
+    <span class="string">"model"</span>: <span class="string">"granite-3-2-8b-instruct"</span>,
+    <span class="string">"messages"</span>: [
+      {<span class="string">"role"</span>: <span class="string">"user"</span>, <span class="string">"content"</span>: <span class="string">"How many tokens is this message?"</span>}
+    ]
+  }'</pre>
+    <p style="margin-top:0.5rem; font-size:0.85rem; color:#555;">The response includes <code>count</code> (total token count) and <code>tokens</code> (list of token IDs). Not all models expose this endpoint — check the model's capability badge in the LiteMaaS portal.</p>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- Document Conversion                                         -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <div class="section">
+    <h2>Document Conversion — Granite Docling 258M</h2>
+    <p>
+      Granite Docling is a specialized model for document parsing and conversion. It converts PDFs, Word documents,
+      and other document formats into clean structured text (Markdown or JSON) suitable for downstream LLM processing.
+      It uses a different endpoint format from the OpenAI-compatible API.
+    </p>
+
+    <div class="model-card">
+      <div class="model-card-header">
+        <div>
+          <h3>IBM Granite Docling 258M <span class="badge badge-orange">Docling</span></h3>
+          <p style="color:#555; font-size:0.85rem; margin-top:0.3rem;">Compact document understanding model from IBM. Handles PDF layout analysis, table extraction, figure detection, and OCR. Output is clean Markdown ready for RAG ingestion.</p>
+        </div>
+      </div>
+      <div class="model-meta">
+        <div class="model-meta-item"><strong>Model ID</strong>granite-docling-258m</div>
+        <div class="model-meta-item"><strong>Parameters</strong>258M</div>
+        <div class="model-meta-item"><strong>Runtime</strong>KServe (CPU)</div>
+      </div>
+      <pre><span class="comment"># Convert a PDF URL to Markdown</span>
+curl -X POST https://maas-rhdp.apps.maas.redhatworkshops.io/docling/v1/convert/source \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -d '{
+    <span class="string">"http_sources"</span>: [{
+      <span class="string">"url"</span>: <span class="string">"https://arxiv.org/pdf/2408.09869"</span>
+    }],
+    <span class="string">"options"</span>: {
+      <span class="string">"output_format"</span>: <span class="string">"markdown"</span>
+    }
+  }'</pre>
+      <pre><span class="comment"># Upload a local file for conversion</span>
+curl -X POST https://maas-rhdp.apps.maas.redhatworkshops.io/docling/v1/convert/file \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -F <span class="string">"file=@/path/to/document.pdf"</span> \
+  -F <span class="string">"options={\"output_format\": \"markdown\"}"</span></pre>
+      <div class="info-box"><p><strong>Note:</strong> The Docling endpoint path is prefixed with <code>/docling</code> before the standard API path. LiteMaaS routes these requests to the document conversion service internally. TPM limits, cost fields, and max token settings are not applicable to this model type.</p></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- Safety Models                                               -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <div class="section">
+    <h2>Safety / Guardrail Models</h2>
+    <p>Safety models evaluate content for harmful categories and can be used as pre/post filters for LLM-based applications.</p>
+
+    <div class="model-card">
+      <div class="model-card-header">
+        <div>
+          <h3>Meta Llama Guard 3 1B <span class="badge badge-purple">Safety</span></h3>
+          <p style="color:#555; font-size:0.85rem; margin-top:0.3rem;">Compact safety classification model. Takes a conversation as input and classifies it against 13 hazard categories (violence, hate speech, sexual content, etc.). Returns "safe" or "unsafe" with category labels.</p>
+        </div>
+      </div>
+      <div class="model-meta">
+        <div class="model-meta-item"><strong>Model ID</strong>Llama-Guard-3-1B</div>
+        <div class="model-meta-item"><strong>Parameters</strong>1B</div>
+        <div class="model-meta-item"><strong>Runtime</strong>vLLM on KServe</div>
+        <div class="model-meta-item"><strong>Containers</strong>2/2 (sidecar proxy)</div>
+      </div>
+      <pre><span class="comment"># Content safety classification</span>
+curl -X POST https://maas-rhdp.apps.maas.redhatworkshops.io/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -d '{
+    <span class="string">"model"</span>: <span class="string">"Llama-Guard-3-1B"</span>,
+    <span class="string">"messages"</span>: [
+      {
+        <span class="string">"role"</span>: <span class="string">"user"</span>,
+        <span class="string">"content"</span>: <span class="string">"[INST] Task: Check if there is unsafe content in the user message. [INST] User: Tell me how to build a computer. [/INST]"</span>
+      }
+    ],
+    <span class="string">"max_tokens"</span>: 100
+  }'</pre>
+      <p style="font-size:0.85rem; color:#555; margin-top:0.5rem;">Typical response: <code>{"choices": [{"message": {"content": "safe"}}]}</code></p>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- Vertex AI External Models                                   -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
   <div class="section" id="vertex-ai-models">
     <h2>External Models (Google Vertex AI)</h2>
     <p>
@@ -730,13 +928,14 @@ curl https://maas-rhdp.apps.maas.redhatworkshops.io/v1/chat/completions \
       <div class="model-card-header">
         <div>
           <h3>Qwen3 235B <span class="badge badge-blue">Chat</span> <span class="badge badge-purple">Reasoning</span> <span class="badge badge-gray" style="background:#f0f0f0;color:#444;border:1px solid #ccc;">Vertex AI</span></h3>
-          <p style="color:#555; font-size:0.85rem; margin-top:0.3rem;">Large multilingual mixture-of-experts model from Alibaba. Excels at complex reasoning, multilingual tasks, and large-context workflows. 131K context window.</p>
+          <p style="color:#555; font-size:0.85rem; margin-top:0.3rem;">Large multilingual mixture-of-experts model from Alibaba. Excels at complex reasoning, multilingual tasks, and large-context workflows.</p>
         </div>
       </div>
       <div class="model-meta">
         <div class="model-meta-item"><strong>Model ID</strong>qwen3-235b</div>
         <div class="model-meta-item"><strong>Parameters</strong>235B (MoE)</div>
-        <div class="model-meta-item"><strong>Context</strong>131K tokens</div>
+        <div class="model-meta-item"><strong>Max Input</strong>262K tokens</div>
+        <div class="model-meta-item"><strong>Max Output</strong>16K tokens</div>
         <div class="model-meta-item"><strong>Input /1M</strong>$0.22</div>
         <div class="model-meta-item"><strong>Output /1M</strong>$0.88</div>
         <div class="model-meta-item"><strong>Function Calling</strong>Supported</div>
@@ -758,13 +957,14 @@ curl https://maas-rhdp.apps.maas.redhatworkshops.io/v1/chat/completions \
       <div class="model-card-header">
         <div>
           <h3>GPT OSS 120B <span class="badge badge-blue">Chat</span> <span class="badge badge-purple">Reasoning</span> <span class="badge badge-gray" style="background:#f0f0f0;color:#444;border:1px solid #ccc;">Vertex AI</span></h3>
-          <p style="color:#555; font-size:0.85rem; margin-top:0.3rem;">Large open-source 120B model with strong function calling support. Suited for complex generation, agentic workflows, and tasks that benefit from a large parameter count. 131K context window.</p>
+          <p style="color:#555; font-size:0.85rem; margin-top:0.3rem;">Large open-source 120B model with strong function calling support. Suited for complex generation, agentic workflows, and tasks that benefit from a large parameter count.</p>
         </div>
       </div>
       <div class="model-meta">
         <div class="model-meta-item"><strong>Model ID</strong>gpt-oss-120b</div>
         <div class="model-meta-item"><strong>Parameters</strong>120B</div>
-        <div class="model-meta-item"><strong>Context</strong>131K tokens</div>
+        <div class="model-meta-item"><strong>Max Input</strong>131K tokens</div>
+        <div class="model-meta-item"><strong>Max Output</strong>32K tokens</div>
         <div class="model-meta-item"><strong>Input /1M</strong>$0.09</div>
         <div class="model-meta-item"><strong>Output /1M</strong>$0.36</div>
         <div class="model-meta-item"><strong>Function Calling</strong>Supported</div>
@@ -786,15 +986,16 @@ curl https://maas-rhdp.apps.maas.redhatworkshops.io/v1/chat/completions \
       <div class="model-card-header">
         <div>
           <h3>GPT OSS 20B <span class="badge badge-blue">Chat</span> <span class="badge badge-gray" style="background:#f0f0f0;color:#444;border:1px solid #ccc;">Vertex AI</span></h3>
-          <p style="color:#555; font-size:0.85rem; margin-top:0.3rem;">Cost-effective option for general-purpose chat tasks. The lightest external model — best starting point when you need a Vertex AI model but want to minimize spend. 131K context window.</p>
+          <p style="color:#555; font-size:0.85rem; margin-top:0.3rem;">Cost-effective option for general-purpose chat tasks. The lightest external model — best starting point when you need a Vertex AI model but want to minimize spend.</p>
         </div>
       </div>
       <div class="model-meta">
         <div class="model-meta-item"><strong>Model ID</strong>gpt-oss-20b</div>
         <div class="model-meta-item"><strong>Parameters</strong>20B</div>
-        <div class="model-meta-item"><strong>Context</strong>131K tokens</div>
+        <div class="model-meta-item"><strong>Max Input</strong>131K tokens</div>
+        <div class="model-meta-item"><strong>Max Output</strong>32K tokens</div>
         <div class="model-meta-item"><strong>Input /1M</strong>$0.07</div>
-        <div class="model-meta-item"><strong>Output /1M</strong>$0.25</div>
+        <div class="model-meta-item"><strong>Output /1M</strong>$0.30</div>
         <div class="model-meta-item"><strong>Function Calling</strong>Supported</div>
         <div class="model-meta-item"><strong>Hosted on</strong>Google Vertex AI</div>
       </div>
@@ -809,43 +1010,21 @@ curl https://maas-rhdp.apps.maas.redhatworkshops.io/v1/chat/completions \
   }'</pre>
     </div>
 
-    <!-- Claude Sonnet 4.6 -->
-    <div class="model-card">
-      <div class="model-card-header">
-        <div>
-          <h3>Claude Sonnet 4.6 <span class="badge badge-blue">Chat</span> <span class="badge badge-gray" style="background:#f0f0f0;color:#444;border:1px solid #ccc;">Vertex AI</span></h3>
-          <p style="color:#555; font-size:0.85rem; margin-top:0.3rem;">Anthropic Claude Sonnet 4.6 via Google Vertex AI. Strong general-purpose reasoning, coding, and analysis. Balanced capability-to-cost ratio.</p>
-        </div>
-      </div>
-      <div class="model-meta">
-        <div class="model-meta-item"><strong>Model ID</strong>claude-sonnet-4-6</div>
-        <div class="model-meta-item"><strong>Input /1M</strong>$3.00</div>
-        <div class="model-meta-item"><strong>Output /1M</strong>$15.00</div>
-        <div class="model-meta-item"><strong>Hosted on</strong>Google Vertex AI</div>
-      </div>
-      <pre><span class="comment"># General reasoning and coding</span>
-curl https://maas-rhdp.apps.maas.redhatworkshops.io/v1/chat/completions \
-  -H "Authorization: Bearer YOUR_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "claude-sonnet-4-6",
-    "messages": [{"role": "user", "content": "Explain how Kubernetes resource quotas work."}],
-    "max_tokens": 1024
-  }'</pre>
-    </div>
-
     <!-- Claude Opus 4.6 -->
     <div class="model-card">
       <div class="model-card-header">
         <div>
           <h3>Claude Opus 4.6 <span class="badge badge-blue">Chat</span> <span class="badge badge-gray" style="background:#f0f0f0;color:#444;border:1px solid #ccc;">Vertex AI</span></h3>
-          <p style="color:#555; font-size:0.85rem; margin-top:0.3rem;">Anthropic's most capable Claude model. Best for complex multi-step reasoning, long-document analysis, and high-stakes generation tasks.</p>
+          <p style="color:#555; font-size:0.85rem; margin-top:0.3rem;">Anthropic's most capable Claude model. Best for complex multi-step reasoning, long-document analysis, and high-stakes generation tasks. 1M token input context.</p>
         </div>
       </div>
       <div class="model-meta">
         <div class="model-meta-item"><strong>Model ID</strong>claude-opus-4-6</div>
+        <div class="model-meta-item"><strong>Max Input</strong>1M tokens</div>
+        <div class="model-meta-item"><strong>Max Output</strong>128K tokens</div>
         <div class="model-meta-item"><strong>Input /1M</strong>$5.00</div>
         <div class="model-meta-item"><strong>Output /1M</strong>$25.00</div>
+        <div class="model-meta-item"><strong>Function Calling</strong>Supported</div>
         <div class="model-meta-item"><strong>Hosted on</strong>Google Vertex AI</div>
       </div>
       <pre><span class="comment"># Complex analysis and long-form generation</span>
@@ -859,18 +1038,49 @@ curl https://maas-rhdp.apps.maas.redhatworkshops.io/v1/chat/completions \
   }'</pre>
     </div>
 
+    <!-- Claude Sonnet 4.6 -->
+    <div class="model-card">
+      <div class="model-card-header">
+        <div>
+          <h3>Claude Sonnet 4.6 <span class="badge badge-blue">Chat</span> <span class="badge badge-gray" style="background:#f0f0f0;color:#444;border:1px solid #ccc;">Vertex AI</span></h3>
+          <p style="color:#555; font-size:0.85rem; margin-top:0.3rem;">Anthropic Claude Sonnet 4.6 via Google Vertex AI. Strong general-purpose reasoning, coding, and analysis. Balanced capability-to-cost ratio. 1M token input context.</p>
+        </div>
+      </div>
+      <div class="model-meta">
+        <div class="model-meta-item"><strong>Model ID</strong>claude-sonnet-4-6</div>
+        <div class="model-meta-item"><strong>Max Input</strong>1M tokens</div>
+        <div class="model-meta-item"><strong>Max Output</strong>64K tokens</div>
+        <div class="model-meta-item"><strong>Input /1M</strong>$3.00</div>
+        <div class="model-meta-item"><strong>Output /1M</strong>$15.00</div>
+        <div class="model-meta-item"><strong>Function Calling</strong>Supported</div>
+        <div class="model-meta-item"><strong>Hosted on</strong>Google Vertex AI</div>
+      </div>
+      <pre><span class="comment"># General reasoning and coding</span>
+curl https://maas-rhdp.apps.maas.redhatworkshops.io/v1/chat/completions \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "claude-sonnet-4-6",
+    "messages": [{"role": "user", "content": "Explain how Kubernetes resource quotas work."}],
+    "max_tokens": 1024
+  }'</pre>
+    </div>
+
     <!-- Claude Sonnet 4.5 -->
     <div class="model-card">
       <div class="model-card-header">
         <div>
           <h3>Claude Sonnet 4.5 <span class="badge badge-blue">Chat</span> <span class="badge badge-gray" style="background:#f0f0f0;color:#444;border:1px solid #ccc;">Vertex AI</span></h3>
-          <p style="color:#555; font-size:0.85rem; margin-top:0.3rem;">Previous-generation Claude Sonnet. Strong coding and reasoning at the same price point as Sonnet 4.6.</p>
+          <p style="color:#555; font-size:0.85rem; margin-top:0.3rem;">Previous-generation Claude Sonnet. Strong coding and reasoning at the same price point as Sonnet 4.6. 200K token input context.</p>
         </div>
       </div>
       <div class="model-meta">
         <div class="model-meta-item"><strong>Model ID</strong>claude-sonnet-4-5</div>
+        <div class="model-meta-item"><strong>Max Input</strong>200K tokens</div>
+        <div class="model-meta-item"><strong>Max Output</strong>64K tokens</div>
         <div class="model-meta-item"><strong>Input /1M</strong>$3.00</div>
         <div class="model-meta-item"><strong>Output /1M</strong>$15.00</div>
+        <div class="model-meta-item"><strong>Function Calling</strong>Supported</div>
         <div class="model-meta-item"><strong>Hosted on</strong>Google Vertex AI</div>
       </div>
       <pre><span class="comment"># Coding and structured output</span>
@@ -884,26 +1094,30 @@ curl https://maas-rhdp.apps.maas.redhatworkshops.io/v1/chat/completions \
   }'</pre>
     </div>
 
-    <!-- Claude 3.5 Haiku -->
+    <!-- Claude Haiku 4.5 -->
     <div class="model-card">
       <div class="model-card-header">
         <div>
-          <h3>Claude 3.5 Haiku <span class="badge badge-blue">Chat</span> <span class="badge badge-gray" style="background:#f0f0f0;color:#444;border:1px solid #ccc;">Vertex AI</span></h3>
-          <p style="color:#555; font-size:0.85rem; margin-top:0.3rem;">Anthropic's fastest and most cost-efficient Claude model. Ideal for high-throughput tasks, classification, summarization, and light Q&amp;A where cost sensitivity matters.</p>
+          <h3>Claude Haiku 4.5 <span class="badge badge-blue">Chat</span> <span class="badge badge-gray" style="background:#f0f0f0;color:#444;border:1px solid #ccc;">Vertex AI</span></h3>
+          <p style="color:#555; font-size:0.85rem; margin-top:0.3rem;">Anthropic's fastest and most cost-efficient Claude model. Ideal for high-throughput tasks, classification, summarization, and light Q&amp;A where cost sensitivity matters. Also available as <code>claude-3-5-haiku</code> (alias).</p>
         </div>
       </div>
       <div class="model-meta">
-        <div class="model-meta-item"><strong>Model ID</strong>claude-3-5-haiku</div>
+        <div class="model-meta-item"><strong>Model ID</strong>claude-haiku-4-5</div>
+        <div class="model-meta-item"><strong>Alias</strong>claude-3-5-haiku</div>
+        <div class="model-meta-item"><strong>Max Input</strong>200K tokens</div>
+        <div class="model-meta-item"><strong>Max Output</strong>8K tokens</div>
         <div class="model-meta-item"><strong>Input /1M</strong>$1.00</div>
         <div class="model-meta-item"><strong>Output /1M</strong>$5.00</div>
+        <div class="model-meta-item"><strong>Function Calling</strong>Supported</div>
         <div class="model-meta-item"><strong>Hosted on</strong>Google Vertex AI</div>
       </div>
-      <pre><span class="comment"># Fast, cost-efficient tasks</span>
+      <pre><span class="comment"># Fast, cost-efficient tasks (either model ID works)</span>
 curl https://maas-rhdp.apps.maas.redhatworkshops.io/v1/chat/completions \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "claude-3-5-haiku",
+    "model": "claude-haiku-4-5",
     "messages": [{"role": "user", "content": "Classify this log line as error, warning, or info."}],
     "max_tokens": 64
   }'</pre>
@@ -919,9 +1133,11 @@ curl https://maas-rhdp.apps.maas.redhatworkshops.io/v1/chat/completions \
       </div>
       <div class="model-meta">
         <div class="model-meta-item"><strong>Model ID</strong>gemini-2.5-pro</div>
-        <div class="model-meta-item"><strong>Context</strong>1M tokens</div>
+        <div class="model-meta-item"><strong>Max Input</strong>1M tokens</div>
+        <div class="model-meta-item"><strong>Max Output</strong>65K tokens</div>
         <div class="model-meta-item"><strong>Input /1M</strong>$1.25</div>
         <div class="model-meta-item"><strong>Output /1M</strong>$10.00</div>
+        <div class="model-meta-item"><strong>Function Calling</strong>Supported</div>
         <div class="model-meta-item"><strong>Hosted on</strong>Google Vertex AI</div>
       </div>
       <pre><span class="comment"># Long-document analysis</span>
@@ -936,7 +1152,70 @@ curl https://maas-rhdp.apps.maas.redhatworkshops.io/v1/chat/completions \
     </div>
   </div>
 
-  <!-- Available Models API -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- SDK Examples                                                -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <div class="section">
+    <h2>SDK Integration Examples</h2>
+    <h3>Python (openai library)</h3>
+    <pre><span class="keyword">from</span> openai <span class="keyword">import</span> OpenAI
+
+client = OpenAI(
+    api_key=<span class="string">"YOUR_API_KEY"</span>,
+    base_url=<span class="string">"https://maas-rhdp.apps.maas.redhatworkshops.io/v1"</span>
+)
+
+<span class="comment"># Chat completion</span>
+response = client.chat.completions.create(
+    model=<span class="string">"granite-3-2-8b-instruct"</span>,
+    messages=[
+        {<span class="string">"role"</span>: <span class="string">"system"</span>, <span class="string">"content"</span>: <span class="string">"You are a helpful assistant."</span>},
+        {<span class="string">"role"</span>: <span class="string">"user"</span>, <span class="string">"content"</span>: <span class="string">"What is Red Hat OpenShift?"</span>}
+    ]
+)
+print(response.choices[0].message.content)
+
+<span class="comment"># Streaming</span>
+<span class="keyword">with</span> client.chat.completions.stream(
+    model=<span class="string">"granite-3-2-8b-instruct"</span>,
+    messages=[{<span class="string">"role"</span>: <span class="string">"user"</span>, <span class="string">"content"</span>: <span class="string">"Explain containers"</span>}]
+) <span class="keyword">as</span> stream:
+    <span class="keyword">for</span> chunk <span class="keyword">in</span> stream:
+        print(chunk.choices[0].delta.content, end=<span class="string">""</span>, flush=True)</pre>
+
+    <h3>Node.js / TypeScript</h3>
+    <pre><span class="keyword">import</span> OpenAI <span class="keyword">from</span> <span class="string">'openai'</span>;
+
+<span class="keyword">const</span> client = <span class="keyword">new</span> OpenAI({
+  apiKey: <span class="string">'YOUR_API_KEY'</span>,
+  baseURL: <span class="string">'https://maas-rhdp.apps.maas.redhatworkshops.io/v1'</span>
+});
+
+<span class="keyword">const</span> response = <span class="keyword">await</span> client.chat.completions.create({
+  model: <span class="string">'granite-3-2-8b-instruct'</span>,
+  messages: [{ role: <span class="string">'user'</span>, content: <span class="string">'Hello!'</span> }]
+});
+console.log(response.choices[0].message.content);</pre>
+
+    <h3>Langchain (Python)</h3>
+    <pre><span class="keyword">from</span> langchain_openai <span class="keyword">import</span> ChatOpenAI, OpenAIEmbeddings
+
+llm = ChatOpenAI(
+    model=<span class="string">"granite-3-2-8b-instruct"</span>,
+    openai_api_key=<span class="string">"YOUR_API_KEY"</span>,
+    openai_api_base=<span class="string">"https://maas-rhdp.apps.maas.redhatworkshops.io/v1"</span>
+)
+
+embeddings = OpenAIEmbeddings(
+    model=<span class="string">"nomic-embed-text-v1-5"</span>,
+    openai_api_key=<span class="string">"YOUR_API_KEY"</span>,
+    openai_api_base=<span class="string">"https://maas-rhdp.apps.maas.redhatworkshops.io/v1"</span>
+)</pre>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- Available Models API                                        -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
   <div class="section">
     <h2>Listing Available Models via API</h2>
     <pre><span class="comment"># List all models available to your key</span>
@@ -950,11 +1229,11 @@ curl https://maas-rhdp.apps.maas.redhatworkshops.io/model/info \
 
   <div class="page-nav">
     <a href="overview.html" class="pn-prev">
-      <span class="pn-label">← Previous</span>
+      <span class="pn-label">&larr; Previous</span>
       <span class="pn-title">Product Overview</span>
     </a>
     <a href="../install/deployment.html" class="pn-next">
-      <span class="pn-label">Next →</span>
+      <span class="pn-label">Next &rarr;</span>
       <span class="pn-title">Deployment Guide</span>
     </a>
   </div>
@@ -962,7 +1241,7 @@ curl https://maas-rhdp.apps.maas.redhatworkshops.io/model/info \
 
 <footer>
   <p>RHDP MaaS Documentation &mdash; Red Hat Demo Platform &mdash; maas.redhatworkshops.io</p>
-  <span class="footer-updated">Last updated: 2026-03-25</span>
+  <span class="footer-updated">Last updated: 2026-09-03</span>
 </footer>
 
 <button id="back-to-top" title="Back to top" aria-label="Back to top">&#8679;</button>
@@ -970,7 +1249,6 @@ curl https://maas-rhdp.apps.maas.redhatworkshops.io/model/info \
 <script>
   document.getElementById('navToggle').addEventListener('click', function() {
     document.getElementById('navLinks').classList.toggle('open');
-  });
   });
   var btt = document.getElementById('back-to-top');
   window.addEventListener('scroll', function() {
